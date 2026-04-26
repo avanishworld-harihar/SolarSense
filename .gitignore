@@ -1,0 +1,17 @@
+.next
+node_modules
+.env.local
+out
+dist
+
+# Local / scratch
+.tmp-*.css
+tsconfig.tsbuildinfo
+
+# @ducanh2912/next-pwa build output
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/swe-worker-*.js
+public/swe-worker-*.js.map

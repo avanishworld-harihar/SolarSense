@@ -1,0 +1,26 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+
+function subscribe(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("online", onStoreChange);
+  window.addEventListener("offline", onStoreChange);
+  return () => {
+    window.removeEventListener("online", onStoreChange);
+    window.removeEventListener("offline", onStoreChange);
+  };
+}
+
+function getSnapshot(): boolean {
+  return typeof navigator !== "undefined" ? navigator.onLine : true;
+}
+
+function getServerSnapshot(): boolean {
+  return true;
+}
+
+/** True when the browser reports a live network connection (best-effort). */
+export function useOnlineStatus(): boolean {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
