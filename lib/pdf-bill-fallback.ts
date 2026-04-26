@@ -46,7 +46,7 @@ function normalizeMonthToken(raw: string): MonthStamp | null {
   if (!m) return null;
   const key = MONTH_TO_KEY[m[1].toLowerCase()];
   const year = normalizeYear(m[2]);
-  if (!key || !Number.isFinite(year)) return null;
+  if (!key || year === null || !Number.isFinite(year)) return null;
   return { raw: `${key.toUpperCase()}-${year}`, key, monthIndex: toMonthIndex(key), year, pos: -1 };
 }
 

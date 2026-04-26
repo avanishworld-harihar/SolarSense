@@ -273,7 +273,7 @@ async function queuePostScanTasks(input: {
         databaseRates: [calibrationRes.modeledPerUnit],
         dedupeWindowHours: 72,
         note:
-          `[calibration] model mismatch ${calibrationRes.errorPercent}% (actual ₹${calibrationRes.actualBillInr}, modeled ₹${calibrationRes.modeledBillInr}, units ${calibrationRes.unitsUsed} via ${calibrationRes.unitsSource}). ` +
+          `[calibration] model mismatch ${calibrationRes.errorPercent}% (actual ₹${calibrationRes.actualBillInr}, modeled ₹${calibrationRes.modeledBillInr}, units ${calibrationRes.unitsUsed} via ${calibrationRes.unitSource}). ` +
           `Suggestion: energy x${calibrationRes.suggestion.energyRateMultiplier}, fixed ${calibrationRes.suggestion.fixedChargeDeltaInr >= 0 ? "+" : ""}${calibrationRes.suggestion.fixedChargeDeltaInr}, ` +
           `fuel ${calibrationRes.suggestion.fuelPerKwhDelta >= 0 ? "+" : ""}${calibrationRes.suggestion.fuelPerKwhDelta}/kWh, duty ${calibrationRes.suggestion.dutyRateDeltaPctPoint >= 0 ? "+" : ""}${calibrationRes.suggestion.dutyRateDeltaPctPoint}pp.`
       })

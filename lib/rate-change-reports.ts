@@ -159,7 +159,6 @@ async function selectRowsByStatus(
   if (fallback.error || !fallback.data) return [];
   return (fallback.data as Record<string, unknown>[]).filter((row) => {
     const resolved = deriveStatus(row);
-    if (status === "all") return true;
     return resolved === status;
   });
 }
@@ -376,7 +375,7 @@ export async function reviewTariffReport(input: {
   const mergedNote = [existingNote.trim(), actionLine].filter(Boolean).join("\n");
   const payload: Record<string, unknown> = {
     status,
-    pending_admin_approval: status === "pending_admin_approval",
+    pending_admin_approval: (status as string) === "pending_admin_approval",
     admin_alert_required: false,
     reviewed_by: input.reviewedBy?.trim() || "admin",
     verified_at: action === "approve" ? nowIso : null,

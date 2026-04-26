@@ -379,14 +379,18 @@ export default function ProposalPage() {
     }
     if (calc?.latestBill) setLatestBill(calc.latestBill);
     else if (bill?.parsedBill) setLatestBill(bill.parsedBill);
-    if (calc?.previousBill) {
-      setAdditionalBills((prev) => {
-        if (prev.length === 0) return [calc.previousBill];
-        const next = [...prev];
-        next[0] = calc.previousBill;
-        return next;
-      });
-    }
+ // 1. Bill ko ek pakke variable mein nikaal lijiye
+const billToAdd = calc?.previousBill;
+
+// 2. Sirf tabhi aage badhein jab billToAdd pakka maujood ho
+if (billToAdd) {
+  setAdditionalBills((prev) => {
+    if (prev.length === 0) return [billToAdd];
+    const next = [...prev];
+    next[0] = billToAdd;
+    return next;
+  });
+}
 
     if (!billAnalysis) {
       setBillAnalysis(t("proposal_billAutofillDone"));
@@ -1605,7 +1609,7 @@ function deriveBaseUnits(parsed: ParsedBillShape): number {
     const avg = history.reduce((a, b) => a + b, 0) / history.length;
     return Math.max(1, Math.round(avg));
   }
-  const maybeMonthly = Number(parsed.months_average ?? 0);
+  const maybeMonthly = Number((parsed as any).months_average ?? 0);
   if (Number.isFinite(maybeMonthly) && maybeMonthly > 0) return Math.round(maybeMonthly);
   return 180;
 }

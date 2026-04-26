@@ -18,7 +18,7 @@ export type BillModelCalibrationResult = {
   state: string;
   discom: string;
   unitsUsed: number;
-  unitsSource: UnitsPick["source"] | null;
+  unitSource: any;
   actualBillInr: number;
   modeledBillInr: number;
   absoluteDeltaInr: number;
@@ -130,7 +130,7 @@ export async function evaluateBillModelCalibration(parsed: ParsedBillShape): Pro
       state,
       discom,
       unitsUsed: 0,
-      unitsSource: null,
+      unitSource: null,
       actualBillInr: 0,
       modeledBillInr: 0,
       absoluteDeltaInr: 0,
@@ -158,7 +158,7 @@ export async function evaluateBillModelCalibration(parsed: ParsedBillShape): Pro
       state,
       discom,
       unitsUsed: 0,
-      unitsSource: null,
+      unitSource: null,
       actualBillInr: 0,
       modeledBillInr: 0,
       absoluteDeltaInr: 0,
@@ -178,7 +178,7 @@ export async function evaluateBillModelCalibration(parsed: ParsedBillShape): Pro
       state,
       discom,
       unitsUsed: 0,
-      unitsSource: null,
+      unitSource: null,
       actualBillInr,
       modeledBillInr: 0,
       absoluteDeltaInr: 0,
@@ -207,7 +207,7 @@ export async function evaluateBillModelCalibration(parsed: ParsedBillShape): Pro
     state,
     discom,
     unitsUsed: unitsPick.units,
-    unitsSource: unitsPick.source,
+    unitSource: unitsPick.source,
     actualBillInr,
     modeledBillInr,
     absoluteDeltaInr,
