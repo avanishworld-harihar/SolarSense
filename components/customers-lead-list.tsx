@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Building2, IndianRupee, MapPin, MessageCircle, PhoneCall, Users } from "lucide-react";
+import { Building2, IndianRupee, MapPin, MessageCircle, Phone, PhoneCall, Send, Users, Wifi } from "lucide-react";
 
 import type { CustomerLead } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 import {
   LEAD_STATUS_BADGE,
   LEAD_STATUS_I18N_KEY,
+  LEAD_STATUS_OPTIONS,
   normalizeLeadStatus,
   type LeadStatusKey
 } from "@/lib/lead-status";
@@ -17,6 +19,7 @@ import { useLanguage } from "@/lib/language-context";
 import { formatLastFollowUpLocale } from "@/lib/time-i18n";
 import { buildLeadWhatsAppUrl } from "@/lib/whatsapp-lead";
 import { readLeadFollowUpMap, recordLeadFollowUp } from "@/lib/lead-followup-storage";
+import { normalizeSource, SOURCE_META, isLeadStale } from "@/lib/lead-source";
 
 export type { CustomerLead };
 
@@ -41,6 +44,53 @@ function LeadStatusBadge({ statusKey, label }: { statusKey: LeadStatusKey; label
   );
 }
 
+/**
+ * Editable variant — used when the parent passes an `onStatusChange` callback.
+ * Visually identical to `LeadStatusBadge` (so the row keeps its color hierarchy)
+ * but a real `<select>` underneath, which gives free OS-native pickers on
+ * mobile and full a11y/keyboard support on desktop.
+ */
+function LeadStatusPillSelect({
+  leadId,
+  statusKey,
+  label,
+  t,
+  onChange
+}: {
+  leadId: string;
+  statusKey: LeadStatusKey;
+  label: string;
+  t: (key: string) => string;
+  onChange: (leadId: string, next: LeadStatusKey) => void;
+}) {
+  const meta = LEAD_STATUS_BADGE[statusKey];
+  return (
+    <span
+      className={cn(
+        "relative inline-flex max-w-full items-center justify-center rounded-full border-[0.5px] px-3 py-1 text-center text-[11px] font-bold uppercase tracking-wide backdrop-blur-sm transition-shadow hover:shadow-md sm:text-xs",
+        meta.className
+      )}
+    >
+      <span className="pointer-events-none leading-tight">{label}</span>
+      <select
+        value={statusKey}
+        onChange={(e) => {
+          const next = e.target.value as LeadStatusKey;
+          if (next !== statusKey) onChange(leadId, next);
+        }}
+        aria-label={`Change pipeline status (currently ${label})`}
+        className="absolute inset-0 cursor-pointer rounded-full opacity-0"
+      >
+        {LEAD_STATUS_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {t(LEAD_STATUS_I18N_KEY[opt.value])}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
+
 function LeadRowSkeleton() {
   return (
     <div className="rounded-2xl border-[0.5px] border-white/50 bg-white/30 p-4 shadow-[0_12px_36px_rgba(11,34,64,0.08)] md:grid md:grid-cols-12 md:items-center md:gap-4 md:p-4">
@@ -60,7 +110,41 @@ function LeadRowSkeleton() {
   );
 }
 
-export function CustomersLeadList({ customers, loading }: { customers: CustomerLead[]; loading: boolean }) {
+/**
+ * Tiny source attribution pill rendered on each lead row.
+ * Stripe/Linear style: muted, informational, never competes with status.
+ */
+function LeadSourceBadge({ sourceRaw }: { sourceRaw: string | null | undefined }) {
+  const key = normalizeSource(sourceRaw);
+  if (key === "manual") return null;
+  const meta = SOURCE_META[key];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border-[0.5px] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider sm:text-[10px]",
+        meta.badgeClass
+      )}
+    >
+      <Wifi className="h-2.5 w-2.5 shrink-0" strokeWidth={2.5} />
+      {meta.shortLabel}
+    </span>
+  );
+}
+
+export function CustomersLeadList({
+  customers,
+  loading,
+  onStatusChange
+}: {
+  customers: CustomerLead[];
+  loading: boolean;
+  /**
+   * When provided, the status badge becomes an inline dropdown. The parent
+   * owns optimistic SWR updates + PATCH so the list stays a pure presentation
+   * component.
+   */
+  onStatusChange?: (leadId: string, next: LeadStatusKey) => void;
+}) {
   const { locale, t } = useLanguage();
   const showHeader = !loading && customers.length > 0;
   const installerName = getInstallerBrandName();
@@ -79,6 +163,20 @@ export function CustomersLeadList({ customers, loading }: { customers: CustomerL
       recordLeadFollowUp(leadId);
       refreshFollowMap();
       window.open(url, "_blank", "noopener,noreferrer");
+    },
+    [refreshFollowMap]
+  );
+
+  /**
+   * One-click `tel:` dial — the field-sales team's most-used button. Recording
+   * the follow-up locally bumps the "last touched" label immediately;
+   * server-side `last_touched_at` is bumped via the lead status PATCH if the
+   * stage changes. Tapping the link itself triggers the OS dialer.
+   */
+  const handlePhoneCall = useCallback(
+    (leadId: string) => {
+      recordLeadFollowUp(leadId);
+      refreshFollowMap();
     },
     [refreshFollowMap]
   );
@@ -110,6 +208,7 @@ export function CustomersLeadList({ customers, loading }: { customers: CustomerL
             const followLabel = ts != null ? formatLastFollowUpLocale(locale, ts) : t("customers_neverFollowedUp");
             const waUrl = customer.phone ? buildLeadWhatsAppUrl(customer.phone, customer.name, installerName, locale) : null;
             const statusLabel = t(LEAD_STATUS_I18N_KEY[statusKey]);
+            const stale = isLeadStale(customer.last_touched_at);
 
             return (
               <article
@@ -126,20 +225,43 @@ export function CustomersLeadList({ customers, loading }: { customers: CustomerL
                 />
 
                 <div className="relative flex items-start gap-3 md:col-span-5 md:items-center md:gap-4">
-                  <div
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-sm font-extrabold text-white shadow-md shadow-brand-900/20 ring-2 ring-white/60 sm:h-14 sm:w-14 sm:text-base"
-                    aria-hidden
-                  >
-                    {initials(customer.name)}
+                  <div className="relative shrink-0">
+                    <div
+                      className={cn(
+                        "flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-sm font-extrabold text-white shadow-md shadow-brand-900/20 ring-2 sm:h-14 sm:w-14 sm:text-base",
+                        stale ? "ring-amber-400" : "ring-white/60"
+                      )}
+                      aria-hidden
+                    >
+                      {initials(customer.name)}
+                    </div>
+                    {stale && (
+                      <span
+                        className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-amber-400 ring-2 ring-white"
+                        title="No activity in 14+ days"
+                        aria-label="Stale lead"
+                      />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-base font-extrabold tracking-tight text-brand-900 sm:text-lg">{customer.name}</h3>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <h3 className="truncate text-base font-extrabold tracking-tight text-brand-900 sm:text-lg">{customer.name}</h3>
+                      <LeadSourceBadge sourceRaw={customer.source} />
+                    </div>
                     {customer.phone ? (
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
                         <p className="flex min-w-0 items-center gap-1.5">
                           <PhoneCall className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.85} aria-hidden />
                           <span className="tabular-nums">{customer.phone}</span>
                         </p>
+                        <a
+                          href={`tel:${customer.phone}`}
+                          onClick={() => handlePhoneCall(customer.id)}
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-indigo-200/80 bg-indigo-50/90 text-indigo-600 shadow-sm transition-colors hover:bg-indigo-100 hover:text-indigo-700"
+                          aria-label={`Call ${customer.name}`}
+                        >
+                          <Phone className="h-4 w-4" strokeWidth={1.9} />
+                        </a>
                         {waUrl ? (
                           <button
                             type="button"
@@ -150,9 +272,32 @@ export function CustomersLeadList({ customers, loading }: { customers: CustomerL
                             <MessageCircle className="h-4 w-4" strokeWidth={1.9} />
                           </button>
                         ) : null}
+                        <Link
+                          href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
+                          className="inline-flex h-8 items-center justify-center gap-1 rounded-xl border-[0.5px] border-brand-200/80 bg-brand-50/90 px-2.5 text-[11px] font-bold uppercase tracking-wide text-brand-700 shadow-sm transition-colors hover:bg-brand-100 hover:text-brand-800 sm:text-xs"
+                          aria-label={`Send proposal to ${customer.name}`}
+                        >
+                          <Send className="h-3.5 w-3.5" strokeWidth={2} />
+                          <span>Proposal</span>
+                        </Link>
                       </div>
                     ) : (
-                      <p className="mt-0.5 text-xs font-medium text-slate-400 sm:text-sm">{t("customers_noPhoneOnFile")}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400 sm:text-sm">
+                        <p>{t("customers_noPhoneOnFile")}</p>
+                        <Link
+                          href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
+                          className="inline-flex h-8 items-center justify-center gap-1 rounded-xl border-[0.5px] border-brand-200/80 bg-brand-50/90 px-2.5 text-[11px] font-bold uppercase tracking-wide text-brand-700 shadow-sm transition-colors hover:bg-brand-100 hover:text-brand-800 sm:text-xs"
+                          aria-label={`Send proposal to ${customer.name}`}
+                        >
+                          <Send className="h-3.5 w-3.5" strokeWidth={2} />
+                          <span>Proposal</span>
+                        </Link>
+                      </div>
+                    )}
+                    {stale && (
+                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 sm:text-[10px]">
+                        No activity · 14+ days
+                      </p>
                     )}
                     <p className="mt-1 text-[10px] font-semibold leading-snug text-slate-500 sm:text-[11px]">
                       <span className="text-slate-400">{t("customers_lastFollowUpLabel")}: </span>
@@ -160,7 +305,17 @@ export function CustomersLeadList({ customers, loading }: { customers: CustomerL
                     </p>
                   </div>
                   <div className="shrink-0 md:hidden">
-                    <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
+                    {onStatusChange ? (
+                      <LeadStatusPillSelect
+                        leadId={customer.id}
+                        statusKey={statusKey}
+                        label={statusLabel}
+                        t={t}
+                        onChange={onStatusChange}
+                      />
+                    ) : (
+                      <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
+                    )}
                   </div>
                 </div>
 
@@ -186,7 +341,17 @@ export function CustomersLeadList({ customers, loading }: { customers: CustomerL
                 </div>
 
                 <div className="relative mt-4 hidden justify-end md:col-span-2 md:mt-0 md:flex">
-                  <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
+                  {onStatusChange ? (
+                    <LeadStatusPillSelect
+                      leadId={customer.id}
+                      statusKey={statusKey}
+                      label={statusLabel}
+                      t={t}
+                      onChange={onStatusChange}
+                    />
+                  ) : (
+                    <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
+                  )}
                 </div>
               </article>
             );

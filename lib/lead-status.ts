@@ -1,8 +1,13 @@
-/** Pipeline values stored in DB `status` (and sent from forms). */
+/**
+ * Sol.52 CRM pipeline (4 stages).
+ *
+ * Site Survey is intentionally NOT a CRM stage anymore — it lives only on the
+ * Project pipeline as a `next_action` once a proposal is sent. CRM is for the
+ * pre-sale relationship; project pipeline is for the build.
+ */
 export const LEAD_STATUS_KEYS = [
   "new",
   "contacted",
-  "site-survey-scheduled",
   "proposal-sent",
   "won"
 ] as const;
@@ -13,17 +18,21 @@ export type LeadStatusKey = (typeof LEAD_STATUS_KEYS)[number];
 export const LEAD_STATUS_I18N_KEY: Record<LeadStatusKey, string> = {
   new: "leadStatus_new",
   contacted: "leadStatus_contacted",
-  "site-survey-scheduled": "leadStatus_siteSurveyScheduled",
   "proposal-sent": "leadStatus_proposalSent",
   won: "leadStatus_won"
 };
 
+/**
+ * Legacy → current map. `site-survey-scheduled` rows existed before CRM v2;
+ * the `012_crm_v2.sql` migration also rewrites them at the DB level, but we
+ * keep the in-memory fallback so any cached/in-flight payloads still resolve.
+ */
 const LEGACY_MAP: Record<string, LeadStatusKey> = {
   lead: "new",
   new: "new",
   contacted: "contacted",
-  "site-survey-scheduled": "site-survey-scheduled",
-  "site_survey_scheduled": "site-survey-scheduled",
+  "site-survey-scheduled": "contacted",
+  "site_survey_scheduled": "contacted",
   "proposal-sent": "proposal-sent",
   proposalsent: "proposal-sent",
   won: "won"
@@ -39,7 +48,6 @@ export function normalizeLeadStatus(raw: string | null | undefined): LeadStatusK
 export const LEAD_STATUS_OPTIONS: { value: LeadStatusKey; label: string }[] = [
   { value: "new", label: "New" },
   { value: "contacted", label: "Contacted" },
-  { value: "site-survey-scheduled", label: "Site survey scheduled" },
   { value: "proposal-sent", label: "Proposal sent" },
   { value: "won", label: "Won" }
 ];
@@ -57,11 +65,6 @@ export const LEAD_STATUS_BADGE: Record<
     label: "Contacted",
     className:
       "border-violet-300/60 bg-gradient-to-br from-violet-100 to-violet-50 text-violet-900 shadow-sm shadow-violet-900/5"
-  },
-  "site-survey-scheduled": {
-    label: "Site survey scheduled",
-    className:
-      "border-amber-300/60 bg-gradient-to-br from-amber-100 to-amber-50 text-amber-950 shadow-sm shadow-amber-900/5"
   },
   "proposal-sent": {
     label: "Proposal sent",

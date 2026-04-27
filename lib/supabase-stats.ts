@@ -99,6 +99,8 @@ async function getRecentActiveProjects(): Promise<DashboardRecentProject[]> {
 
   return rows
     .filter((row) => normalizeProjectStatus(row.status) === "active")
+    /* Sol.52 CRM v2 — operator can hide a project from the dashboard or soft-archive it. */
+    .filter((row) => row.dashboard_visible !== false && !row.archived_at)
     .sort((a, b) => Date.parse(b.updated_at ?? "") - Date.parse(a.updated_at ?? ""))
     .slice(0, 3)
     .map((row) => ({

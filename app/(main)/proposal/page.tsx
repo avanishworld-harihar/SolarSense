@@ -30,6 +30,8 @@ import {
 import { mergeCustomerForProposal, type ManualProposalCustomer } from "@/lib/merge-proposal-customer";
 import { ProposalImageUploader } from "@/components/proposal-image-uploader";
 import { swrDiscomsWithOfflineCache, swrTariffWithOfflineCache } from "@/lib/proposal-swr-fetchers";
+import { CUSTOMERS_SWR_KEY } from "@/lib/customers-client";
+import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
 import { cn } from "@/lib/utils";
 import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -96,7 +98,7 @@ async function swrCustomersSafe(url: string) {
 export default function ProposalPage() {
   const { t } = useLanguage();
   const toast = useToast();
-  const { mutate: mutatePipeline } = useSWRConfig();
+  const { mutate: mutateGlobal } = useSWRConfig();
   const [monthlyUnits, setMonthlyUnits] = useState<MonthlyUnits>(() => emptyMonthlyUnits());
   const [latestBill, setLatestBill] = useState<ParsedBillShape | null>(null);
   const [additionalBills, setAdditionalBills] = useState<(ParsedBillShape | null)[]>([]);
@@ -106,7 +108,6 @@ export default function ProposalPage() {
   const [scanTimingBadge, setScanTimingBadge] = useState("");
   const [isAnalyzingLatest, setIsAnalyzingLatest] = useState(false);
   const [isAnalyzingAdditional, setIsAnalyzingAdditional] = useState<boolean[]>([]);
-  const [savePipelineBusy, setSavePipelineBusy] = useState(false);
   const [isPptDownloading, setIsPptDownloading] = useState(false);
   const [isCopyingSummary, setIsCopyingSummary] = useState(false);
   const [isWebProposalBusy, setIsWebProposalBusy] = useState(false);
@@ -208,6 +209,35 @@ export default function ProposalPage() {
   useEffect(() => {
     setHydratedFromServer(false);
   }, [selectedLeadId]);
+
+  /**
+   * Deep-link auto-select: `/proposal?leadId=<id>` lands here from the CRM
+   * "Send proposal" CTA. We wait for the customers list to load, then preselect
+   * the lead and apply its CRM details exactly as if the operator had picked
+   * it from the dropdown. Strip the param so a refresh doesn't re-trigger
+   * after manual changes.
+   */
+  const deepLinkLeadIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("leadId");
+    if (id) deepLinkLeadIdRef.current = id;
+  }, []);
+  useEffect(() => {
+    const id = deepLinkLeadIdRef.current;
+    if (!id || selectedLeadId || !customers.length) return;
+    const lead = customers.find((c) => c.id === id);
+    if (!lead) return;
+    setSelectedLeadId(id);
+    applyLeadFromCrm(lead);
+    deepLinkLeadIdRef.current = null;
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("leadId");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customers, selectedLeadId]);
 
   const stateForSizing = manual.state.trim() || installerState;
   const discomQuery = manual.discom.trim() || installerDiscom.trim();
@@ -695,38 +725,13 @@ if (billToAdd) {
     setBillAnalysisTone("neutral");
   }
 
-  async function saveToPipeline() {
-    if (!selectedLeadId) {
-      toast.info("Select CRM lead first", "Project tab save works only for a selected CRM customer.");
-      return;
-    }
-    setSavePipelineBusy(true);
-    try {
-      const res = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lead_id: selectedLeadId,
-          official_name: manual.officialBillName.trim() || null,
-          capacity_kw: `${effectiveResult.solarKw} kW`,
-          detail: `${manual.city} · ${manual.discom}`.trim() || null,
-          status: "pending",
-          install_progress: 10,
-          next_action: t("proposal_pipelineDefaultNextAction")
-        })
-      });
-      const json = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || !json.ok) throw new Error(json.error || "Save failed");
-      void mutatePipeline(PIPELINE_SWR_KEY);
-      setBillAnalysis(t("proposal_pipelineSaved"));
-      toast.success("Project saved", "Pipeline card updated instantly.");
-    } catch (e) {
-      setBillAnalysis(e instanceof Error ? e.message : t("proposal_pipelineSaveErr"));
-      toast.error("Save failed", e instanceof Error ? e.message : t("proposal_pipelineSaveErr"));
-    } finally {
-      setSavePipelineBusy(false);
-    }
-  }
+  /**
+   * Server-owned conversion as of CRM v2: when "Generate Web Proposal" succeeds,
+   * `POST /api/proposals` upserts the pipeline project and bumps the lead to
+   * `proposal-sent`. The client only refreshes its SWR caches afterwards
+   * (`syncCrmCachesAfterProposal`). The legacy "Save to pipeline" button has
+   * been retired — installers no longer need to remember a second step.
+   */
 
   function buildProposalExtrasPayload() {
     const sanctionedLoadKw = (() => {
@@ -893,6 +898,16 @@ if (billToAdd) {
         toast.success("Web proposal ready", "Share link copied — paste on WhatsApp.");
       } catch {
         toast.success("Web proposal ready", "Share link saved below.");
+      }
+      /**
+       * Server has just upserted the project + bumped the lead to `proposal-sent`.
+       * Revalidate every CRM-touching SWR cache so dashboard / customers /
+       * projects all reflect the new state without a hard refresh.
+       */
+      if (selectedLeadId) {
+        void mutateGlobal(PIPELINE_SWR_KEY);
+        void mutateGlobal(CUSTOMERS_SWR_KEY);
+        void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
       }
       window.open(shareUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
@@ -1424,10 +1439,6 @@ if (billToAdd) {
         </div>
 
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <button type="button" disabled={savePipelineBusy} onClick={() => void saveToPipeline()} className="ss-cta-secondary sm:text-base">
-            {savePipelineBusy ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : null}
-            {t("proposal_savePipelineCta")}
-          </button>
           <button
             type="button"
             className="ss-cta-primary sm:text-base"

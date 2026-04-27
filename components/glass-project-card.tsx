@@ -1,8 +1,8 @@
 "use client";
 
-import { FolderKanban, PencilLine, X } from "lucide-react";
+import { Archive, ArchiveRestore, Eye, EyeOff, FolderKanban, PencilLine, X } from "lucide-react";
 import Link from "next/link";
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,18 @@ export type GlassProjectSummary = {
   nextAction?: string | null;
   /** ISO timestamp for stale Pending/Active pulse (>3 days in same state) */
   updatedAt?: string | null;
+  /** CRM v2 — operator can pin/un-pin from the dashboard. Defaults true. */
+  dashboardVisible?: boolean;
+  /** CRM v2 — soft-archive ISO timestamp. */
+  archivedAt?: string | null;
+};
+
+export type ProjectCardPatch = {
+  dashboard_visible?: boolean;
+  archived_at?: string | null | true;
+  status?: "pending" | "active" | "done";
+  next_action?: string | null;
+  install_progress?: number;
 };
 
 function statusNeedsStalePulse(status: GlassProjectSummary["status"], updatedAtIso?: string | null): boolean {
@@ -41,12 +53,41 @@ function statusNeedsStalePulse(status: GlassProjectSummary["status"], updatedAtI
   return Date.now() - t > STALE_MS;
 }
 
-function GlassProjectCardInner({ project, className }: { project: GlassProjectSummary; className?: string }) {
+function GlassProjectCardInner({
+  project,
+  className,
+  onPatch
+}: {
+  project: GlassProjectSummary;
+  className?: string;
+  /**
+   * Optional patch handler. When provided, the bottom-sheet exposes
+   * dashboard-visibility and archive controls; the parent owns the optimistic
+   * SWR mutation + revalidation. When omitted, the card stays read-only.
+   */
+  onPatch?: (id: string, patch: ProjectCardPatch) => Promise<void> | void;
+}) {
   const { t } = useLanguage();
   const stalePulse = statusNeedsStalePulse(project.status, project.updatedAt);
   const touchMode = useProjectCardTouchMode();
   const [touchExpanded, setTouchExpanded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [patchBusy, setPatchBusy] = useState(false);
+  const dashboardVisible = project.dashboardVisible !== false;
+  const isArchived = Boolean(project.archivedAt);
+
+  const applyPatch = useCallback(
+    async (patch: ProjectCardPatch) => {
+      if (!onPatch) return;
+      setPatchBusy(true);
+      try {
+        await onPatch(project.id, patch);
+      } finally {
+        setPatchBusy(false);
+      }
+    },
+    [onPatch, project.id]
+  );
   const statusGlowClass =
     project.status === "active"
       ? "card-status-active-glow"
@@ -268,6 +309,43 @@ function GlassProjectCardInner({ project, className }: { project: GlassProjectSu
                 <p className="mt-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">{project.nextAction.trim()}</p>
               ) : null}
             </div>
+
+            {onPatch ? (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={patchBusy}
+                  onClick={() => void applyPatch({ dashboard_visible: !dashboardVisible })}
+                  className={cn(
+                    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-extrabold transition disabled:opacity-60",
+                    dashboardVisible
+                      ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-200"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200"
+                  )}
+                  aria-label={dashboardVisible ? "Hide from dashboard" : "Show on dashboard"}
+                >
+                  {dashboardVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {dashboardVisible ? "Hide from dashboard" : "Show on dashboard"}
+                </button>
+                <button
+                  type="button"
+                  disabled={patchBusy}
+                  onClick={() =>
+                    void applyPatch({ archived_at: isArchived ? null : true })
+                  }
+                  className={cn(
+                    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-extrabold transition disabled:opacity-60",
+                    isArchived
+                      ? "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100 dark:border-sky-500/40 dark:bg-sky-950/40 dark:text-sky-200"
+                      : "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-950/40 dark:text-rose-200"
+                  )}
+                  aria-label={isArchived ? "Restore from archive" : "Archive project"}
+                >
+                  {isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                  {isArchived ? "Restore" : "Archive"}
+                </button>
+              </div>
+            ) : null}
 
             <Link
               href="/projects"

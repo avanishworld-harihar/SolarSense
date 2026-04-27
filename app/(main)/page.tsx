@@ -465,7 +465,15 @@ function DashboardPageContent() {
         </DashboardItem>
 
         <DashboardItem animate={shouldAnimateDashboard}>
-          <DashboardSectionTitle>{t("dashboard_projectSummaries")}</DashboardSectionTitle>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <DashboardSectionTitle>{t("dashboard_projectSummaries")}</DashboardSectionTitle>
+            <Link
+              href="/projects?view=hidden"
+              className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-indigo-600 underline-offset-4 hover:underline dark:text-indigo-300 sm:text-xs"
+            >
+              Manage visibility →
+            </Link>
+          </div>
           {showingDemoProjects && (
             <p className="mb-2 text-[11px] font-semibold text-indigo-600 dark:text-[#94A3B8] sm:text-xs">Showing demo projects for UI preview.</p>
           )}

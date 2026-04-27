@@ -4,7 +4,10 @@ import { fetchMpAuditOverridesByRef } from "@/lib/mp-bill-audit-fetch";
 import { summarizeProposalDeck, type PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import { createProposal } from "@/lib/proposals-store";
 import { proposalExtrasShape } from "@/lib/proposal-extras-schema";
+import { bumpLeadStatus, upsertPipelineProject } from "@/lib/supabase";
 import type { MonthlyUnits } from "@/lib/types";
+
+const SITE_SURVEY_NEXT_ACTION = "Site survey pending";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -107,6 +110,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /**
+     * Server-owned auto-conversion (Sol.52 spec): when a web proposal is
+     * generated for a real CRM lead, the lead automatically transitions to
+     * `proposal-sent` and a Project pipeline card is created with
+     * `next_action = "Site survey pending"`. No client mutation needed.
+     *
+     * Best-effort: a failure here must NOT block returning the proposal to
+     * the caller (the share link is the user-facing artifact).
+     */
+    let projectId: string | null = null;
+    if (payload.leadId) {
+      const detail = payload.location?.trim() || null;
+      try {
+        const project = await upsertPipelineProject({
+          lead_id: payload.leadId,
+          official_name: payload.customerName,
+          capacity_kw: `${payload.systemKw} kW`,
+          detail: detail ?? undefined,
+          status: "pending",
+          install_progress: 10,
+          next_action: SITE_SURVEY_NEXT_ACTION
+        });
+        if (project && typeof project["id"] === "string") {
+          projectId = project["id"] as string;
+        }
+      } catch (err) {
+        console.warn("[proposals POST] pipeline upsert failed:", err);
+      }
+      try {
+        await bumpLeadStatus(payload.leadId, "proposal-sent");
+      } catch (err) {
+        console.warn("[proposals POST] bumpLeadStatus failed:", err);
+      }
+    }
+
     const origin = req.headers.get("origin") || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
     const shareUrl = `${origin}/proposal/${created.id}`;
 
@@ -119,7 +157,9 @@ export async function POST(req: NextRequest) {
         customerName: created.customer_name,
         generatedAt: created.generated_at,
         shareUrl,
-        summary
+        summary,
+        projectId,
+        leadStatus: payload.leadId ? "proposal-sent" : null
       },
       { status: 200 }
     );

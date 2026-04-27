@@ -17,7 +17,15 @@ import {
 } from "@/lib/dashboard-stats-client";
 import { OfflineDataNotice } from "@/components/offline-data-notice";
 import { useInstallerDiscoms } from "@/hooks/use-installer-discoms";
-import { LEAD_STATUS_I18N_KEY, LEAD_STATUS_OPTIONS } from "@/lib/lead-status";
+import { LEAD_STATUS_I18N_KEY, LEAD_STATUS_OPTIONS, type LeadStatusKey } from "@/lib/lead-status";
+import {
+  normalizeSource,
+  SOURCE_FILTER_OPTIONS,
+  SOURCE_META,
+  isLeadStale,
+  type LeadSourceKey
+} from "@/lib/lead-source";
+import { cn } from "@/lib/utils";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import {
   INSTALLER_REGION_EVENT,
@@ -69,7 +77,27 @@ function CustomersPageContent() {
     onSuccess: (list) => writeCustomersCache(list)
   });
 
-  const customers = data ?? [];
+  const allCustomers = data ?? [];
+
+  const [sourceFilter, setSourceFilter] = useState<LeadSourceKey | "all">("all");
+  const [staleOnly, setStaleOnly] = useState(false);
+
+  const customers = useMemo(() => {
+    let list = allCustomers;
+    if (sourceFilter !== "all") {
+      list = list.filter((c) => normalizeSource(c.source) === sourceFilter);
+    }
+    if (staleOnly) {
+      list = list.filter((c) => isLeadStale(c.last_touched_at));
+    }
+    return list;
+  }, [allCustomers, sourceFilter, staleOnly]);
+
+  const staleCount = useMemo(
+    () => allCustomers.filter((c) => isLeadStale(c.last_touched_at)).length,
+    [allCustomers]
+  );
+
   const showListSkeleton = isLoading && data === undefined && !loadError;
 
   useLayoutEffect(() => {
@@ -130,6 +158,42 @@ function CustomersPageContent() {
     if (!s || !d) return;
     writeInstallerRegion(s, d);
   }, [showAddModal, form.state, form.discom]);
+
+  /**
+   * Optimistic pipeline status change. Mutates the SWR cache instantly so the
+   * pill animates without waiting for the round trip; on failure we roll back
+   * and toast the operator. Server stamps `last_touched_at` so the row also
+   * lifts out of any "stale" filter automatically.
+   */
+  function handleStatusChange(leadId: string, next: LeadStatusKey) {
+    const prev = data ?? [];
+    const before = prev.find((c) => c.id === leadId)?.status;
+    if (before === next) return;
+    void mutate(
+      prev.map((c) => (c.id === leadId ? { ...c, status: next } : c)),
+      { revalidate: false }
+    );
+    void (async () => {
+      try {
+        const r = await fetch(`/api/customers/${leadId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: next })
+        });
+        const j = (await r.json()) as { ok?: boolean; error?: string };
+        if (!j.ok) throw new Error(j.error || "Could not update status");
+        await mutate();
+        await mutateGlobal(DASHBOARD_STATS_SWR_KEY, undefined, { revalidate: true });
+        toast.success("Pipeline updated", `Moved to ${LEAD_STATUS_OPTIONS.find((o) => o.value === next)?.label ?? next}.`);
+      } catch (e) {
+        await mutate(
+          prev.map((c) => (c.id === leadId ? { ...c, status: before ?? c.status } : c)),
+          { revalidate: false }
+        );
+        toast.error("Status update failed", e instanceof Error ? e.message : "Please try again.");
+      }
+    })();
+  }
 
   function bumpDashboardLeads(delta: number) {
     void mutateGlobal(
@@ -209,21 +273,37 @@ function CustomersPageContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        const result = await response.json();
+        const result = await response.json() as { ok?: boolean; deduped?: boolean; error?: string; data?: CustomerLead };
         if (!result.ok) throw new Error(result.error || "Could not save customer");
 
         const serverRow = result.data as CustomerLead;
-        await mutate(
-          (prev) => {
-            const next = [serverRow, ...(prev ?? []).filter((c) => c.id !== optimisticId)];
-            writeCustomersCache(next);
-            touchCustomersSavedAt();
-            return next;
-          },
-          { revalidate: false }
-        );
-        await mutateGlobal(DASHBOARD_STATS_SWR_KEY, undefined, { revalidate: true });
-        toast.success("Customer saved", `${payload.name} has been added to your lead list.`);
+        if (result.deduped) {
+          /* Phone matched an existing lead — roll back the optimistic row,
+           * surface an info toast, and revalidate so the existing lead
+           * surfaces at the top (its last_touched_at was just bumped). */
+          await mutate(
+            (prev) => (prev ?? []).filter((c) => c.id !== optimisticId),
+            { revalidate: false }
+          );
+          bumpDashboardLeads(-1);
+          await mutate();
+          toast.info(
+            "Lead already in CRM",
+            `${serverRow.name} already exists — last touch refreshed.`
+          );
+        } else {
+          await mutate(
+            (prev) => {
+              const next = [serverRow, ...(prev ?? []).filter((c) => c.id !== optimisticId)];
+              writeCustomersCache(next);
+              touchCustomersSavedAt();
+              return next;
+            },
+            { revalidate: false }
+          );
+          await mutateGlobal(DASHBOARD_STATS_SWR_KEY, undefined, { revalidate: true });
+          toast.success("Customer saved", `${payload.name} has been added to your lead list.`);
+        }
       } catch (e) {
         await mutate(
           (prev) => (prev ?? []).filter((c) => c.id !== optimisticId),
@@ -271,8 +351,51 @@ function CustomersPageContent() {
         </div>
         </div>
 
+        {/* ── Filter chips — Stripe/Linear style: small, flush, no gap clutter ── */}
+        <div className="page-lite-item flex flex-wrap gap-1.5 sm:gap-2">
+          {SOURCE_FILTER_OPTIONS.map((opt) => {
+            const isActive = sourceFilter === opt.value;
+            const chipMeta = opt.value !== "all" ? SOURCE_META[opt.value as LeadSourceKey] : null;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setSourceFilter(opt.value as LeadSourceKey | "all")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all sm:text-xs",
+                  isActive
+                    ? chipMeta
+                      ? chipMeta.chipActiveClass
+                      : "border-brand-700 bg-brand-700 text-white"
+                    : "border-slate-200/80 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-300"
+                )}
+                aria-pressed={isActive}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setStaleOnly((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all sm:text-xs",
+              staleOnly
+                ? "border-amber-500 bg-amber-500 text-white"
+                : "border-amber-200/80 bg-amber-50/70 text-amber-700 hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-300"
+            )}
+            aria-pressed={staleOnly}
+          >
+            Stale · {staleCount}
+          </button>
+        </div>
+
         <div className="page-lite-item ss-card-subtle p-3 sm:p-4 md:p-5">
-          <CustomersLeadList customers={customers} loading={showListSkeleton} />
+          <CustomersLeadList
+            customers={customers}
+            loading={showListSkeleton}
+            onStatusChange={handleStatusChange}
+          />
         </div>
       </div>
 
