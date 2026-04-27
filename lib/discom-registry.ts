@@ -27,11 +27,25 @@ export function isMissingDiscomFormatsTable(message: string): boolean {
 }
 
 // 3. Baaki functions (agar file mein aur kuch tha toh wo yahan niche rehne dein)
-export function listRegistryDiscomsForState(stateCode: string): { code: string; name: string }[] {
-  // Returns an empty array until a full registry is wired in. Typed explicitly
-  // so callers that iterate `d.code` / `d.name` don't get `never`.
-  void stateCode;
-  return [];
+type RegistryDiscom = { code: string; name: string };
+type StateRegistry = { aliases: string[]; discoms: RegistryDiscom[] };
+
+const REGISTRY: StateRegistry[] = [
+  {
+    aliases: ["madhya pradesh", "mp"],
+    discoms: [
+      { code: "MPMKVVCL", name: "MP Madhya Kshetra (Central · Bhopal)" },
+      { code: "MPPaKVVCL", name: "MP Paschim Kshetra (West · Indore)" },
+      { code: "MPPKVVCL",  name: "MP Poorv Kshetra (East · Jabalpur)" }
+    ]
+  }
+];
+
+export function listRegistryDiscomsForState(stateCode: string): RegistryDiscom[] {
+  const norm = stateCode.trim().toLowerCase();
+  if (!norm) return [];
+  const entry = REGISTRY.find((r) => r.aliases.some((a) => norm.includes(a) || a.includes(norm)));
+  return entry?.discoms ?? [];
 }
 /**
  * State names ko standard format mein badalne ke liye
