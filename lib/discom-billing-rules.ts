@@ -46,13 +46,15 @@ const MP_RULE: BillingRule = {
 };
 
 const STATE_LEVEL_RULES: Partial<Record<string, BillingRule>> = {
-  "Madhya Pradesh": MP_RULE
+  "Madhya Pradesh": MP_RULE,
+  "MP": MP_RULE
 };
 
 const DISCOM_CODE_OVERRIDES = new Map<string, BillingRule>([
   ["mppkvvcl", MP_RULE],
   ["mppgvvcl", MP_RULE],
   ["mpmkvvcl", MP_RULE],
+  ["mppakvvcl", MP_RULE],
   ["mpcz", MP_RULE],
   ["mpez", MP_RULE],
   ["mpwz", MP_RULE]
