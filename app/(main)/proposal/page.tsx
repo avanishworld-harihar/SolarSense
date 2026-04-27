@@ -210,34 +210,7 @@ export default function ProposalPage() {
     setHydratedFromServer(false);
   }, [selectedLeadId]);
 
-  /**
-   * Deep-link auto-select: `/proposal?leadId=<id>` lands here from the CRM
-   * "Send proposal" CTA. We wait for the customers list to load, then preselect
-   * the lead and apply its CRM details exactly as if the operator had picked
-   * it from the dropdown. Strip the param so a refresh doesn't re-trigger
-   * after manual changes.
-   */
-  const deepLinkLeadIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("leadId");
-    if (id) deepLinkLeadIdRef.current = id;
-  }, []);
-  useEffect(() => {
-    const id = deepLinkLeadIdRef.current;
-    if (!id || selectedLeadId || !customers.length) return;
-    const lead = customers.find((c) => c.id === id);
-    if (!lead) return;
-    setSelectedLeadId(id);
-    applyLeadFromCrm(lead);
-    deepLinkLeadIdRef.current = null;
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("leadId");
-      window.history.replaceState({}, "", url.toString());
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customers, selectedLeadId]);
+  // deepLinkLeadIdRef and its effects are declared below, after `customers` is in scope.
 
   const stateForSizing = manual.state.trim() || installerState;
   const discomQuery = manual.discom.trim() || installerDiscom.trim();
@@ -346,6 +319,36 @@ export default function ProposalPage() {
   }
   const customers: CustomerLead[] = fetchedCustomers.length > 0 ? fetchedCustomers : customerCacheRef.current;
   const isCustomersLoading = !customersRes;
+
+  /**
+   * Deep-link auto-select: `/proposal?leadId=<id>` lands here from the CRM
+   * "Send proposal" CTA. Declared here so `customers` is in scope (it is a
+   * `const` derived from SWR data above — referencing it earlier causes a
+   * TypeScript "used before declaration" error).
+   */
+  const deepLinkLeadIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("leadId");
+    if (id) deepLinkLeadIdRef.current = id;
+  }, []);
+  useEffect(() => {
+    const id = deepLinkLeadIdRef.current;
+    if (!id || selectedLeadId || !customers.length) return;
+    const lead = customers.find((c) => c.id === id);
+    if (!lead) return;
+    setSelectedLeadId(id);
+    applyLeadFromCrm(lead);
+    deepLinkLeadIdRef.current = null;
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("leadId");
+      window.history.replaceState({}, "", url.toString());
+    }
+    // applyLeadFromCrm is stable (reads only state setters); customers + selectedLeadId
+    // are the real reactive dependencies here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customers, selectedLeadId]);
   const restoreUrl =
     clientRef.length > 0
       ? `/api/calculations?clientRef=${encodeURIComponent(clientRef)}${
