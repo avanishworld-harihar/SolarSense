@@ -30,6 +30,8 @@ export interface ParsedBillShape {
   connection_date?: string;
   sanctioned_load?: string;
   phase?: string;
+  /** Registered mobile number printed on the bill (10-digit Indian number or as printed). */
+  registered_mobile?: string;
   connection_type?: string;
   /** e.g. Domestic / Commercial / LT / HT — as printed on bill */
   tariff_category?: string;

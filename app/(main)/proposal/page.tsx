@@ -124,6 +124,8 @@ export default function ProposalPage() {
   // Company logo (Supabase Storage public URL).
   const [installerLogoUrl, setInstallerLogoUrl] = useState("");
   const [showProposalSettings, setShowProposalSettings] = useState(false);
+  const [overrideSolarKw, setOverrideSolarKw] = useState("");
+  const [overridePanels, setOverridePanels] = useState("");
   const [installerState, setInstallerState] = useState("");
   const [installerDiscom, setInstallerDiscom] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState("");
@@ -325,6 +327,39 @@ export default function ProposalPage() {
       }),
     [monthlyUnits, effectiveTariffContext, stateForSizing, connectedLoadKw, areaProfile]
   );
+  const effectiveResult = useMemo(() => {
+    const kwRaw = parseFloat(overrideSolarKw);
+    const solarKw = kwRaw > 0 ? Math.round(kwRaw * 10) / 10 : result.solarKw;
+    const panelsRaw = parseInt(overridePanels);
+    const panels = panelsRaw > 0 ? panelsRaw : Math.ceil((solarKw * 1000) / 540);
+    const annualGeneration = Math.round(solarKw * 1500);
+    const selfUse = Math.min(annualGeneration, result.annualUnits);
+    const monthlySavings = Math.round((result.currentMonthlyBill * (selfUse / Math.max(result.annualUnits, 1))) * 0.9);
+    const annualSavings = monthlySavings * 12;
+    const grossCost = Math.round(solarKw * 50000);
+    const centralSubsidy = solarKw <= 2 ? Math.round(solarKw * 30000) : Math.min(78000, Math.round(60000 + (solarKw - 2) * 18000));
+    const netCost = Math.max(0, grossCost - centralSubsidy);
+    const paybackYears = annualSavings > 0 ? Number((netCost / annualSavings).toFixed(1)) : 0;
+    const savings25yr = annualSavings * 25;
+    const profit25yr = savings25yr - netCost;
+    return {
+      ...result,
+      solarKw,
+      panels,
+      annualGeneration,
+      annualSavings,
+      monthlySavings,
+      newMonthlyBill: Math.max(0, result.currentMonthlyBill - monthlySavings),
+      grossCost,
+      centralSubsidy,
+      netCost,
+      paybackYears,
+      paybackDisplay: `${paybackYears} years`,
+      savings25yr,
+      profit25yr
+    };
+  }, [overrideSolarKw, overridePanels, result]);
+
   const filledMonths = useMemo(() => countFilledMonths(monthlyUnits), [monthlyUnits]);
   const annualUnits = useMemo(
     () =>
@@ -539,6 +574,7 @@ if (billToAdd) {
         meterNumber: prev.meterNumber || data.meter_number || "",
         connectionDate: prev.connectionDate || data.connection_date || "",
         phase: prev.phase || data.phase || "",
+        leadPhone: prev.leadPhone || data.registered_mobile || "",
         connectionType: prev.connectionType || data.connection_type || "",
         sanctionedLoad: prev.sanctionedLoad || data.sanctioned_load || "",
         billingAddress: prev.billingAddress || data.address || "",
@@ -661,7 +697,7 @@ if (billToAdd) {
         body: JSON.stringify({
           lead_id: selectedLeadId,
           official_name: manual.officialBillName.trim() || null,
-          capacity_kw: `${result.solarKw} kW`,
+          capacity_kw: `${effectiveResult.solarKw} kW`,
           detail: `${manual.city} · ${manual.discom}`.trim() || null,
           status: "pending",
           install_progress: 10,
@@ -729,11 +765,11 @@ if (billToAdd) {
         body: JSON.stringify({
           customerName,
           location,
-          systemKw: result.solarKw,
-          yearlyBill: result.currentMonthlyBill * 12,
-          afterSolar: result.newMonthlyBill * 12,
-          saving: result.annualSavings,
-          paybackYears: result.paybackYears,
+          systemKw: effectiveResult.solarKw,
+          yearlyBill: effectiveResult.currentMonthlyBill * 12,
+          afterSolar: effectiveResult.newMonthlyBill * 12,
+          saving: effectiveResult.annualSavings,
+          paybackYears: effectiveResult.paybackYears,
           monthlyUnits,
           state: manual.state || latestBill?.state || previousBill?.state || installerState || "Madhya Pradesh",
           discom: manual.discom || latestBill?.discom || previousBill?.discom || installerDiscom || "MPPKVVCL",
@@ -778,11 +814,11 @@ if (billToAdd) {
       const text = [
         `SOL.52 Solar Snapshot`,
         `Customer: ${customer}`,
-        `System size: ${result.solarKw} kW`,
-        `Net investment: ₹${result.netCost.toLocaleString("en-IN")}`,
-        `Annual saving: ₹${result.annualSavings.toLocaleString("en-IN")}`,
-        `Payback: ${result.paybackDisplay}`,
-        `25Y profit estimate: ₹${result.profit25yr.toLocaleString("en-IN")}`
+        `System size: ${effectiveResult.solarKw} kW`,
+        `Net investment: ₹${effectiveResult.netCost.toLocaleString("en-IN")}`,
+        `Annual saving: ₹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
+        `Payback: ${effectiveResult.paybackDisplay}`,
+        `25Y profit estimate: ₹${effectiveResult.profit25yr.toLocaleString("en-IN")}`
       ].join("\n");
       await navigator.clipboard.writeText(text);
       toast.success("Summary copied", "WhatsApp-ready proposal summary copied.");
@@ -806,11 +842,11 @@ if (billToAdd) {
         body: JSON.stringify({
           customerName,
           location,
-          systemKw: result.solarKw,
-          yearlyBill: result.currentMonthlyBill * 12,
-          afterSolar: result.newMonthlyBill * 12,
-          saving: result.annualSavings,
-          paybackYears: result.paybackYears,
+          systemKw: effectiveResult.solarKw,
+          yearlyBill: effectiveResult.currentMonthlyBill * 12,
+          afterSolar: effectiveResult.newMonthlyBill * 12,
+          saving: effectiveResult.annualSavings,
+          paybackYears: effectiveResult.paybackYears,
           monthlyUnits,
           state: manual.state || latestBill?.state || previousBill?.state || installerState || "Madhya Pradesh",
           discom: manual.discom || latestBill?.discom || previousBill?.discom || installerDiscom || "MPPKVVCL",
@@ -826,8 +862,8 @@ if (billToAdd) {
           monthlyBillActuals,
           clientRef: clientRef || undefined,
           leadId: selectedLeadId || undefined,
-          netCostInr: result.netCost,
-          panels: result.panels,
+          netCostInr: effectiveResult.netCost,
+          panels: effectiveResult.panels,
           ...buildProposalExtrasPayload()
         })
       });
@@ -860,10 +896,10 @@ if (billToAdd) {
     const text = [
       `Namaste ${customer} 🌞`,
       ``,
-      `${result.solarKw} kW solar proposal aapke liye taiyaar hai:`,
-      `• Net cost: ₹${result.netCost.toLocaleString("en-IN")}`,
-      `• Annual saving: ₹${result.annualSavings.toLocaleString("en-IN")}`,
-      `• Payback: ${result.paybackDisplay}`,
+      `${effectiveResult.solarKw} kW solar proposal aapke liye taiyaar hai:`,
+      `• Net cost: ₹${effectiveResult.netCost.toLocaleString("en-IN")}`,
+      `• Annual saving: ₹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
+      `• Payback: ${effectiveResult.paybackDisplay}`,
       ``,
       `Full interactive proposal: ${latestWebProposalUrl}`
     ].join("\n");
@@ -1185,24 +1221,101 @@ if (billToAdd) {
       <div className="ss-card p-4 sm:p-5">
         <h2 className="text-base font-extrabold text-brand-900 sm:text-lg">{t("proposal_recommended")}</h2>
         <p className="mt-2 break-words text-2xl font-extrabold tabular-nums text-solar-600 sm:text-3xl lg:text-4xl">
-          ₹{result.annualSavings.toLocaleString("en-IN")}
+          ₹{effectiveResult.annualSavings.toLocaleString("en-IN")}
         </p>
         <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">{t("proposal_annualSavingsLine")}</p>
       </div>
 
-      <div className="ss-card space-y-2 p-4 sm:p-5">
-        <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-          {t("proposal_solarSizeLabel")}: <span className="text-brand-700">{result.solarKw} kW</span>
-        </p>
-        <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-          {t("proposal_panelsLabel")}: <span className="text-brand-700">{result.panels}</span>
-        </p>
-        <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-          {t("proposal_netCost")}: <span className="break-words text-brand-700">₹{result.netCost.toLocaleString("en-IN")}</span>
-        </p>
-        <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-          {t("proposal_payback")}: <span className="text-brand-700">{result.paybackDisplay}</span>
-        </p>
+      <div className="ss-card space-y-4 p-4 sm:p-5">
+        {/* Solar System Size — editable */}
+        <div>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+            {t("proposal_solarSizeLabel")}
+            {overrideSolarKw && parseFloat(overrideSolarKw) !== result.solarKw && (
+              <span className="ml-2 font-semibold text-indigo-500">Auto: {result.solarKw} kW</span>
+            )}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
+              <input
+                type="number"
+                min="0.5"
+                max="100"
+                step="0.5"
+                className="w-16 bg-transparent text-base font-extrabold text-brand-700 outline-none"
+                value={overrideSolarKw || result.solarKw}
+                onChange={(e) => {
+                  setOverrideSolarKw(e.target.value);
+                  setOverridePanels("");
+                }}
+              />
+              <span className="text-sm font-bold text-brand-700">kW</span>
+            </div>
+            {[1, 1.5, 2, 3, 4, 5, 6, 7.5, 10].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => { setOverrideSolarKw(String(v)); setOverridePanels(""); }}
+                className={`rounded-full border px-2.5 py-1 text-xs font-bold transition-colors ${
+                  effectiveResult.solarKw === v
+                    ? "border-brand-500 bg-brand-500 text-white"
+                    : "border-slate-300 bg-white text-slate-600 hover:border-brand-400 hover:text-brand-600"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+            {overrideSolarKw && (
+              <button
+                type="button"
+                onClick={() => { setOverrideSolarKw(""); setOverridePanels(""); }}
+                className="rounded-full border border-slate-300 px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-red-500"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Panels — editable */}
+        <div>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+            {t("proposal_panelsLabel")}
+            <span className="ml-2 font-normal normal-case text-slate-400">(Auto: {Math.ceil((effectiveResult.solarKw * 1000) / 540)} panels @ 540W)</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
+              <input
+                type="number"
+                min="1"
+                max="500"
+                step="1"
+                className="w-16 bg-transparent text-base font-extrabold text-brand-700 outline-none"
+                value={overridePanels || Math.ceil((effectiveResult.solarKw * 1000) / 540)}
+                onChange={(e) => setOverridePanels(e.target.value)}
+              />
+              <span className="text-sm font-bold text-brand-700">panels</span>
+            </div>
+            {overridePanels && (
+              <button
+                type="button"
+                onClick={() => setOverridePanels("")}
+                className="rounded-full border border-slate-300 px-2.5 py-1 text-xs font-bold text-slate-400 hover:text-red-500"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+          <p className="text-xs font-semibold text-slate-700 sm:text-sm">
+            {t("proposal_netCost")}: <span className="break-words font-extrabold text-brand-700">₹{effectiveResult.netCost.toLocaleString("en-IN")}</span>
+          </p>
+          <p className="text-xs font-semibold text-slate-700 sm:text-sm">
+            {t("proposal_payback")}: <span className="font-extrabold text-brand-700">{effectiveResult.paybackDisplay}</span>
+          </p>
+        </div>
         {/* Proposal Builder Settings — controls the 12-slide deck */}
         <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
           <button
