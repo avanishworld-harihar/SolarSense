@@ -6,15 +6,18 @@ import {
   Banknote,
   Building2,
   CheckCircle2,
+  Compass,
   Download,
   Factory,
   Gauge,
+  Hammer,
   Home,
   Languages,
   Leaf,
   MessageCircle,
   Moon,
   Phone,
+  Ruler,
   ShieldCheck,
   Sparkles,
   Sun,
@@ -25,6 +28,44 @@ import {
 import type { ProposalDeckSummary } from "@/lib/proposal-ppt";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
 import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
+
+// ---------------------------------------------------------------------------
+// Connection-type expansion — gives "LT" → "LT — Low Tension (Residential)"
+// so the customer profile never reads as a bare two-letter code.
+// ---------------------------------------------------------------------------
+function expandConnectionType(raw: string | undefined | null): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "—";
+  const upper = v.toUpperCase();
+  // Exact code matches first
+  if (upper === "LT") return "LT — Low Tension (Residential)";
+  if (upper === "HT") return "HT — High Tension (Industrial)";
+  if (upper === "EHT" || upper === "EHV") return "EHT — Extra High Tension";
+  if (upper === "DS-I" || upper === "DS1") return "DS-I — Domestic Slab I";
+  if (upper === "DS-II" || upper === "DS2") return "DS-II — Domestic Slab II";
+  if (upper === "BPL") return "BPL — Below Poverty Line";
+  // Pattern-based expansion when the raw string starts with a code
+  if (/^lt\b/i.test(v)) return v.replace(/^lt\b/i, "LT — Low Tension");
+  if (/^ht\b/i.test(v)) return v.replace(/^ht\b/i, "HT — High Tension");
+  return v;
+}
+
+// Format a date-ish string nicely; gracefully fallback for empty / unknown.
+function formatConnectionDate(raw: string | undefined | null): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "—";
+  // Already nicely formatted? leave it.
+  if (/^\d{2}[-/.]\d{2}[-/.]\d{4}$/.test(v)) return v.replace(/[/.]/g, "-");
+  // Try a Date parse for ISO / locale strings
+  const d = new Date(v);
+  if (!Number.isNaN(d.getTime())) {
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+  return v;
+}
 
 // ---------------------------------------------------------------------------
 // Count-up animation hook
@@ -159,27 +200,28 @@ function SectionHeader({ kicker, title, subtitle }: { kicker: string; title: str
 function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; labels: string[]; peakIndices?: number[] }) {
   const max = Math.max(1, ...values);
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-30px" });
+  const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduced = useReducedMotion();
   const peakSet = new Set(peakIndices ?? []);
   return (
-    <div ref={ref} className="flex h-44 items-end gap-1.5 sm:h-56 sm:gap-2">
+    <div ref={ref} className="flex h-56 items-end gap-1.5 sm:h-72 sm:gap-2 lg:h-80">
       {values.map((v, i) => {
         const target = (v / max) * 100;
         const isPeak = peakSet.has(i);
         return (
           <div key={`${labels[i]}-${i}`} className="flex flex-1 flex-col items-center gap-1.5">
             <motion.div
+              // CSS var `--bar-target` is the print fallback — see globals.css.
+              style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
-              animate={inView ? { height: `${target}%`, opacity: 1 } : undefined}
-              transition={{ duration: 0.9, delay: i * 0.04, ease: [0.21, 1.02, 0.73, 1] }}
-              className={`w-full rounded-t-md ${
+              animate={inView || reduced ? { height: `${target}%`, opacity: 1 } : undefined}
+              transition={{ duration: 0.9, delay: i * 0.05, ease: [0.21, 1.02, 0.73, 1] }}
+              className={`proposal-chart-bar w-full rounded-t-md ${
                 isPeak
-                  ? "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.5),0_2px_8px_rgba(244,63,94,0.35)]"
-                  : "bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4),0_2px_8px_rgba(14,165,233,0.25)]"
+                  ? "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.55),0_2px_10px_rgba(244,63,94,0.35)]"
+                  : "bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.45),0_2px_10px_rgba(14,165,233,0.25)]"
               }`}
               aria-label={`${labels[i]}: ${v}`}
-              style={{ minHeight: target > 0 ? 4 : 0 }}
             />
             <span className="text-[10px] font-medium text-slate-500">{labels[i]}</span>
           </div>
@@ -204,7 +246,7 @@ function GenVsUseChart({
 }) {
   const max = Math.max(1, ...gen, ...use);
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-30px" });
+  const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduced = useReducedMotion();
   return (
     <div className="flex flex-col gap-3">
@@ -216,7 +258,7 @@ function GenVsUseChart({
           <span className="h-2 w-2 rounded-full bg-sky-500" /> {legendUse}
         </span>
       </div>
-      <div ref={ref} className="flex h-44 items-end gap-1 sm:h-56">
+      <div ref={ref} className="flex h-56 items-end gap-1 sm:h-72 lg:h-80">
         {labels.map((label, i) => {
           const tg = (gen[i] / max) * 100;
           const tu = (use[i] / max) * 100;
@@ -224,18 +266,18 @@ function GenVsUseChart({
             <div key={`${label}-${i}`} className="flex flex-1 flex-col items-center gap-1.5">
               <div className="flex w-full items-end gap-0.5">
                 <motion.div
+                  style={{ ["--bar-target" as string]: `${tg}%`, minHeight: tg > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tg}%` } : { height: 0 }}
-                  animate={inView ? { height: `${tg}%` } : undefined}
-                  transition={{ duration: 0.8, delay: i * 0.04 }}
-                  className="flex-1 rounded-t-sm bg-emerald-500"
-                  style={{ minHeight: tg > 0 ? 2 : 0 }}
+                  animate={inView || reduced ? { height: `${tg}%` } : undefined}
+                  transition={{ duration: 0.85, delay: i * 0.05 }}
+                  className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                 />
                 <motion.div
+                  style={{ ["--bar-target" as string]: `${tu}%`, minHeight: tu > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tu}%` } : { height: 0 }}
-                  animate={inView ? { height: `${tu}%` } : undefined}
-                  transition={{ duration: 0.8, delay: i * 0.04 + 0.05 }}
-                  className="flex-1 rounded-t-sm bg-sky-500"
-                  style={{ minHeight: tu > 0 ? 2 : 0 }}
+                  animate={inView || reduced ? { height: `${tu}%` } : undefined}
+                  transition={{ duration: 0.85, delay: i * 0.05 + 0.06 }}
+                  className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4)]"
                 />
               </div>
               <span className="text-[10px] font-medium text-slate-500">{label}</span>
@@ -383,77 +425,140 @@ function HeroCover({
   D,
   summary,
   installerLogoUrl,
-  location
+  location,
+  siteImages
 }: {
   D: ProposalDict;
   summary: ProposalDeckSummary;
   installerLogoUrl?: string;
   location?: string;
+  siteImages?: string[];
 }) {
   const cp = summary.customerProfile;
+  const cmp = summary.companyProfile;
+  const heroBottomImage = siteImages?.[0];
+
+  // Strict 12-col grid — every block declares its column span so nothing
+  // floats or overlaps. On mobile the grid collapses to 1 column.
   return (
-    <section className="rounded-3xl bg-gradient-to-br from-sky-50 via-white to-white p-6 sm:p-10">
-      <div className="flex items-center gap-3">
-        {installerLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={installerLogoUrl} alt={summary.installer} className="h-10 w-10 rounded-lg object-contain" />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
-            <Sun className="h-5 w-5" />
+    <section className="proposal-hero relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-50 via-white to-emerald-50/40 p-5 sm:p-8 lg:p-10">
+      {/* ── 1. INSTALLER BAR (Logo · Name · Tagline · Contact) ─────────── */}
+      <div className="grid grid-cols-12 items-center gap-3">
+        <div className="col-span-12 flex items-center gap-3 sm:col-span-7">
+          {installerLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={installerLogoUrl} alt={summary.installer} className="h-12 w-12 flex-shrink-0 rounded-xl border border-white/60 bg-white object-contain p-1 shadow-md sm:h-14 sm:w-14" />
+          ) : (
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 text-white shadow-md sm:h-14 sm:w-14">
+              <Sun className="h-6 w-6 sm:h-7 sm:w-7" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">{summary.installer}</p>
+            <p className="truncate text-[11px] uppercase tracking-[0.2em] text-slate-500 sm:text-xs">{summary.tagline}</p>
           </div>
-        )}
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.32em] text-slate-900">{summary.installer}</p>
-          <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500">{summary.tagline}</p>
+        </div>
+        <div className="col-span-12 sm:col-span-5 sm:text-right">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact</p>
+          <p className="text-xs font-semibold text-slate-700 sm:text-sm">{summary.contact}</p>
         </div>
       </div>
 
-      <motion.p
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mt-8 text-xs font-semibold uppercase tracking-[0.32em] text-sky-700"
-      >
-        {D["slide.cover.kicker"]}
-      </motion.p>
-      <motion.h1
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.05 }}
-        className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-5xl"
-      >
-        {summary.honoredName}
-      </motion.h1>
-      {location ? (
-        <p className="mt-1 text-sm text-slate-600 sm:text-base">{location}</p>
-      ) : null}
+      {/* ── 2. KICKER + CUSTOMER NAME ──────────────────────────────────── */}
+      <div className="mt-7 sm:mt-9">
+        <motion.p
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          className="text-[11px] font-bold uppercase tracking-[0.3em] text-sky-700 sm:text-xs"
+        >
+          {D["slide.cover.kicker"]}
+        </motion.p>
+        <motion.h1
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
+          className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl lg:text-5xl"
+        >
+          {summary.honoredName}
+        </motion.h1>
+        {location ? (
+          <p className="mt-1 text-sm text-slate-600 sm:text-base">{location}</p>
+        ) : null}
+      </div>
 
-      {/* Customer profile grid */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {/* ── 3. CUSTOMER PROFILE — strict 6-col grid ────────────────────── */}
+      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
         {[
           { l: D["profile.consumerId"], v: profileFieldOrDash(cp.consumerId) },
           { l: D["profile.meterNo"], v: profileFieldOrDash(cp.meterNumber) },
-          { l: D["profile.connectionDate"], v: profileFieldOrDash(cp.connectionDate) },
-          { l: D["profile.connectionType"], v: profileFieldOrDash(cp.connectionType) },
+          { l: D["profile.connectionDate"], v: formatConnectionDate(cp.connectionDate) },
+          { l: D["profile.connectionType"], v: expandConnectionType(cp.connectionType) },
           { l: D["profile.phase"], v: profileFieldOrDash(cp.phase) },
           { l: D["profile.sanctionedLoad"], v: cp.sanctionedLoadKw ? `${cp.sanctionedLoadKw} kW` : "—" }
-        ].map((c) => (
-          <div key={c.l} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{c.l}</p>
-            <p className="mt-1 text-sm font-bold text-slate-900 sm:text-base">{c.v}</p>
-          </div>
+        ].map((c, i) => (
+          <motion.div
+            key={c.l}
+            initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            transition={{ duration: 0.35, delay: 0.05 + i * 0.04 }}
+            className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-3 py-2.5 backdrop-blur-sm shadow-[0_2px_10px_rgba(15,23,42,0.04)]"
+          >
+            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{c.l}</p>
+            <p className="mt-1 truncate text-[13px] font-bold leading-tight text-slate-900 sm:text-sm" title={c.v}>{c.v}</p>
+          </motion.div>
         ))}
       </div>
 
-      {/* System summary bar */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+      {/* ── 4. ABOUT-US BLURB (1 short paragraph from companyProfile) ──── */}
+      {cmp.aboutUsParagraphs?.[0] ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mt-6 rounded-2xl border border-white/60 bg-white/70 p-4 backdrop-blur-sm shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:p-5"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">About {summary.installer}</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-700 sm:text-sm">
+            {cmp.aboutUsParagraphs[0]}
+          </p>
+        </motion.div>
+      ) : null}
+
+      {/* ── 5. SYSTEM SUMMARY — strict 5-col grid; no overlap ──────────── */}
+      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
         <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} />
         <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} />
         <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} rawValue={summary.netCost} tone="blue" delay={0.15} />
         <StatTile label={D["common.payback"]} value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`} tone="green" delay={0.2} />
         <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} rawValue={summary.lifetime25Profit} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} />
       </div>
-      <p className="mt-3 text-[11px] italic text-slate-500">{D["common.engineNote"]}</p>
+      <p className="mt-3 text-[10px] italic text-slate-500 sm:text-[11px]">{D["common.engineNote"]}</p>
+
+      {/* ── 6. WIDE BOTTOM IMAGE — bleed effect, strictly at page bottom ── */}
+      {heroBottomImage ? (
+        <motion.div
+          initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="relative mt-7 overflow-hidden rounded-2xl shadow-[0_12px_40px_rgba(15,23,42,0.18)] sm:mt-8"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={heroBottomImage} alt="Solar installation" className="h-44 w-full object-cover sm:h-56 lg:h-64" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/10 to-transparent" />
+          <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3 sm:bottom-4 sm:left-6 sm:right-6">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300 sm:text-xs">Engineered Locally</p>
+              <p className="mt-0.5 text-base font-extrabold leading-tight text-white sm:text-lg">{summary.installer}</p>
+            </div>
+            <p className="text-right text-[10px] font-semibold text-white/80 sm:text-xs">{cmp.installationsDone} {cmp.installationsLabel}</p>
+          </div>
+        </motion.div>
+      ) : (
+        // No image? Fill the bottom with a strong brand band so the page never reads "empty".
+        <motion.div
+          initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="relative mt-7 overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-sky-900 to-emerald-900 p-5 text-white sm:mt-8 sm:p-7"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300 sm:text-xs">Engineered Locally</p>
+          <p className="mt-1 text-lg font-extrabold tracking-tight sm:text-2xl">100% Local team, end-to-end EPC</p>
+          <p className="mt-1 text-xs text-white/70 sm:text-sm">Site survey · Design · Install · Net-meter · 5 yr aftercare.</p>
+        </motion.div>
+      )}
     </section>
   );
 }
@@ -791,17 +896,13 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
 function CompanyProfileSection({
   D,
   summary,
-  siteImages,
-  installerLogoUrl
+  siteImages
 }: {
   D: ProposalDict;
   summary: ProposalDeckSummary;
   siteImages?: string[];
-  installerLogoUrl?: string;
 }) {
   const cp = summary.companyProfile;
-  const heroImage = siteImages?.[0];
-  const actionImage = siteImages?.[1];
   const expertiseCategories = [
     {
       icon: Home,
@@ -830,181 +931,121 @@ function CompanyProfileSection({
   ];
 
   return (
-    <>
-      {/* Page 1 — Identity */}
-      <section className="mt-12 sm:mt-16">
-        <SectionHeader kicker={D["slide.about.kicker"]} title={D["slide.about.title"]} />
-        <div className="grid gap-4 sm:grid-cols-5">
-          {/* About content */}
-          <motion.div
-            initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:col-span-3 sm:p-6"
-          >
-            {/* Company identity header */}
-            <div className="flex items-center gap-3 mb-4">
-              {installerLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={installerLogoUrl} alt={summary.installer} className="h-12 w-12 rounded-xl object-contain border border-slate-100 shadow-sm" />
+    <section className="mt-10 sm:mt-12">
+      <SectionHeader
+        kicker={D["slide.about.kicker"]}
+        title="Solutions for Every Scale"
+        subtitle="From home rooftops to industrial megawatts — we engineer the right system for you."
+      />
+
+      {/* Three expertise cards — strict 3-column grid, equal heights */}
+      <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
+        {expertiseCategories.map((cat, i) => {
+          const colorMap: Record<string, string> = {
+            sky: "border-sky-200/70 bg-gradient-to-br from-sky-50 to-white",
+            violet: "border-violet-200/70 bg-gradient-to-br from-violet-50 to-white",
+            amber: "border-amber-200/70 bg-gradient-to-br from-amber-50 to-white"
+          };
+          const iconMap: Record<string, string> = {
+            sky: "bg-sky-500",
+            violet: "bg-violet-500",
+            amber: "bg-amber-500"
+          };
+          const textMap: Record<string, string> = {
+            sky: "text-sky-900",
+            violet: "text-violet-900",
+            amber: "text-amber-900"
+          };
+          return (
+            <motion.div
+              key={cat.title}
+              initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.08 + i * 0.08 }}
+              className={`flex flex-col overflow-hidden rounded-2xl border shadow-[0_4px_20px_rgba(15,23,42,0.06)] backdrop-blur-sm ${colorMap[cat.color]}`}
+            >
+              {cat.img ? (
+                <div className="relative h-44 overflow-hidden sm:h-48">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cat.img} alt={cat.title} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconMap[cat.color]} shadow-md`}>
+                      <cat.icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-white">{cat.title}</p>
+                      <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-white/85">{cat.subtitle}</p>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 shadow-md">
-                  <Sun className="h-6 w-6 text-white" />
+                <div className={`flex h-44 items-center justify-center ${iconMap[cat.color]} sm:h-48`}>
+                  <cat.icon className="h-20 w-20 text-white/30" />
                 </div>
               )}
-              <div>
-                <p className="text-lg font-bold text-slate-900 leading-tight">{summary.installer}</p>
-                <p className="text-xs text-slate-500">{summary.tagline}</p>
+              <div className="flex flex-1 flex-col p-4">
+                {!cat.img ? (
+                  <>
+                    <p className={`text-base font-bold ${textMap[cat.color]}`}>{cat.title}</p>
+                    <p className="text-[11px] font-semibold text-slate-500">{cat.subtitle}</p>
+                  </>
+                ) : null}
+                <ul className={`space-y-1.5 ${cat.img ? "" : "mt-3"}`}>
+                  {cat.bullets.map((b) => (
+                    <li key={b} className="flex items-start gap-1.5 text-xs leading-relaxed text-slate-700">
+                      <CheckCircle2 className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${textMap[cat.color]} opacity-70`} />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
+            </motion.div>
+          );
+        })}
+      </div>
 
-            <div className="space-y-3 text-sm leading-relaxed text-slate-700 sm:text-base">
-              {cp.aboutUsParagraphs.map((p, i) => (<p key={i}>{p}</p>))}
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              {[
-                { l: D["about.founded"], v: cp.founded },
-                { l: D["about.gst"], v: cp.gstNumber },
-                { l: D["about.installations"], v: cp.installationsDone },
-                { l: D["about.locations"], v: cp.locations }
-              ].map((item, i) => (
-                <motion.div
-                  key={item.l}
-                  initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.1 + i * 0.06 }}
-                  className="rounded-xl bg-slate-50/80 p-3 border border-slate-100"
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{item.l}</p>
-                  <p className="mt-1 text-base font-bold text-slate-900">{item.v}</p>
-                </motion.div>
-              ))}
-            </div>
-            <ul className="mt-5 space-y-2">
-              {cp.bullets.map((b, i) => (
-                <motion.li
-                  key={b}
-                  initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
-                  transition={{ duration: 0.35, delay: 0.2 + i * 0.05 }}
-                  className="flex items-start gap-2 text-sm text-slate-700"
-                >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
-                  <span>{b}</span>
-                </motion.li>
-              ))}
-            </ul>
-          </motion.div>
+      {/* Mid-band: company differentiators (4 bullets in single row) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="mt-5 rounded-2xl border border-white/60 bg-white/85 p-4 backdrop-blur-sm shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:p-5"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Why customers choose us</p>
+        <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {cp.bullets.slice(0, 4).map((b, i) => (
+            <motion.li
+              key={b}
+              initial={{ opacity: 0, x: -6 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+              transition={{ duration: 0.35, delay: 0.25 + i * 0.05 }}
+              className="flex items-start gap-2 text-xs font-medium text-slate-700 sm:text-[13px]"
+            >
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
+              <span>{b}</span>
+            </motion.li>
+          ))}
+        </ul>
+      </motion.div>
 
-          {/* Action photo (floating right) */}
-          <div className="flex flex-col gap-3 sm:col-span-2">
-            {actionImage ? (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: 12 }} whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.15 }}
-                className="relative overflow-hidden rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={actionImage} alt="Team in action" className="h-56 w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
-              </motion.div>
-            ) : (
-              <div className="flex h-56 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
-                <span className="text-[11px] uppercase tracking-widest text-slate-400">Action Photo</span>
-              </div>
-            )}
-            {/* Stats strip */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 text-center shadow-sm">
-                <p className="text-2xl font-black text-emerald-900">{cp.installationsDone}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Installs</p>
-              </div>
-              <div className="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 to-sky-100/50 p-4 text-center shadow-sm">
-                <p className="text-2xl font-black text-sky-900">{cp.founded}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-sky-700">Est.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Wide-angle hero image — bottom bleed effect */}
-        {heroImage ? (
+      {/* Stats footer — Founded · Installs · Locations · GST (NO floating, neatly inline) */}
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { l: D["about.founded"], v: cp.founded, accent: "from-sky-50 to-white border-sky-200/70 text-sky-900" },
+          { l: D["about.installations"], v: cp.installationsDone, accent: "from-emerald-50 to-white border-emerald-200/70 text-emerald-900" },
+          { l: D["about.locations"], v: cp.locations, accent: "from-violet-50 to-white border-violet-200/70 text-violet-900" },
+          { l: D["about.gst"], v: cp.gstNumber, accent: "from-amber-50 to-white border-amber-200/70 text-amber-900" }
+        ].map((item, i) => (
           <motion.div
-            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className="relative mt-5 overflow-hidden rounded-3xl shadow-[0_16px_60px_rgba(0,0,0,0.18)]"
+            key={item.l}
+            initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            transition={{ duration: 0.35, delay: 0.3 + i * 0.05 }}
+            className={`rounded-xl border bg-gradient-to-br p-3 backdrop-blur-sm shadow-[0_2px_10px_rgba(15,23,42,0.04)] ${item.accent}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={heroImage} alt="Installation" className="h-52 w-full object-cover sm:h-72" />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-            <div className="absolute bottom-4 left-6">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-300">Excellence in Every Install</p>
-              <p className="mt-1 text-lg font-bold text-white">{summary.installer}</p>
-            </div>
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">{item.l}</p>
+            <p className="mt-1 truncate text-sm font-extrabold leading-tight" title={item.v}>{item.v}</p>
           </motion.div>
-        ) : null}
-      </section>
-
-      {/* Page 2 — Expertise Verticals */}
-      <section className="mt-12 sm:mt-16">
-        <SectionHeader
-          kicker="Our Expertise"
-          title="Solutions for Every Scale"
-          subtitle="From home rooftops to industrial megawatts — we engineer the right system for you."
-        />
-        <div className="grid gap-4 sm:grid-cols-3">
-          {expertiseCategories.map((cat, i) => {
-            const colorMap: Record<string, string> = {
-              sky: "border-sky-200/70 bg-gradient-to-br from-sky-50 to-white",
-              violet: "border-violet-200/70 bg-gradient-to-br from-violet-50 to-white",
-              amber: "border-amber-200/70 bg-gradient-to-br from-amber-50 to-white"
-            };
-            const iconMap: Record<string, string> = {
-              sky: "bg-sky-500",
-              violet: "bg-violet-500",
-              amber: "bg-amber-500"
-            };
-            const textMap: Record<string, string> = {
-              sky: "text-sky-900",
-              violet: "text-violet-900",
-              amber: "text-amber-900"
-            };
-            return (
-              <motion.div
-                key={cat.title}
-                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.1 + i * 0.1 }}
-                className={`overflow-hidden rounded-2xl border shadow-sm ${colorMap[cat.color]}`}
-              >
-                {cat.img ? (
-                  <div className="relative h-36 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={cat.img} alt={cat.title} className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </div>
-                ) : (
-                  <div className={`flex h-36 items-center justify-center ${iconMap[cat.color]}`}>
-                    <cat.icon className="h-16 w-16 text-white/30" />
-                  </div>
-                )}
-                <div className="p-4">
-                  <div className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${iconMap[cat.color]} shadow-sm`}>
-                    <cat.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <p className={`mt-2 text-base font-bold ${textMap[cat.color]}`}>{cat.title}</p>
-                  <p className="text-[11px] font-semibold text-slate-500">{cat.subtitle}</p>
-                  <ul className="mt-3 space-y-1.5">
-                    {cat.bullets.map((b) => (
-                      <li key={b} className="flex items-start gap-1.5 text-xs text-slate-700">
-                        <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current opacity-50" />
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </section>
-    </>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -1443,6 +1484,161 @@ function BankingSection({
   );
 }
 
+// ---------------------------------------------------------------------------
+// SurveyAndWorkflowSection — Page 4 (Engineering depth: site survey, shadow
+// analysis, and 5-stage installation workflow). Densified for A4 printing.
+// ---------------------------------------------------------------------------
+function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; lang: ProposalLang; siteImages?: string[] }) {
+  const surveyImage = siteImages?.[5] ?? siteImages?.[0];
+
+  const surveyChecks = lang === "hi"
+    ? [
+        { l: "रूफ ऑरिएंटेशन", v: "दक्षिण-मुखी, 15° झुकाव" },
+        { l: "उपलब्ध क्षेत्र", v: "रूफ बीम × पैनल फिटमेंट" },
+        { l: "स्ट्रक्चरल लोड", v: "5 kg/m² अतिरिक्त भार" },
+        { l: "शैडो विश्लेषण", v: "9AM–4PM कोई बाधा नहीं" },
+        { l: "वायरिंग पथ", v: "DC < 30m, AC < 10m" },
+        { l: "अर्थिंग", v: "≤ 1Ω · डबल पिट" }
+      ]
+    : [
+        { l: "Roof Orientation", v: "South-facing, 15° tilt" },
+        { l: "Available Area", v: "Roof beam × panel fitment" },
+        { l: "Structural Load", v: "5 kg/m² extra dead load" },
+        { l: "Shadow Analysis", v: "Clear 9 AM–4 PM" },
+        { l: "Wiring Path", v: "DC < 30m, AC < 10m" },
+        { l: "Earthing", v: "≤ 1Ω · double-pit" }
+      ];
+
+  const stages = lang === "hi"
+    ? [
+        { d: "दिन 1-2", t: "साइट सर्वे + डिज़ाइन", s: "ड्रोन सर्वे, छाया मानचित्र, स्ट्रक्चरल जांच" },
+        { d: "दिन 3-5", t: "DISCOM + ऑर्डर", s: "नेट-मीटर आवेदन, सब्सिडी, सामग्री खरीद" },
+        { d: "दिन 6-7", t: "स्ट्रक्चर + माउंटिंग", s: "GI रेल्स वेल्डिंग, छत-वॉटरप्रूफिंग" },
+        { d: "दिन 7-9", t: "पैनल + इन्वर्टर", s: "DC/AC वायरिंग, अर्थिंग, SPD" },
+        { d: "दिन 9-10", t: "टेस्टिंग + कमीशनिंग", s: "नेट-मीटर इंस्टाल, हैंडओवर" }
+      ]
+    : [
+        { d: "Day 1–2", t: "Site Survey & Design", s: "Drone survey · shadow map · structural check" },
+        { d: "Day 3–5", t: "DISCOM Filing", s: "Net-meter, subsidy, material PO" },
+        { d: "Day 6–7", t: "Structure & Mounting", s: "GI rails welding · roof waterproofing" },
+        { d: "Day 7–9", t: "Panels & Inverter", s: "DC/AC wiring · earthing · SPD" },
+        { d: "Day 9–10", t: "Testing & Commissioning", s: "Net-meter install · handover" }
+      ];
+
+  return (
+    <section className="mt-10 sm:mt-12">
+      <SectionHeader
+        kicker={lang === "hi" ? "सर्वे + डिज़ाइन" : "Survey · Design · Build"}
+        title={lang === "hi" ? "साइट इंजीनियरिंग गहराई" : "Site Survey, Shadow Analysis & Build Workflow"}
+        subtitle={lang === "hi"
+          ? "हम पहले सर्वे करते हैं — पैनल बेचना नहीं। यही पेशेवर अंतर है।"
+          : "We survey first — we don't sell panels. That's the engineering difference."}
+      />
+
+      {/* Top: Survey image + checklist (40/60 split) */}
+      <div className="grid gap-4 sm:grid-cols-5">
+        <motion.div
+          initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="relative overflow-hidden rounded-2xl shadow-[0_8px_28px_rgba(15,23,42,0.12)] sm:col-span-2"
+        >
+          {surveyImage ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={surveyImage} alt="Site survey" className="h-44 w-full object-cover sm:h-full sm:min-h-[220px]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/65 via-transparent to-transparent" />
+            </>
+          ) : (
+            <div className="flex h-44 items-center justify-center bg-gradient-to-br from-sky-100 to-emerald-100 sm:h-full sm:min-h-[220px]">
+              <Compass className="h-16 w-16 text-sky-600/50" />
+            </div>
+          )}
+          <div className="absolute bottom-3 left-3 right-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-200">Step 0</p>
+            <p className="mt-0.5 text-base font-extrabold leading-tight text-white sm:text-lg">Pre-install Site Survey</p>
+            <p className="mt-1 text-[11px] text-white/85">Drone-assisted shadow + structural assessment.</p>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: 12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="rounded-2xl border border-white/60 bg-white/85 backdrop-blur-sm p-4 shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:col-span-3 sm:p-5"
+        >
+          <div className="flex items-center gap-2">
+            <Ruler className="h-4 w-4 text-sky-700" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">{lang === "hi" ? "सर्वे चेकलिस्ट" : "Survey Checklist"}</p>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {surveyChecks.map((c, i) => (
+              <motion.div
+                key={c.l}
+                initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: 0.15 + i * 0.04 }}
+                className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2"
+              >
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{c.l}</p>
+                  <p className="truncate text-xs font-semibold text-slate-900">{c.v}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Shadow analysis band */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="mt-4 grid grid-cols-3 gap-3 rounded-2xl border border-amber-200/60 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-4 backdrop-blur-sm sm:p-5"
+      >
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-800">9 AM</p>
+          <p className="mt-1 text-sm font-extrabold leading-tight text-slate-900 sm:text-base">East tilt clear</p>
+          <p className="mt-0.5 text-[11px] text-slate-600">No tree/water-tank obstruction.</p>
+        </div>
+        <div className="border-x border-amber-200/60 px-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-orange-800">12 PM</p>
+          <p className="mt-1 text-sm font-extrabold leading-tight text-slate-900 sm:text-base">Peak irradiance</p>
+          <p className="mt-0.5 text-[11px] text-slate-600">~5.5 kWh/m²/day average.</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-rose-800">4 PM</p>
+          <p className="mt-1 text-sm font-extrabold leading-tight text-slate-900 sm:text-base">West tilt clear</p>
+          <p className="mt-0.5 text-[11px] text-slate-600">Generation continues till sunset.</p>
+        </div>
+      </motion.div>
+
+      {/* Workflow stages */}
+      <div className="mt-5 rounded-2xl border border-white/60 bg-white/85 p-4 backdrop-blur-sm shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:p-5">
+        <div className="flex items-center gap-2">
+          <Hammer className="h-4 w-4 text-emerald-700" />
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">{lang === "hi" ? "स्थापना कार्यप्रवाह" : "Installation Workflow"}</p>
+        </div>
+        <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-5">
+          {stages.map((s, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              transition={{ duration: 0.35, delay: 0.25 + i * 0.07 }}
+              className="rounded-xl border border-sky-100 bg-gradient-to-br from-sky-50/80 to-white p-3 shadow-[0_2px_10px_rgba(14,165,233,0.07)]"
+            >
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-[11px] font-bold text-white shadow-sm">{i + 1}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{s.d}</span>
+              </div>
+              <p className="mt-2 text-sm font-bold leading-tight text-slate-900">{s.t}</p>
+              <p className="mt-1 text-[11px] leading-snug text-slate-600">{s.s}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ClosingSection({
   D,
   summary,
@@ -1625,51 +1821,56 @@ export default function ProposalView({
         </button>
       </div>
 
-      <div className="proposal-page">
-        <HeroCover D={D} summary={summary} installerLogoUrl={installerLogoUrl} location={undefined} />
+      {/* PAGE 1 — COVER (Identity + customer + about + bottom-bleed image) */}
+      <div className="proposal-page" data-page="cover">
+        <HeroCover D={D} summary={summary} installerLogoUrl={installerLogoUrl} location={undefined} siteImages={siteImages} />
       </div>
 
-      <div className="proposal-page">
+      {/* PAGE 2 — THE EXPERTISE (Domestic / Commercial / Industrial verticals) */}
+      <div className="proposal-page" data-page="expertise">
+        <CompanyProfileSection D={D} summary={summary} siteImages={siteImages} />
+      </div>
+
+      {/* PAGE 3 — BILL INTELLIGENCE (Audit + bar chart) */}
+      <div className="proposal-page" data-page="bill-audit">
         <DeepAuditSection D={D} summary={summary} monthLbls={monthLbls} />
       </div>
 
-      <div className="proposal-page">
+      {/* PAGE 4 — ECONOMICS (Solar vs Grid, EMI, ROI) */}
+      <div className="proposal-page" data-page="economics">
         <EconomicsSection D={D} summary={summary} monthLbls={monthLbls} />
       </div>
 
-      <div className="proposal-page">
+      {/* PAGE 5 — ENVIRONMENT (Carbon offset + tree-planting equivalence) */}
+      <div className="proposal-page" data-page="environment">
         <EnvironmentSection D={D} summary={summary} />
       </div>
 
-      <div className="proposal-page">
-        <CompanyProfileSection D={D} summary={summary} siteImages={siteImages} installerLogoUrl={installerLogoUrl} />
-      </div>
-
-      <div className="proposal-page">
+      {/* PAGE 6 — TECHNICAL + BOM (single high-density page, 2 sections combined) */}
+      <div className="proposal-page" data-page="technical-bom">
         <TechnicalProposalSection D={D} lang={lang} summary={summary} />
-      </div>
-
-      <div className="proposal-page">
         <BomSection D={D} lang={lang} summary={summary} />
       </div>
 
-      <div className="proposal-page">
-        <PaymentSection D={D} summary={summary} />
+      {/* PAGE 7 — NEW: SURVEY & SITE DESIGN (Engineering depth) */}
+      <div className="proposal-page" data-page="survey">
+        <SurveyAndWorkflowSection D={D} lang={lang} siteImages={siteImages} />
       </div>
 
-      <div className="proposal-page">
-        <CommercialAndAmcSection D={D} summary={summary} selectedAmcYears={selectedAmcYears} onAmcChange={setSelectedAmcYears} />
-      </div>
-
-      <div className="proposal-page">
+      {/* PAGE 8 — AMC SERVICE (Aftercare detail) */}
+      <div className="proposal-page" data-page="amc">
         <ServiceAmcSection D={D} lang={lang} summary={summary} />
       </div>
 
-      <div className="proposal-page">
-        <BankingSection D={D} summary={summary} siteImages={siteImages} proposalId={id} lang={lang} />
+      {/* PAGE 9 — COMMERCIAL (Payment plan + Commercial terms combined) */}
+      <div className="proposal-page" data-page="commercial">
+        <PaymentSection D={D} summary={summary} />
+        <CommercialAndAmcSection D={D} summary={summary} selectedAmcYears={selectedAmcYears} onAmcChange={setSelectedAmcYears} />
       </div>
 
-      <div className="proposal-page">
+      {/* PAGE 10 — THE CLOSING (Banking + Thank You combined; QR perfectly visible) */}
+      <div className="proposal-page" data-page="closing">
+        <BankingSection D={D} summary={summary} siteImages={siteImages} proposalId={id} lang={lang} />
         <ClosingSection
           D={D}
           summary={summary}

@@ -995,6 +995,24 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   margin-top: 1rem;
 }
 
+/* Stacked sections inside one .proposal-page (e.g. Tech+BOM, Banking+Closing)
+   should not double-up vertical margins. The first child sits flush at the top;
+   subsequent siblings get a smaller, consistent gap. */
+.proposal-page > section:first-child,
+.proposal-page > div:first-child > section {
+  margin-top: 0 !important;
+}
+
+.proposal-page > section + section {
+  margin-top: 1.75rem !important;
+}
+
+@media (min-width: 640px) {
+  .proposal-page > section + section {
+    margin-top: 2rem !important;
+  }
+}
+
 @media (min-width: 768px) {
   .proposal-page {
     background: rgba(255, 255, 255, 0.88);
@@ -1008,20 +1026,30 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     /* Subtle glass for the page wrapper on screen */
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
+    /* World-class subtle border-glow — visible on screen, invisible in print */
+    transition: box-shadow 220ms ease;
   }
 
-  .proposal-page > section,
-  .proposal-page > div > section {
-    /* Remove the inner section's auto top margin so it doesn't double up
-       with the .proposal-page wrapper padding. */
-    margin-top: 0;
+  .proposal-page:hover {
+    box-shadow:
+      0 8px 36px rgba(11, 34, 64, 0.1),
+      0 0 0 1px rgba(14, 165, 233, 0.18),
+      0 0 24px rgba(14, 165, 233, 0.08),
+      0 1px 0 rgba(255, 255, 255, 0.9) inset;
   }
+}
+
+/* On-screen: chart bars use Framer-Motion height. The CSS variable below is
+   a fallback that print mode can lock onto regardless of animation state. */
+.proposal-chart-bar {
+  height: 0%;
+  will-change: height, transform;
 }
 
 @media print {
   @page {
     size: 210mm 297mm; /* Exact A4 portrait */
-    margin: 14mm 12mm;
+    margin: 12mm 11mm;
   }
 
   @page :first {
@@ -1032,35 +1060,48 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   body {
     background: white !important;
     color: #0b132b !important;
-    font-size: 14px !important;
+    font-size: 13px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .proposal-document {
     max-width: none !important;
-    width: 186mm !important; /* 210mm - 2×12mm margins */
+    width: 188mm !important; /* 210mm - 2×11mm margins */
     padding: 0 !important;
     margin: 0 auto !important;
     background: white !important;
   }
 
-  /* Every section = its own A4 page */
+  /* Every .proposal-page = its own A4 page (strict break) */
   .proposal-page {
-    page-break-before: always;
-    break-before: page;
+    page-break-before: always !important;
+    break-before: page !important;
     page-break-after: auto;
     break-after: auto;
+    page-break-inside: avoid;
+    break-inside: avoid-page;
     background: white !important;
     border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    padding: 6mm 0 !important;
+    padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
+    /* Cap the content area so it never overflows past A4 useable region:
+       297mm - 2×12mm margins ≈ 273mm usable. */
+    max-height: 273mm;
+    overflow: hidden;
   }
 
   .proposal-page:first-child {
-    page-break-before: auto;
-    break-before: auto;
+    page-break-before: auto !important;
+    break-before: auto !important;
+  }
+
+  /* Tighten consecutive-section gap inside a single page for print */
+  .proposal-page > section + section {
+    margin-top: 6mm !important;
   }
 
   /* Force vibrant colors & gradients in PDF */
@@ -1076,13 +1117,13 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   .proposal-page .backdrop-blur-sm,
   .proposal-page .backdrop-blur,
   .proposal-page .backdrop-blur-md,
-  .proposal-page .backdrop-blur-lg {
+  .proposal-page .backdrop-blur-lg,
+  .proposal-page .backdrop-blur-xl {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-    background-color: white !important;
   }
 
-  /* Solid white fallback for glass cards */
+  /* Solid white fallback for translucent glass cards (preserves color tints) */
   .proposal-page [class*="bg-white/"] {
     background-color: white !important;
   }
@@ -1097,7 +1138,7 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     visibility: hidden !important;
   }
 
-  /* Prevent awkward breaks */
+  /* Prevent awkward breaks within section internals */
   .proposal-page h1,
   .proposal-page h2,
   .proposal-page h3,
@@ -1110,38 +1151,78 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
 
   .proposal-page table,
   .proposal-page svg,
-  .proposal-page img,
-  .proposal-page figure {
+  .proposal-page figure,
+  .proposal-page section {
     page-break-inside: avoid;
     break-inside: avoid;
     max-width: 100% !important;
   }
 
-  /* Ensure images render in PDF */
+  /* Ensure images render crisply in PDF, capped for A4 fit */
   .proposal-page img {
     display: block !important;
-    max-height: 80mm;
+    max-height: 70mm;
     object-fit: cover;
+    image-rendering: -webkit-optimize-contrast;
   }
 
-  /* QR code full resolution in print */
+  /* Hero bottom-bleed image — taller, full width */
+  .proposal-hero img {
+    max-height: 55mm !important;
+  }
+
+  /* QR code full resolution in print — strictly square, crisp edges */
   .proposal-page img[alt="Payment QR"],
   .proposal-page img[alt="UPI QR"],
   .proposal-page img[alt*="QR"] {
-    max-height: 60mm !important;
-    width: 60mm !important;
-    object-fit: contain;
-    image-rendering: crisp-edges;
+    max-height: 55mm !important;
+    width: 55mm !important;
+    height: 55mm !important;
+    object-fit: contain !important;
+    image-rendering: crisp-edges !important;
   }
 
   /* Typography tightening for A4 */
-  .proposal-page .text-3xl { font-size: 1.5rem !important; }
-  .proposal-page .text-5xl { font-size: 2.25rem !important; }
-  .proposal-page .sm\:text-5xl { font-size: 2.25rem !important; }
+  .proposal-page .text-3xl { font-size: 1.4rem !important; }
+  .proposal-page .text-4xl { font-size: 1.7rem !important; }
+  .proposal-page .text-5xl { font-size: 2rem !important; }
+  .proposal-page .sm\:text-4xl { font-size: 1.7rem !important; }
+  .proposal-page .sm\:text-5xl { font-size: 2rem !important; }
+  .proposal-page .lg\:text-5xl { font-size: 2rem !important; }
 
-  /* Chart heights — keep them compact */
-  .proposal-page .h-44,
-  .proposal-page .sm\:h-56 { height: 9rem !important; }
-  .proposal-page .h-72,
-  .proposal-page .sm\:h-80 { height: 12rem !important; }
+  /* Chart heights — keep them readable but A4-safe */
+  .proposal-page .h-56 { height: 7rem !important; }
+  .proposal-page .sm\:h-72 { height: 8.5rem !important; }
+  .proposal-page .lg\:h-80 { height: 9rem !important; }
+  .proposal-page .h-72 { height: 10rem !important; }
+  .proposal-page .sm\:h-80 { height: 11rem !important; }
+
+  /* CRITICAL: Force animated chart bars to their final height for PDF capture.
+     Framer Motion may leave bars at height: 0 if useInView never fired
+     (off-screen during print). The --bar-target var carries the final %. */
+  .proposal-page .proposal-chart-bar {
+    height: var(--bar-target, 0%) !important;
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Force motion paths in line charts to fully draw */
+  .proposal-page svg path,
+  .proposal-page svg circle {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+
+  /* Reset all framer-motion transform/opacity that might leave content invisible */
+  .proposal-page [style*="opacity: 0"],
+  .proposal-page [style*="opacity:0"] {
+    opacity: 1 !important;
+  }
+
+  .proposal-page [style*="translate"] {
+    transform: none !important;
+  }
 }
