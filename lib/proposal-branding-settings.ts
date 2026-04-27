@@ -6,6 +6,8 @@ export type ProposalBrandingSettings = {
   installerLogoUrl: string;
   personalizedBranding: boolean;
   themePreset: ProposalThemePreset;
+  /** Payment QR code image URL (Supabase Storage). Shown on the Banking slide. */
+  paymentQrCodeUrl: string;
 };
 
 const STORAGE_KEY = "ss_proposal_branding_settings_v1";
@@ -15,7 +17,8 @@ export const DEFAULT_PROPOSAL_BRANDING_SETTINGS: ProposalBrandingSettings = {
   installerContact: "+91-9993322267",
   installerLogoUrl: "",
   personalizedBranding: true,
-  themePreset: "greenBlueClassic"
+  themePreset: "greenBlueClassic",
+  paymentQrCodeUrl: ""
 };
 
 export function readProposalBrandingSettings(): ProposalBrandingSettings {
@@ -35,7 +38,8 @@ export function readProposalBrandingSettings(): ProposalBrandingSettings {
       themePreset:
         parsed.themePreset === "greenBlueVivid" || parsed.themePreset === "greenBlueClassic"
           ? parsed.themePreset
-          : DEFAULT_PROPOSAL_BRANDING_SETTINGS.themePreset
+          : DEFAULT_PROPOSAL_BRANDING_SETTINGS.themePreset,
+      paymentQrCodeUrl: parsed.paymentQrCodeUrl?.trim() || ""
     };
   } catch {
     return { ...DEFAULT_PROPOSAL_BRANDING_SETTINGS };

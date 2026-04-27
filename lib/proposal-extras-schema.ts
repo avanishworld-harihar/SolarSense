@@ -46,7 +46,9 @@ export const bankDetailsSchema = z
     accountNumber: z.string().max(40).optional(),
     ifsc: z.string().max(20).optional(),
     branch: z.string().max(120).optional(),
-    upiId: z.string().max(120).optional()
+    upiId: z.string().max(120).optional(),
+    /** Uploaded payment QR code image (URL or base64 data-URI). Displayed on the Banking slide. */
+    paymentQrCodeUrl: z.string().max(600000).optional()
   })
   .optional();
 

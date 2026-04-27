@@ -997,12 +997,17 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
 
 @media (min-width: 768px) {
   .proposal-page {
-    background: white;
-    border: 1px solid rgb(226 232 240);
-    border-radius: 1.25rem;
-    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
     margin-top: 1.5rem;
-    box-shadow: 0 12px 30px rgba(11, 34, 64, 0.06);
+    box-shadow:
+      0 4px 24px rgba(11, 34, 64, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    /* Subtle glass for the page wrapper on screen */
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
   }
 
   .proposal-page > section,
@@ -1015,65 +1020,128 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
 
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 12mm;
+    size: 210mm 297mm; /* Exact A4 portrait */
+    margin: 14mm 12mm;
   }
 
-  html, body {
+  @page :first {
+    margin-top: 10mm;
+  }
+
+  html,
+  body {
     background: white !important;
-    color: #0B132B !important;
+    color: #0b132b !important;
+    font-size: 14px !important;
   }
 
   .proposal-document {
     max-width: none !important;
-    width: 100% !important;
+    width: 186mm !important; /* 210mm - 2×12mm margins */
     padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .proposal-page {
-    /* Each section becomes its own A4 page when printed. */
-    page-break-after: always;
-    break-after: page;
+    margin: 0 auto !important;
     background: white !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 0 0 0 !important;
   }
 
-  .proposal-page:last-child {
+  /* Every section = its own A4 page */
+  .proposal-page {
+    page-break-before: always;
+    break-before: page;
     page-break-after: auto;
     break-after: auto;
+    background: white !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 6mm 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
   }
 
-  /* Preserve brand gradients & solid backgrounds on print */
-  .proposal-page,
-  .proposal-page * {
+  .proposal-page:first-child {
+    page-break-before: auto;
+    break-before: auto;
+  }
+
+  /* Force vibrant colors & gradients in PDF */
+  *,
+  .proposal-page *,
+  .proposal-document * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Remove all backdrop-blur/glass effects for crisp print */
+  .proposal-page .backdrop-blur-sm,
+  .proposal-page .backdrop-blur,
+  .proposal-page .backdrop-blur-md,
+  .proposal-page .backdrop-blur-lg {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: white !important;
+  }
+
+  /* Solid white fallback for glass cards */
+  .proposal-page [class*="bg-white/"] {
+    background-color: white !important;
   }
 
   /* Hide on-screen chrome */
   .print\:hidden,
   .proposal-document .fixed,
   nav,
-  header[role="banner"] {
+  header[role="banner"],
+  [role="navigation"] {
     display: none !important;
+    visibility: hidden !important;
   }
 
-  /* Slightly tighter type and shorter charts so a slide fits one page */
+  /* Prevent awkward breaks */
   .proposal-page h1,
   .proposal-page h2,
-  .proposal-page h3 {
+  .proposal-page h3,
+  .proposal-page header {
     page-break-after: avoid;
     break-after: avoid;
+    orphans: 3;
+    widows: 3;
   }
 
   .proposal-page table,
   .proposal-page svg,
-  .proposal-page img {
+  .proposal-page img,
+  .proposal-page figure {
     page-break-inside: avoid;
     break-inside: avoid;
+    max-width: 100% !important;
   }
+
+  /* Ensure images render in PDF */
+  .proposal-page img {
+    display: block !important;
+    max-height: 80mm;
+    object-fit: cover;
+  }
+
+  /* QR code full resolution in print */
+  .proposal-page img[alt="Payment QR"],
+  .proposal-page img[alt="UPI QR"],
+  .proposal-page img[alt*="QR"] {
+    max-height: 60mm !important;
+    width: 60mm !important;
+    object-fit: contain;
+    image-rendering: crisp-edges;
+  }
+
+  /* Typography tightening for A4 */
+  .proposal-page .text-3xl { font-size: 1.5rem !important; }
+  .proposal-page .text-5xl { font-size: 2.25rem !important; }
+  .proposal-page .sm\:text-5xl { font-size: 2.25rem !important; }
+
+  /* Chart heights — keep them compact */
+  .proposal-page .h-44,
+  .proposal-page .sm\:h-56 { height: 9rem !important; }
+  .proposal-page .h-72,
+  .proposal-page .sm\:h-80 { height: 12rem !important; }
 }

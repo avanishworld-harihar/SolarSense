@@ -18,6 +18,7 @@ import {
 } from "@/lib/bill-parse";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import { INSTALLER_REGION_EVENT, readInstallerRegion } from "@/lib/installer-region-storage";
+import { readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast-center";
@@ -119,6 +120,7 @@ export default function ProposalPage() {
   const [bankIfsc, setBankIfsc] = useState("");
   const [bankBranch, setBankBranch] = useState("");
   const [bankUpiId, setBankUpiId] = useState("");
+  const [bankPaymentQrCodeUrl, setBankPaymentQrCodeUrl] = useState("");
   // Site / past-installation photos (Supabase Storage URLs, max 6).
   const [siteImageUrls, setSiteImageUrls] = useState<string[]>([]);
   // Company logo (Supabase Storage public URL).
@@ -168,6 +170,14 @@ export default function ProposalPage() {
       localStorage.setItem(CLIENT_REF_STORAGE_KEY, ref);
     }
     setClientRef(ref);
+
+    // Pre-populate payment QR from branding settings (set once in More > Banking & Payments).
+    try {
+      const branding = readProposalBrandingSettings();
+      if (branding.paymentQrCodeUrl) setBankPaymentQrCodeUrl(branding.paymentQrCodeUrl);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
@@ -746,7 +756,8 @@ if (billToAdd) {
         accountNumber: bankAccountNumber.trim() || undefined,
         ifsc: bankIfsc.trim() || undefined,
         branch: bankBranch.trim() || undefined,
-        upiId: bankUpiId.trim() || undefined
+        upiId: bankUpiId.trim() || undefined,
+        paymentQrCodeUrl: bankPaymentQrCodeUrl.trim() || undefined
       },
       siteImages: siteImages.length > 0 ? siteImages : undefined,
       installerLogoUrl: installerLogoUrl.trim() || undefined

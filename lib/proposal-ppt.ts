@@ -38,6 +38,8 @@ export type ProposalBankDetails = {
   ifsc?: string;
   branch?: string;
   upiId?: string;
+  /** Uploaded payment QR code image URL (Supabase Storage or data-URI). Shown in the Banking slide. */
+  paymentQrCodeUrl?: string;
 };
 
 export type ProposalFinanceOption = {

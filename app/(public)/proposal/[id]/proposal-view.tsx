@@ -4,28 +4,73 @@ import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
-  CalendarCheck,
+  Building2,
   CheckCircle2,
   Download,
   Factory,
   Gauge,
-  Globe,
+  Home,
   Languages,
   Leaf,
   MessageCircle,
+  Moon,
   Phone,
   ShieldCheck,
   Sparkles,
   Sun,
   TreeDeciduous,
-  Trophy,
-  Wrench,
   XCircle,
   Zap
 } from "lucide-react";
 import type { ProposalDeckSummary } from "@/lib/proposal-ppt";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
 import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
+
+// ---------------------------------------------------------------------------
+// Count-up animation hook
+// ---------------------------------------------------------------------------
+function useCountUp(target: number, inView: boolean, duration = 1.4) {
+  const [value, setValue] = useState(0);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (reduced) { setValue(target); return; }
+    if (!inView) return;
+    let start: number | null = null;
+    let raf: number;
+    const animate = (ts: number) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / (duration * 1000), 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, target, duration, reduced]);
+  return value;
+}
+
+function AnimatedINR({ value, prefix = "₹", className }: { value: number; prefix?: string; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-20px" });
+  const counted = useCountUp(value, inView);
+  return (
+    <span ref={ref} className={className}>
+      {prefix}{counted.toLocaleString("en-IN")}
+    </span>
+  );
+}
+
+function AnimatedNumber({ value, suffix = "", className }: { value: number; suffix?: string; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-20px" });
+  const counted = useCountUp(value, inView);
+  return (
+    <span ref={ref} className={className}>
+      {counted.toLocaleString("en-IN")}{suffix}
+    </span>
+  );
+}
 
 type ProposalViewProps = {
   id: string;
@@ -58,28 +103,45 @@ const inrK = (v: number) => {
 function StatTile({
   label,
   value,
+  rawValue,
   tone = "ink",
-  delay = 0
+  delay = 0,
+  dark = false
 }: {
   label: string;
   value: string;
+  rawValue?: number;
   tone?: "ink" | "blue" | "green" | "rose";
   delay?: number;
+  dark?: boolean;
 }) {
   const toneClass =
-    tone === "blue" ? "text-sky-700" :
-    tone === "green" ? "text-emerald-700" :
-    tone === "rose" ? "text-rose-700" : "text-slate-900";
+    tone === "blue" ? (dark ? "text-sky-300" : "text-sky-700") :
+    tone === "green" ? (dark ? "text-emerald-300" : "text-emerald-700") :
+    tone === "rose" ? (dark ? "text-rose-300" : "text-rose-700") :
+    (dark ? "text-white" : "text-slate-900");
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-30px" });
+  const counted = useCountUp(rawValue ?? 0, inView && rawValue !== undefined);
+  const displayValue = rawValue !== undefined
+    ? (value.startsWith("₹") ? `₹${counted.toLocaleString("en-IN")}` : counted.toLocaleString("en-IN") + value.replace(/^[\d,₹.]+/, ""))
+    : value;
+
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 14 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, delay, ease: [0.21, 1.02, 0.73, 1] }}
-      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+      className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${
+        dark
+          ? "border-white/10 bg-white/5 backdrop-blur-sm"
+          : "border-white/60 bg-white/80 backdrop-blur-sm shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
+      }`}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-bold sm:text-3xl ${toneClass}`}>{value}</p>
+      <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${dark ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
+      <p className={`mt-2 text-2xl font-bold sm:text-3xl ${toneClass}`}>{displayValue}</p>
     </motion.div>
   );
 }
@@ -111,7 +173,11 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
               animate={inView ? { height: `${target}%`, opacity: 1 } : undefined}
               transition={{ duration: 0.9, delay: i * 0.04, ease: [0.21, 1.02, 0.73, 1] }}
-              className={`w-full rounded-t-md ${isPeak ? "bg-gradient-to-t from-rose-500 to-rose-400 shadow-[0_2px_8px_rgba(244,63,94,0.35)]" : "bg-gradient-to-t from-sky-500 to-sky-400 shadow-[0_2px_8px_rgba(14,165,233,0.25)]"}`}
+              className={`w-full rounded-t-md ${
+                isPeak
+                  ? "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.5),0_2px_8px_rgba(244,63,94,0.35)]"
+                  : "bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4),0_2px_8px_rgba(14,165,233,0.25)]"
+              }`}
               aria-label={`${labels[i]}: ${v}`}
               style={{ minHeight: target > 0 ? 4 : 0 }}
             />
@@ -382,10 +448,10 @@ function HeroCover({
       {/* System summary bar */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} />
-        <StatTile label={D["common.panels"]} value={String(summary.panels)} delay={0.1} />
-        <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} tone="blue" delay={0.15} />
+        <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} />
+        <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} rawValue={summary.netCost} tone="blue" delay={0.15} />
         <StatTile label={D["common.payback"]} value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`} tone="green" delay={0.2} />
-        <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} />
+        <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} rawValue={summary.lifetime25Profit} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} />
       </div>
       <p className="mt-3 text-[11px] italic text-slate-500">{D["common.engineNote"]}</p>
     </section>
@@ -398,7 +464,7 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
       <SectionHeader kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} />
 
       {/* Bar chart with summer trap highlight */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-4 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
         <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
       </div>
 
@@ -443,25 +509,33 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
 
       {/* Insight cards */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+        <div className="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-rose-100/50 p-4 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-700">{D["insight.summer.title"]}</p>
-          <p className="mt-2 text-2xl font-bold text-rose-900 sm:text-3xl">{summary.summerPct}%</p>
+          <p className="mt-2 text-2xl font-bold text-rose-900 sm:text-3xl">
+            <AnimatedNumber value={summary.summerPct} suffix="%" />
+          </p>
           <p className="mt-1 text-xs text-rose-800">{D["insight.summer.sub"]}</p>
         </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+        <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">{D["insight.fixed.title"]}</p>
-          <p className="mt-2 text-2xl font-bold text-amber-900 sm:text-3xl">{inr(summary.fixedAnnual)}</p>
+          <p className="mt-2 text-2xl font-bold text-amber-900 sm:text-3xl">
+            <AnimatedINR value={summary.fixedAnnual} />
+          </p>
           <p className="mt-1 text-xs text-amber-800">{D["insight.fixed.sub"]}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+        <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-slate-100/50 p-4 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">{D["insight.duty.title"]}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">{inr(summary.auditTotals.duty + summary.auditTotals.fuel)}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+            <AnimatedINR value={summary.auditTotals.duty + summary.auditTotals.fuel} />
+          </p>
           <p className="mt-1 text-xs text-slate-700">{D["insight.duty.sub"]}</p>
         </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+        <div className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">{D["insight.solar.title"]}</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-900 sm:text-3xl">{summary.totalReduction}%</p>
-          <p className="mt-1 text-xs text-emerald-800">{inr(summary.annualSaving)} / yr</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-900 sm:text-3xl">
+            <AnimatedNumber value={summary.totalReduction} suffix="%" />
+          </p>
+          <p className="mt-1 text-xs text-emerald-800"><AnimatedINR value={summary.annualSaving} /> / yr</p>
         </div>
       </div>
     </section>
@@ -597,44 +671,115 @@ function EconomicsSection({
   );
 }
 
+function TreeAnimation({ count, inView }: { count: number; inView: boolean }) {
+  const treesPerRow = 8;
+  const maxTrees = Math.min(count, 24);
+  const rows = Math.ceil(maxTrees / treesPerRow);
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {Array.from({ length: maxTrees }).map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, scale: 0, y: 8 }}
+          animate={inView ? { opacity: 1, scale: 1, y: 0 } : undefined}
+          transition={{ duration: 0.4, delay: 0.5 + i * 0.04, ease: [0.34, 1.56, 0.64, 1] }}
+        >
+          <TreeDeciduous className="h-5 w-5 text-emerald-500 drop-shadow-[0_0_4px_rgba(16,185,129,0.5)]" />
+        </motion.div>
+      ))}
+      {count > maxTrees && (
+        <span className="self-center text-xs font-bold text-emerald-700">+{(count - maxTrees).toLocaleString("en-IN")}</span>
+      )}
+    </div>
+  );
+}
+
 function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: ProposalDeckSummary }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const treeCount = useCountUp(summary.environmental.treeEquivalent, inView);
+  const co2Count = useCountUp(summary.environmental.lifetimeCo2TonsSaved, inView);
+  const genCount = useCountUp(summary.annualGen, inView);
+
+  // 1-year tree equivalent
+  const yearlyTrees = Math.round(summary.environmental.treeEquivalent / 25);
+
   return (
     <section className="mt-12 sm:mt-16">
       <SectionHeader kicker={D["slide.environment.kicker"]} title={D["slide.environment.title"]} subtitle={D["slide.environment.subtitle"]} />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
-          <Leaf className="h-6 w-6 text-emerald-600" />
-          <p className="mt-3 text-3xl font-bold text-emerald-900">
-            {summary.environmental.lifetimeCo2TonsSaved}<span className="text-base font-medium"> t</span>
-          </p>
+      <div ref={ref} className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0 }}
+          className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 shadow-sm sm:p-5"
+        >
+          <Leaf className="h-6 w-6 text-emerald-600 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+          <p className="mt-3 text-3xl font-bold text-emerald-900">{co2Count}<span className="text-base font-medium"> t</span></p>
           <p className="mt-1 text-[11px] uppercase tracking-widest text-emerald-700">{D["env.co2"]}</p>
-        </div>
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
-          <TreeDeciduous className="h-6 w-6 text-emerald-600" />
-          <p className="mt-3 text-3xl font-bold text-emerald-900">
-            {summary.environmental.treeEquivalent.toLocaleString("en-IN")}
-          </p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.06 }}
+          className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-teal-100/50 p-4 shadow-sm sm:p-5"
+        >
+          <TreeDeciduous className="h-6 w-6 text-emerald-600 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+          <p className="mt-3 text-3xl font-bold text-emerald-900">{treeCount.toLocaleString("en-IN")}</p>
           <p className="mt-1 text-[11px] uppercase tracking-widest text-emerald-700">{D["env.trees"]}</p>
-        </div>
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 sm:p-5">
-          <Sun className="h-6 w-6 text-sky-600" />
-          <p className="mt-3 text-3xl font-bold text-sky-900">
-            {summary.annualGen.toLocaleString("en-IN")}<span className="text-base font-medium"> u</span>
-          </p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.12 }}
+          className="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 to-sky-100/50 p-4 shadow-sm sm:p-5"
+        >
+          <Sun className="h-6 w-6 text-sky-600 drop-shadow-[0_0_8px_rgba(14,165,233,0.4)]" />
+          <p className="mt-3 text-3xl font-bold text-sky-900">{genCount.toLocaleString("en-IN")}<span className="text-base font-medium"> u</span></p>
           <p className="mt-1 text-[11px] uppercase tracking-widest text-sky-700">{D["env.solarYearly"]}</p>
-        </div>
-        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4 sm:p-5">
-          <Sparkles className="h-6 w-6 text-violet-600" />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.18 }}
+          className="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50 to-violet-100/50 p-4 shadow-sm sm:p-5"
+        >
+          <Sparkles className="h-6 w-6 text-violet-600 drop-shadow-[0_0_8px_rgba(139,92,246,0.4)]" />
           <p className="mt-3 text-3xl font-bold text-violet-900">{summary.coverage}%</p>
           <p className="mt-1 text-[11px] uppercase tracking-widest text-violet-700">{D["env.coverage"]}</p>
-        </div>
+        </motion.div>
       </div>
+
+      {/* Animated carbon offset highlight card */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, delay: 0.2 }}
+        className="mt-5 overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 p-6 text-white shadow-[0_8px_40px_rgba(16,185,129,0.25)] sm:p-8"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">Your 1-Year Carbon Offset</p>
+            <p className="mt-3 text-2xl font-bold sm:text-3xl">
+              Equivalent to planting{" "}
+              <AnimatedNumber
+                value={yearlyTrees}
+                className="text-emerald-300"
+              />{" "}
+              trees 🌳
+            </p>
+            <p className="mt-2 text-sm text-emerald-200/80">
+              Over 25 years — <span className="font-bold text-emerald-300">{summary.environmental.treeEquivalent.toLocaleString("en-IN")} trees</span> worth of CO₂ absorbed.
+            </p>
+          </div>
+          <TreeDeciduous className="h-16 w-16 flex-shrink-0 text-emerald-400 opacity-30" />
+        </div>
+        <TreeAnimation count={Math.min(yearlyTrees, 40)} inView={inView} />
+      </motion.div>
+
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="mt-6 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white sm:p-10"
+        transition={{ duration: 0.6, delay: 0.1 }}
+        className="mt-4 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white sm:p-10"
       >
         <p className="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">{D["env.legacy.title"]}</p>
         <p className="mt-3 text-base text-slate-300 sm:text-lg">{D["env.legacy.sub"]}</p>
@@ -646,67 +791,220 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
 function CompanyProfileSection({
   D,
   summary,
-  siteImages
+  siteImages,
+  installerLogoUrl
 }: {
   D: ProposalDict;
   summary: ProposalDeckSummary;
   siteImages?: string[];
+  installerLogoUrl?: string;
 }) {
   const cp = summary.companyProfile;
+  const heroImage = siteImages?.[0];
+  const actionImage = siteImages?.[1];
+  const expertiseCategories = [
+    {
+      icon: Home,
+      title: "Residential Solar",
+      subtitle: "Homes & Apartments",
+      color: "sky",
+      bullets: ["1–10 kW rooftop systems", "PM Surya Ghar subsidy eligible", "25-year performance warranty"],
+      img: siteImages?.[2]
+    },
+    {
+      icon: Building2,
+      title: "Commercial Solar",
+      subtitle: "Shops & Offices",
+      color: "violet",
+      bullets: ["10–100 kW on-grid systems", "Accelerated depreciation benefits", "Net metering + export income"],
+      img: siteImages?.[3]
+    },
+    {
+      icon: Factory,
+      title: "Industrial Solar",
+      subtitle: "Factories & Plants",
+      color: "amber",
+      bullets: ["100 kW+ ground/rooftop", "HT / LT connection solutions", "Custom energy audit + BOM"],
+      img: siteImages?.[4]
+    }
+  ];
+
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.about.kicker"]} title={D["slide.about.title"]} />
-      <div className="grid gap-4 sm:grid-cols-5">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:col-span-3 sm:p-6">
-          <div className="space-y-3 text-sm leading-relaxed text-slate-700 sm:text-base">
-            {cp.aboutUsParagraphs.map((p, i) => (<p key={i}>{p}</p>))}
+    <>
+      {/* Page 1 — Identity */}
+      <section className="mt-12 sm:mt-16">
+        <SectionHeader kicker={D["slide.about.kicker"]} title={D["slide.about.title"]} />
+        <div className="grid gap-4 sm:grid-cols-5">
+          {/* About content */}
+          <motion.div
+            initial={{ opacity: 0, x: -16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:col-span-3 sm:p-6"
+          >
+            {/* Company identity header */}
+            <div className="flex items-center gap-3 mb-4">
+              {installerLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={installerLogoUrl} alt={summary.installer} className="h-12 w-12 rounded-xl object-contain border border-slate-100 shadow-sm" />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 shadow-md">
+                  <Sun className="h-6 w-6 text-white" />
+                </div>
+              )}
+              <div>
+                <p className="text-lg font-bold text-slate-900 leading-tight">{summary.installer}</p>
+                <p className="text-xs text-slate-500">{summary.tagline}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm leading-relaxed text-slate-700 sm:text-base">
+              {cp.aboutUsParagraphs.map((p, i) => (<p key={i}>{p}</p>))}
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {[
+                { l: D["about.founded"], v: cp.founded },
+                { l: D["about.gst"], v: cp.gstNumber },
+                { l: D["about.installations"], v: cp.installationsDone },
+                { l: D["about.locations"], v: cp.locations }
+              ].map((item, i) => (
+                <motion.div
+                  key={item.l}
+                  initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: 0.1 + i * 0.06 }}
+                  className="rounded-xl bg-slate-50/80 p-3 border border-slate-100"
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{item.l}</p>
+                  <p className="mt-1 text-base font-bold text-slate-900">{item.v}</p>
+                </motion.div>
+              ))}
+            </div>
+            <ul className="mt-5 space-y-2">
+              {cp.bullets.map((b, i) => (
+                <motion.li
+                  key={b}
+                  initial={{ opacity: 0, x: -8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+                  transition={{ duration: 0.35, delay: 0.2 + i * 0.05 }}
+                  className="flex items-start gap-2 text-sm text-slate-700"
+                >
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
+                  <span>{b}</span>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* Action photo (floating right) */}
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            {actionImage ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 12 }} whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.15 }}
+                className="relative overflow-hidden rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={actionImage} alt="Team in action" className="h-56 w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
+              </motion.div>
+            ) : (
+              <div className="flex h-56 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50">
+                <span className="text-[11px] uppercase tracking-widest text-slate-400">Action Photo</span>
+              </div>
+            )}
+            {/* Stats strip */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 text-center shadow-sm">
+                <p className="text-2xl font-black text-emerald-900">{cp.installationsDone}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Installs</p>
+              </div>
+              <div className="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50 to-sky-100/50 p-4 text-center shadow-sm">
+                <p className="text-2xl font-black text-sky-900">{cp.founded}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-sky-700">Est.</p>
+              </div>
+            </div>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{D["about.founded"]}</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{cp.founded}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{D["about.gst"]}</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{cp.gstNumber}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{D["about.installations"]}</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{cp.installationsDone}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{D["about.locations"]}</p>
-              <p className="mt-1 text-base font-bold text-slate-900">{cp.locations}</p>
-            </div>
-          </div>
-          <ul className="mt-5 space-y-2">
-            {cp.bullets.map((b) => (
-              <li key={b} className="flex items-start gap-2 text-sm text-slate-700">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-1">
-          {[0, 1, 2].map((i) => {
-            const url = siteImages?.[i];
+
+        {/* Wide-angle hero image — bottom bleed effect */}
+        {heroImage ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className="relative mt-5 overflow-hidden rounded-3xl shadow-[0_16px_60px_rgba(0,0,0,0.18)]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroImage} alt="Installation" className="h-52 w-full object-cover sm:h-72" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+            <div className="absolute bottom-4 left-6">
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-300">Excellence in Every Install</p>
+              <p className="mt-1 text-lg font-bold text-white">{summary.installer}</p>
+            </div>
+          </motion.div>
+        ) : null}
+      </section>
+
+      {/* Page 2 — Expertise Verticals */}
+      <section className="mt-12 sm:mt-16">
+        <SectionHeader
+          kicker="Our Expertise"
+          title="Solutions for Every Scale"
+          subtitle="From home rooftops to industrial megawatts — we engineer the right system for you."
+        />
+        <div className="grid gap-4 sm:grid-cols-3">
+          {expertiseCategories.map((cat, i) => {
+            const colorMap: Record<string, string> = {
+              sky: "border-sky-200/70 bg-gradient-to-br from-sky-50 to-white",
+              violet: "border-violet-200/70 bg-gradient-to-br from-violet-50 to-white",
+              amber: "border-amber-200/70 bg-gradient-to-br from-amber-50 to-white"
+            };
+            const iconMap: Record<string, string> = {
+              sky: "bg-sky-500",
+              violet: "bg-violet-500",
+              amber: "bg-amber-500"
+            };
+            const textMap: Record<string, string> = {
+              sky: "text-sky-900",
+              violet: "text-violet-900",
+              amber: "text-amber-900"
+            };
             return (
-              <div key={i} className="aspect-[4/3] overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                {url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={url} alt={`Site ${i + 1}`} className="h-full w-full object-cover" />
+              <motion.div
+                key={cat.title}
+                initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 + i * 0.1 }}
+                className={`overflow-hidden rounded-2xl border shadow-sm ${colorMap[cat.color]}`}
+              >
+                {cat.img ? (
+                  <div className="relative h-36 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cat.img} alt={cat.title} className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  </div>
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-slate-400">
-                    <span className="text-[11px] uppercase tracking-widest">Site Photo {i + 1}</span>
+                  <div className={`flex h-36 items-center justify-center ${iconMap[cat.color]}`}>
+                    <cat.icon className="h-16 w-16 text-white/30" />
                   </div>
                 )}
-              </div>
+                <div className="p-4">
+                  <div className={`inline-flex h-9 w-9 items-center justify-center rounded-xl ${iconMap[cat.color]} shadow-sm`}>
+                    <cat.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <p className={`mt-2 text-base font-bold ${textMap[cat.color]}`}>{cat.title}</p>
+                  <p className="text-[11px] font-semibold text-slate-500">{cat.subtitle}</p>
+                  <ul className="mt-3 space-y-1.5">
+                    {cat.bullets.map((b) => (
+                      <li key={b} className="flex items-start gap-1.5 text-xs text-slate-700">
+                        <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current opacity-50" />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </motion.div>
             );
           })}
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
 
@@ -1059,21 +1357,22 @@ function BankingSection({
     { l: D["bank.upiId"], v: bnk.upiId ?? "—" }
   ];
 
-  // Site photo gallery takes priority — when the installer has uploaded any
-  // photos, the right column becomes a "Recent Installations" grid. Otherwise
-  // fall back to the QR (UPI first, web-link second).
+  // Priority: uploaded payment QR > site photo gallery > auto-generated UPI/web QR
+  const uploadedQr = bnk.paymentQrCodeUrl?.trim();
   const photos = (siteImages ?? []).filter((u) => typeof u === "string" && u.length > 0).slice(0, 6);
-  const showGallery = photos.length > 0;
+  const showGallery = !uploadedQr && photos.length > 0;
   const galleryTitle = lang === "hi" ? "हमारे संस्थापन" : "Recent Installations";
-  const qrCaption = summary.upiLink
-    ? D["bank.scanQr"]
-    : (lang === "hi" ? "वेब प्रपोजल देखने के लिए स्कैन करें" : "Scan to view this proposal online");
+  const qrCaption = uploadedQr
+    ? (lang === "hi" ? "भुगतान QR कोड" : "Payment QR Code")
+    : summary.upiLink
+      ? D["bank.scanQr"]
+      : (lang === "hi" ? "वेब प्रपोजल देखने के लिए स्कैन करें" : "Scan to view this proposal online");
 
   return (
     <section className="mt-12 sm:mt-16">
       <SectionHeader kicker={D["slide.banking.kicker"]} title={D["slide.banking.title"]} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-slate-700" />
             <p className="text-sm font-bold text-slate-900">Bank Transfer</p>
@@ -1088,7 +1387,7 @@ function BankingSection({
           </div>
         </div>
         {showGallery ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">{galleryTitle}</p>
             <p className="mt-1 text-[11px] text-slate-500">
               {lang === "hi" ? "हमारी हाल की कुछ इंस्टॉलेशन।" : "A few of our recent rooftop installations."}
@@ -1103,10 +1402,21 @@ function BankingSection({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6"
+          >
             <p className="text-sm font-bold text-slate-900">{qrCaption}</p>
-            <div className="mt-4 flex h-56 w-56 items-center justify-center rounded-2xl bg-slate-50">
-              {qrDataUrl ? (
+            <div className="mt-4 flex h-60 w-60 items-center justify-center rounded-2xl bg-slate-50 p-2 shadow-inner">
+              {uploadedQr ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={uploadedQr}
+                  alt="Payment QR"
+                  className="h-56 w-56 rounded-xl object-contain"
+                />
+              ) : qrDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={qrDataUrl} alt={summary.upiLink ? "UPI QR" : "Web proposal QR"} className="h-52 w-52" />
               ) : (
@@ -1118,7 +1428,12 @@ function BankingSection({
             {bnk.upiId ? (
               <p className="mt-3 text-xs italic text-slate-500">{bnk.upiId}</p>
             ) : null}
-          </div>
+            {uploadedQr && (
+              <p className="mt-2 text-[10px] font-semibold text-emerald-700 uppercase tracking-wider">
+                Scan to Pay · High-resolution
+              </p>
+            )}
+          </motion.div>
         )}
       </div>
       <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-center text-xs font-bold text-emerald-800">
@@ -1209,6 +1524,7 @@ export default function ProposalView({
   const [downloading, setDownloading] = useState(false);
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
   const [selectedAmcYears, setSelectedAmcYears] = useState<1 | 5 | 10>(summary.amcSelectedYears ?? 5);
+  const [darkMode, setDarkMode] = useState(false);
 
   const D = dict(lang);
   const monthLbls = monthLabels(lang);
@@ -1263,21 +1579,46 @@ export default function ProposalView({
   // document is constrained to A4 width (`max-w-[210mm]`) for a real "document"
   // feel; on mobile the sections stack vertically full-bleed.
   return (
-    <div className="proposal-document mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0">
-      {/* Floating language toggle — hidden in print */}
-      <div className="mb-2 flex items-center justify-end gap-2 print:hidden">
+    <div
+      className={`proposal-document mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
+        darkMode ? "bg-slate-950 text-white" : "bg-transparent"
+      }`}
+      data-theme={darkMode ? "dark" : "light"}
+    >
+      {/* Floating controls — hidden in print */}
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-2 print:hidden">
         <button
           type="button"
           onClick={() => setLang((l) => (l === "en" ? "hi" : "en"))}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors ${
+            darkMode
+              ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
+              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          }`}
         >
           <Languages className="h-3.5 w-3.5" />
           {lang === "en" ? "हिन्दी" : "English"}
         </button>
         <button
           type="button"
+          onClick={() => setDarkMode((d) => !d)}
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors ${
+            darkMode
+              ? "border-yellow-500/50 bg-yellow-900/40 text-yellow-300 hover:bg-yellow-900/60"
+              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          {darkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          {darkMode ? "Light" : "Dark"}
+        </button>
+        <button
+          type="button"
           onClick={() => { if (typeof window !== "undefined") window.print(); }}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors ${
+            darkMode
+              ? "border-slate-600 bg-slate-800 text-slate-200 hover:bg-slate-700"
+              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          }`}
         >
           <Download className="h-3.5 w-3.5" />
           {lang === "en" ? "Print / PDF" : "प्रिंट / PDF"}
@@ -1301,7 +1642,7 @@ export default function ProposalView({
       </div>
 
       <div className="proposal-page">
-        <CompanyProfileSection D={D} summary={summary} siteImages={siteImages} />
+        <CompanyProfileSection D={D} summary={summary} siteImages={siteImages} installerLogoUrl={installerLogoUrl} />
       </div>
 
       <div className="proposal-page">

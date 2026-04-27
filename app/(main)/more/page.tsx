@@ -40,6 +40,7 @@ import {
   CreditCard,
   MapPin,
   Palette,
+  QrCode,
   ReceiptText,
   Settings2,
   ShieldCheck,
@@ -65,8 +66,10 @@ export default function MorePage() {
   const [companyName, setCompanyName] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName);
   const [companyContact, setCompanyContact] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact);
   const [companyLogo, setCompanyLogo] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerLogoUrl);
+  const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.paymentQrCodeUrl);
   const [personalizedBranding, setPersonalizedBranding] = useState(true);
   const [themePreset, setThemePreset] = useState<ProposalThemePreset>("greenBlueClassic");
+  const [uploadingQr, setUploadingQr] = useState(false);
   const [lastRateReportAt, setLastRateReportAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [reportingRateChange, setReportingRateChange] = useState(false);
@@ -98,6 +101,7 @@ export default function MorePage() {
       setCompanyName(settings.installerName);
       setCompanyContact(settings.installerContact);
       setCompanyLogo(settings.installerLogoUrl);
+      setPaymentQrCodeUrl(settings.paymentQrCodeUrl ?? "");
       setPersonalizedBranding(settings.personalizedBranding);
       setThemePreset(settings.themePreset);
       const last = localStorage.getItem(STORAGE_LAST_RATE_REPORT_AT);
@@ -266,26 +270,44 @@ export default function MorePage() {
     markSaved(`Performance mode set to ${PERFORMANCE_MODE_OPTIONS.find((o) => o.id === mode)?.label ?? mode}.`);
   }
 
-  function saveCompanyProfile() {
-    writeProposalBrandingSettings({
+  function currentBrandingSettings() {
+    return {
       installerName: companyName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName,
       installerContact: companyContact.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact,
       installerLogoUrl: companyLogo.trim(),
       personalizedBranding,
-      themePreset
-    });
+      themePreset,
+      paymentQrCodeUrl: paymentQrCodeUrl.trim()
+    };
+  }
+
+  function saveCompanyProfile() {
+    writeProposalBrandingSettings(currentBrandingSettings());
     markSaved("Company profile saved for PPT/PDF branding.");
   }
 
   function saveProposalStyles() {
-    writeProposalBrandingSettings({
-      installerName: companyName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName,
-      installerContact: companyContact.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact,
-      installerLogoUrl: companyLogo.trim(),
-      personalizedBranding,
-      themePreset
-    });
+    writeProposalBrandingSettings(currentBrandingSettings());
     markSaved("Proposal style updated with smooth preview settings.");
+  }
+
+  async function uploadPaymentQr(file: File | null) {
+    if (!file) return;
+    setUploadingQr(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/company-logo-upload", { method: "POST", body: form });
+      const payload = (await res.json()) as { ok?: boolean; url?: string; error?: string };
+      if (!res.ok || !payload.ok || !payload.url) throw new Error(payload.error || "QR upload failed.");
+      setPaymentQrCodeUrl(payload.url);
+      writeProposalBrandingSettings({ ...currentBrandingSettings(), paymentQrCodeUrl: payload.url });
+      markSaved("Payment QR code uploaded and saved.");
+    } catch (e) {
+      markIssue(e instanceof Error ? e.message : "QR upload failed.");
+    } finally {
+      setUploadingQr(false);
+    }
   }
 
   function saveOperatingRegion() {
@@ -420,6 +442,58 @@ export default function MorePage() {
           <button type="button" onClick={saveCompanyProfile} className="ss-cta-primary mt-2 w-full sm:w-auto">
             Save Company Profile
           </button>
+        </SectionCard>
+
+        <SectionCard icon={QrCode} title="Banking & Payments" subtitle="Upload your Payment QR code once — it appears on every web proposal Banking slide.">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Payment QR Code</p>
+              <p className="text-[11px] font-medium text-slate-500">
+                Upload your UPI / bank QR code. It replaces the auto-generated UPI QR on the proposal Banking slide — higher resolution, easier to scan.
+              </p>
+              <label className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-brand-300 bg-brand-50 px-4 text-xs font-bold text-brand-800 hover:bg-brand-100">
+                {uploadingQr ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                Upload QR Image
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => void uploadPaymentQr(e.target.files?.[0] ?? null)}
+                  disabled={uploadingQr}
+                />
+              </label>
+              {paymentQrCodeUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentQrCodeUrl("");
+                    writeProposalBrandingSettings({ ...currentBrandingSettings(), paymentQrCodeUrl: "" });
+                    markSaved("Payment QR code removed.");
+                  }}
+                  className="ml-2 text-[11px] font-semibold text-rose-600 hover:underline"
+                >
+                  Remove QR
+                </button>
+              )}
+            </div>
+            {paymentQrCodeUrl ? (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Preview</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={paymentQrCodeUrl}
+                  alt="Payment QR preview"
+                  className="h-32 w-32 rounded-xl border border-slate-200 object-contain p-1 shadow-sm"
+                />
+                <p className="text-[10px] text-emerald-700 font-semibold">✓ Will show on proposal Banking slide</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-4">
+                <QrCode className="h-8 w-8 text-slate-300" />
+                <p className="text-[11px] text-slate-400">QR preview will appear here</p>
+              </div>
+            )}
+          </div>
         </SectionCard>
 
         <SectionCard icon={ReceiptText} title="Tariff Center" subtitle="Keep numbers trustworthy — transparent tariff signal builds buyer confidence.">
