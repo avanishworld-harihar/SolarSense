@@ -139,6 +139,7 @@ export default function ProposalPage() {
   const [manual, setManual] = useState<ManualProposalCustomer>({
     leadContactName: "",
     leadPhone: "",
+    billPhone: "",
     officialBillName: "",
     city: "",
     discom: "",
@@ -574,7 +575,7 @@ if (billToAdd) {
         meterNumber: prev.meterNumber || data.meter_number || "",
         connectionDate: prev.connectionDate || data.connection_date || "",
         phase: prev.phase || data.phase || "",
-        leadPhone: prev.leadPhone || data.registered_mobile || "",
+        billPhone: prev.billPhone || data.registered_mobile || "",
         connectionType: prev.connectionType || data.connection_type || "",
         sanctionedLoad: prev.sanctionedLoad || data.sanctioned_load || "",
         billingAddress: prev.billingAddress || data.address || "",
@@ -903,7 +904,7 @@ if (billToAdd) {
       ``,
       `Full interactive proposal: ${latestWebProposalUrl}`
     ].join("\n");
-    const phone = (manual.leadPhone || "").replace(/[^\d]/g, "");
+    const phone = (manual.leadPhone || manual.billPhone || "").replace(/[^\d]/g, "");
     const url = phone
       ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
       : `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -1078,54 +1079,50 @@ if (billToAdd) {
             onChange={(e) => setManual((p) => ({ ...p, officialBillName: e.target.value }))}
           />
 
-          {!leadSelected ? (
-            <>
-              <FloatingLabelInput
-                label={t("proposal_walkInContactPlaceholder")}
-                value={manual.leadContactName}
-                onChange={(e) => setManual((p) => ({ ...p, leadContactName: e.target.value }))}
-              />
-              <FloatingLabelInput
-                label={t("proposal_walkInPhonePlaceholder")}
-                value={manual.leadPhone}
-                onChange={(e) => setManual((p) => ({ ...p, leadPhone: e.target.value }))}
-              />
-            </>
-          ) : null}
+          {!leadSelected && (
+            <FloatingLabelInput
+              label={t("proposal_walkInContactPlaceholder")}
+              value={manual.leadContactName}
+              onChange={(e) => setManual((p) => ({ ...p, leadContactName: e.target.value }))}
+            />
+          )}
+          <FloatingLabelInput
+            label="Lead / Contact Mobile No."
+            value={manual.leadPhone}
+            onChange={(e) => setManual((p) => ({ ...p, leadPhone: e.target.value }))}
+          />
+          <FloatingLabelInput
+            label="Bill Registered Mobile No."
+            value={manual.billPhone}
+            onChange={(e) => setManual((p) => ({ ...p, billPhone: e.target.value }))}
+          />
 
           <FloatingLabelInput
             label={`${t("customers_placeholderCity")} / district`}
             value={manual.city}
             onChange={(e) => setManual((p) => ({ ...p, city: e.target.value }))}
           />
-          <div className="space-y-1.5 sm:col-span-2">
-            <FloatingLabelSelect
-              label={t("proposal_discomPickSub")}
-              suppressHydrationWarning
-              disabled={!stateQuery}
-              value={manual.discom && discomOptions.some((o) => o.code === manual.discom) ? manual.discom : ""}
-              onChange={(e) => setManual((p) => ({ ...p, discom: e.target.value }))}
-            >
-              {!stateQuery ? (
-                <option value="">{t("dashboard_selectState")}</option>
-              ) : (
-                <>
-                  <option value="">{t("proposal_discomPickPlaceholder")}</option>
-                  {discomOptions.map((o) => (
-                    <option key={o.id} value={o.code}>
-                      {o.name} — {o.code}
-                    </option>
-                  ))}
-                </>
-              )}
-            </FloatingLabelSelect>
-            <FloatingLabelInput
-              label={`${t("customers_placeholderDiscom")} (e.g. MPPKVVCL)`}
-              disabled={!stateQuery}
-              value={manual.discom}
-              onChange={(e) => setManual((p) => ({ ...p, discom: e.target.value }))}
-            />
-          </div>
+          <FloatingLabelSelect
+            label={t("proposal_discomPickSub")}
+            suppressHydrationWarning
+            containerClassName="sm:col-span-2"
+            disabled={!stateQuery}
+            value={manual.discom && discomOptions.some((o) => o.code === manual.discom) ? manual.discom : ""}
+            onChange={(e) => setManual((p) => ({ ...p, discom: e.target.value }))}
+          >
+            {!stateQuery ? (
+              <option value="">{t("dashboard_selectState")}</option>
+            ) : (
+              <>
+                <option value="">{t("proposal_discomPickPlaceholder")}</option>
+                {discomOptions.map((o) => (
+                  <option key={o.id} value={o.code}>
+                    {o.name} — {o.code}
+                  </option>
+                ))}
+              </>
+            )}
+          </FloatingLabelSelect>
           <FloatingLabelSelect
             label={t("proposal_statePlaceholder")}
             suppressHydrationWarning
@@ -1251,7 +1248,7 @@ if (billToAdd) {
               />
               <span className="text-sm font-bold text-brand-700">kW</span>
             </div>
-            {[1, 1.5, 2, 3, 4, 5, 6, 7.5, 10].map((v) => (
+            {[1, 2, 3, 4, 5, 6, 7.5, 10, 15, 20, 25, 30, 50, 75, 100, 150, 200].map((v) => (
               <button
                 key={v}
                 type="button"
@@ -1479,6 +1476,7 @@ function manualSnapshot(manual: ManualProposalCustomer): Record<string, string> 
   return {
     leadContactName: manual.leadContactName,
     leadPhone: manual.leadPhone,
+    billPhone: manual.billPhone,
     officialBillName: manual.officialBillName,
     city: manual.city,
     discom: manual.discom,

@@ -4,7 +4,10 @@ import type { ParsedBillShape } from "@/lib/bill-parse";
 export type ManualProposalCustomer = {
   /** CRM / who to call — from selected lead or walk-in entry */
   leadContactName: string;
+  /** Contact / CRM mobile number */
   leadPhone: string;
+  /** Registered mobile number printed on electricity bill (may differ from lead phone) */
+  billPhone: string;
   /** Name printed on electricity bill — may differ from lead contact */
   officialBillName: string;
   city: string;
