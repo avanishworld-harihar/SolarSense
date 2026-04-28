@@ -1043,18 +1043,37 @@ export default function ProposalPage() {
   }
 
   async function saveToPipeline() {
-    if (!selectedLeadId) {
-      toast.error("No lead selected", "Select a CRM lead first to save to pipeline.");
-      return;
-    }
     setIsSavingPipeline(true);
     try {
       const customerName = manual.officialBillName || manual.leadContactName || "Customer";
+      let leadId = selectedLeadId;
+      if (!leadId) {
+        const createLeadResp = await fetch("/api/customers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: customerName,
+            city: manual.city.trim() || "Unknown",
+            state: manual.state.trim() || undefined,
+            discom: manual.discom.trim() || installerDiscom || "Unknown",
+            monthly_bill: Math.max(0, Math.round(effectiveResult.currentMonthlyBill || 0)),
+            phone: manual.leadPhone.trim() || manual.billPhone.trim() || undefined
+          })
+        });
+        if (!createLeadResp.ok) {
+          const j = (await createLeadResp.json().catch(() => ({}))) as { error?: string };
+          throw new Error(j.error || "Lead create failed");
+        }
+        const j = (await createLeadResp.json()) as { data?: { id?: string } };
+        leadId = j.data?.id ?? "";
+        if (!leadId) throw new Error("Lead create response missing id");
+        setSelectedLeadId(leadId);
+      }
       const resp = await fetch("/api/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lead_id: selectedLeadId,
+          lead_id: leadId,
           official_name: customerName,
           capacity_kw: `${effectiveResult.solarKw} kW`,
           detail: manual.city.trim() || undefined,
@@ -1068,6 +1087,8 @@ export default function ProposalPage() {
         throw new Error(j.error || "Pipeline save failed");
       }
       void mutateGlobal(PIPELINE_SWR_KEY);
+      void mutateGlobal(CUSTOMERS_SWR_KEY);
+      void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
       toast.success("Saved to pipeline", `${customerName} — ${effectiveResult.solarKw} kW added to project pipeline.`);
     } catch (err) {
       toast.error("Pipeline save failed", err instanceof Error ? err.message : "Could not save.");
@@ -1605,17 +1626,15 @@ export default function ProposalPage() {
             {isCopyingSummary ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <MessageCircle className="mr-2 h-4 w-4" />}
             Copy Summary
           </button>
-          {selectedLeadId && (
-            <button
-              type="button"
-              className="ss-cta-secondary border-indigo-400 text-indigo-700 hover:bg-indigo-50 sm:text-base"
-              disabled={isSavingPipeline}
-              onClick={() => void saveToPipeline()}
-            >
-              {isSavingPipeline ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <FileUp className="mr-2 h-4 w-4" />}
-              Save to Pipeline
-            </button>
-          )}
+          <button
+            type="button"
+            className="ss-cta-secondary border-indigo-400 text-indigo-700 hover:bg-indigo-50 sm:text-base"
+            disabled={isSavingPipeline}
+            onClick={() => void saveToPipeline()}
+          >
+            {isSavingPipeline ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <FileUp className="mr-2 h-4 w-4" />}
+            Save to Pipeline
+          </button>
         </div>
         {latestWebProposalUrl ? (
           <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50/60 p-3 text-xs sm:text-sm">
