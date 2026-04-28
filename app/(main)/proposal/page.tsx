@@ -40,6 +40,7 @@ import useSWR, { useSWRConfig } from "swr";
 const PIPELINE_SWR_KEY = "/api/pipeline";
 const CLIENT_REF_STORAGE_KEY = "ss_device_ref";
 const LEARNED_BILL_PROFILE_KEY = "ss_bill_upload_profile_v1";
+const SESSION_STATE_KEY = "ss_proposal_session_v2";
 
 type LearnedBillProfile = {
   requiredBills: number;
@@ -70,6 +71,18 @@ function billInrFromParsed(v: number | string | null | undefined): number | unde
   if (typeof v === "number" && Number.isFinite(v)) return v;
   const n = parseFloat(String(v).replace(/,/g, "").replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Keep only the first meaningful token from connection_type so bill-printed codes
+ * like "LT" / "LV2.2" / "LT-II" are not expanded by the AI into long descriptions.
+ * Max 40 chars; strips trailing " - description" patterns.
+ */
+function truncateConnectionType(raw: string): string {
+  if (!raw) return "";
+  // Remove " - " and anything after it (AI often appends " - Low Tension / Commercial…")
+  const cleaned = raw.replace(/\s*[-–]\s+(low tension|high tension|commercial|domestic|industrial|lt|ht).*/i, "").trim();
+  return cleaned.slice(0, 40).trim();
 }
 
 function parseManualContractKva(s: string): number | undefined {
@@ -133,14 +146,45 @@ async function swrCustomersSafe(url: string) {
   }
 }
 
+type SessionSnap = {
+  manual: ManualProposalCustomer;
+  monthlyUnits: MonthlyUnits;
+  latestBill: ParsedBillShape | null;
+  additionalBills: (ParsedBillShape | null)[];
+  auditedMonthTotals: Partial<Record<keyof MonthlyUnits, number>>;
+  overrideSolarKw: string;
+  overridePanels: string;
+};
+
+function loadSession(): SessionSnap | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STATE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SessionSnap;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(snap: SessionSnap) {
+  try {
+    sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify(snap));
+  } catch {
+    /* quota exceeded or private mode — ignore */
+  }
+}
+
 export default function ProposalPage() {
   const { t } = useLanguage();
   const toast = useToast();
   const { mutate: mutateGlobal } = useSWRConfig();
-  const [monthlyUnits, setMonthlyUnits] = useState<MonthlyUnits>(() => emptyMonthlyUnits());
-  const [latestBill, setLatestBill] = useState<ParsedBillShape | null>(null);
-  const [additionalBills, setAdditionalBills] = useState<(ParsedBillShape | null)[]>([]);
-  const [auditedMonthTotals, setAuditedMonthTotals] = useState<Partial<Record<keyof MonthlyUnits, number>>>({});
+
+  const sessionSnap = useMemo(() => loadSession(), []);
+
+  const [monthlyUnits, setMonthlyUnits] = useState<MonthlyUnits>(() => sessionSnap?.monthlyUnits ?? emptyMonthlyUnits());
+  const [latestBill, setLatestBill] = useState<ParsedBillShape | null>(sessionSnap?.latestBill ?? null);
+  const [additionalBills, setAdditionalBills] = useState<(ParsedBillShape | null)[]>(sessionSnap?.additionalBills ?? []);
+  const [auditedMonthTotals, setAuditedMonthTotals] = useState<Partial<Record<keyof MonthlyUnits, number>>>(sessionSnap?.auditedMonthTotals ?? {});
   const [billAnalysis, setBillAnalysis] = useState("");
   const [billAnalysisTone, setBillAnalysisTone] = useState<"neutral" | "success" | "warning" | "error">("neutral");
   const [scanTimingBadge, setScanTimingBadge] = useState("");
@@ -164,9 +208,10 @@ export default function ProposalPage() {
   const [siteImageUrls, setSiteImageUrls] = useState<string[]>([]);
   // Company logo (Supabase Storage public URL).
   const [installerLogoUrl, setInstallerLogoUrl] = useState("");
+  const [isSavingPipeline, setIsSavingPipeline] = useState(false);
   const [showProposalSettings, setShowProposalSettings] = useState(false);
-  const [overrideSolarKw, setOverrideSolarKw] = useState("");
-  const [overridePanels, setOverridePanels] = useState("");
+  const [overrideSolarKw, setOverrideSolarKw] = useState(sessionSnap?.overrideSolarKw ?? "");
+  const [overridePanels, setOverridePanels] = useState(sessionSnap?.overridePanels ?? "");
   const [installerState, setInstallerState] = useState("");
   const [installerDiscom, setInstallerDiscom] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState("");
@@ -177,7 +222,7 @@ export default function ProposalPage() {
   const uploadQueueRef = useRef<UploadTask[]>([]);
   const uploadWorkerRunningRef = useRef(false);
   const customerCacheRef = useRef<CustomerLead[]>([]);
-  const [manual, setManual] = useState<ManualProposalCustomer>({
+  const [manual, setManual] = useState<ManualProposalCustomer>(sessionSnap?.manual ?? {
     leadContactName: "",
     leadPhone: "",
     billPhone: "",
@@ -235,6 +280,19 @@ export default function ProposalPage() {
   useEffect(() => {
     localStorage.setItem(LEARNED_BILL_PROFILE_KEY, JSON.stringify(learnedBillProfiles));
   }, [learnedBillProfiles]);
+
+  // Persist session across tab switches (instant, no network needed).
+  useEffect(() => {
+    saveSession({
+      manual,
+      monthlyUnits,
+      latestBill,
+      additionalBills,
+      auditedMonthTotals,
+      overrideSolarKw,
+      overridePanels
+    });
+  }, [manual, monthlyUnits, latestBill, additionalBills, auditedMonthTotals, overrideSolarKw, overridePanels]);
 
   useEffect(() => {
     const sync = () => {
@@ -479,6 +537,13 @@ export default function ProposalPage() {
       return;
     }
 
+    // If sessionStorage already had a snapshot, session data takes priority —
+    // skip server overwrite to prevent stale server data clobbering fresher local state.
+    if (sessionSnap) {
+      setHydratedFromServer(true);
+      return;
+    }
+
     if (calc?.monthlyUnits) {
       setMonthlyUnits((prev) => {
         const hasCurrentData = countFilledMonths(prev) > 0;
@@ -494,28 +559,33 @@ export default function ProposalPage() {
     }
 
     if (calc?.manualSnapshot) {
-      setManual((prev) => ({ ...prev, ...calc.manualSnapshot }));
+      // Merge only empty fields — never overwrite data the user has already typed.
+      setManual((prev) => {
+        const snap = calc.manualSnapshot as Partial<ManualProposalCustomer>;
+        const merged: ManualProposalCustomer = { ...prev };
+        for (const key of Object.keys(snap) as (keyof ManualProposalCustomer)[]) {
+          if (!merged[key] && snap[key]) (merged as Record<string, string>)[key] = snap[key] as string;
+        }
+        return merged;
+      });
     }
-    if (calc?.latestBill) setLatestBill(calc.latestBill);
-    else if (bill?.parsedBill) setLatestBill(bill.parsedBill);
- // 1. Bill ko ek pakke variable mein nikaal lijiye
-const billToAdd = calc?.previousBill;
-
-// 2. Sirf tabhi aage badhein jab billToAdd pakka maujood ho
-if (billToAdd) {
-  setAdditionalBills((prev) => {
-    if (prev.length === 0) return [billToAdd];
-    const next = [...prev];
-    next[0] = billToAdd;
-    return next;
-  });
-}
+    if (calc?.latestBill) setLatestBill((prev) => prev ?? calc.latestBill ?? null);
+    else if (bill?.parsedBill) setLatestBill((prev) => prev ?? bill.parsedBill ?? null);
+    const billToAdd = calc?.previousBill;
+    if (billToAdd) {
+      setAdditionalBills((prev) => {
+        if (prev.length === 0) return [billToAdd];
+        const next = [...prev];
+        if (!next[0]) next[0] = billToAdd;
+        return next;
+      });
+    }
 
     if (!billAnalysis) {
       setBillAnalysis(t("proposal_billAutofillDone"));
     }
     setHydratedFromServer(true);
-  }, [restoreRes, hydratedFromServer, billAnalysis, t]);
+  }, [restoreRes, hydratedFromServer, billAnalysis, t, sessionSnap]);
 
   useEffect(() => {
     if (!clientRef) return;
@@ -659,7 +729,7 @@ if (billToAdd) {
         connectionDate: prev.connectionDate || data.connection_date || "",
         phase: prev.phase || data.phase || "",
         billPhone: prev.billPhone || data.registered_mobile || "",
-        connectionType: prev.connectionType || data.connection_type || "",
+        connectionType: prev.connectionType || truncateConnectionType(data.connection_type || ""),
         sanctionedLoad: prev.sanctionedLoad || data.sanctioned_load || "",
         billingAddress: prev.billingAddress || data.address || "",
         tariffCategory: prev.tariffCategory || data.tariff_category || "",
@@ -972,6 +1042,40 @@ if (billToAdd) {
     }
   }
 
+  async function saveToPipeline() {
+    if (!selectedLeadId) {
+      toast.error("No lead selected", "Select a CRM lead first to save to pipeline.");
+      return;
+    }
+    setIsSavingPipeline(true);
+    try {
+      const customerName = manual.officialBillName || manual.leadContactName || "Customer";
+      const resp = await fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lead_id: selectedLeadId,
+          official_name: customerName,
+          capacity_kw: `${effectiveResult.solarKw} kW`,
+          detail: manual.city.trim() || undefined,
+          status: "pending",
+          install_progress: 10,
+          next_action: "Site survey pending"
+        })
+      });
+      if (!resp.ok) {
+        const j = (await resp.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || "Pipeline save failed");
+      }
+      void mutateGlobal(PIPELINE_SWR_KEY);
+      toast.success("Saved to pipeline", `${customerName} — ${effectiveResult.solarKw} kW added to project pipeline.`);
+    } catch (err) {
+      toast.error("Pipeline save failed", err instanceof Error ? err.message : "Could not save.");
+    } finally {
+      setIsSavingPipeline(false);
+    }
+  }
+
   function shareLatestOnWhatsApp() {
     if (!latestWebProposalUrl) return;
     const customer = manual.officialBillName || manual.leadContactName || "Customer";
@@ -1184,31 +1288,10 @@ if (billToAdd) {
             onChange={(e) => setManual((p) => ({ ...p, city: e.target.value }))}
           />
           <FloatingLabelSelect
-            label={t("proposal_discomPickSub")}
-            suppressHydrationWarning
-            containerClassName="sm:col-span-2"
-            disabled={!stateQuery}
-            value={manual.discom && discomOptions.some((o) => o.code === manual.discom) ? manual.discom : ""}
-            onChange={(e) => setManual((p) => ({ ...p, discom: e.target.value }))}
-          >
-            {!stateQuery ? (
-              <option value="">{t("dashboard_selectState")}</option>
-            ) : (
-              <>
-                <option value="">{t("proposal_discomPickPlaceholder")}</option>
-                {discomOptions.map((o) => (
-                  <option key={o.id} value={o.code}>
-                    {o.name} — {o.code}
-                  </option>
-                ))}
-              </>
-            )}
-          </FloatingLabelSelect>
-          <FloatingLabelSelect
             label={t("proposal_statePlaceholder")}
             suppressHydrationWarning
             value={manual.state}
-            onChange={(e) => setManual((p) => ({ ...p, state: e.target.value, discom: "" }))}
+            onChange={(e) => setManual((p) => ({ ...p, state: e.target.value }))}
           >
             <option value="">{t("proposal_statePlaceholder")}</option>
             {INDIAN_STATES_AND_UTS.map((s) => (
@@ -1233,17 +1316,11 @@ if (billToAdd) {
             value={manual.connectionDate}
             onChange={(e) => setManual((p) => ({ ...p, connectionDate: e.target.value }))}
           />
-          <FloatingLabelSelect
-            label={t("proposal_phasePlaceholder")}
-            suppressHydrationWarning
+          <FloatingLabelInput
+            label="Phase (as on bill, e.g. Single phase)"
             value={manual.phase}
             onChange={(e) => setManual((p) => ({ ...p, phase: e.target.value }))}
-          >
-            <option value="">{t("proposal_phasePlaceholder")}</option>
-            <option value="Single phase">Single phase</option>
-            <option value="Three phase">Three phase</option>
-            <option value="Other / as per bill">Other / as per bill</option>
-          </FloatingLabelSelect>
+          />
           <FloatingLabelInput
             label={t("proposal_connectionPlaceholder")}
             value={manual.connectionType}
@@ -1324,11 +1401,12 @@ if (billToAdd) {
             )}
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Editable custom input */}
             <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
               <input
                 type="number"
                 min="0.5"
-                max="100"
+                max="500"
                 step="0.5"
                 className="w-16 bg-transparent text-base font-extrabold text-brand-700 outline-none"
                 value={overrideSolarKw || result.solarKw}
@@ -1339,20 +1417,16 @@ if (billToAdd) {
               />
               <span className="text-sm font-bold text-brand-700">kW</span>
             </div>
-            {[1, 2, 3, 4, 5, 6, 7.5, 10, 15, 20, 25, 30, 50, 75, 100, 150, 200].map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => { setOverrideSolarKw(String(v)); setOverridePanels(""); }}
-                className={`rounded-full border px-2.5 py-1 text-xs font-bold transition-colors ${
-                  effectiveResult.solarKw === v
-                    ? "border-brand-500 bg-brand-500 text-white"
-                    : "border-slate-300 bg-white text-slate-600 hover:border-brand-400 hover:text-brand-600"
-                }`}
-              >
-                {v}
-              </button>
-            ))}
+            {/* Preset dropdown */}
+            <select
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 focus:border-brand-400 focus:outline-none"
+              value={overrideSolarKw || String(result.solarKw)}
+              onChange={(e) => { setOverrideSolarKw(e.target.value); setOverridePanels(""); }}
+            >
+              {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 11, 12, 13, 14, 15, 17.5, 20, 25, 30, 40, 50, 60, 75, 80, 100, 125, 150, 200, 250, 300, 400, 500].map((v) => (
+                <option key={v} value={String(v)}>{v} kW</option>
+              ))}
+            </select>
             {overrideSolarKw && (
               <button
                 type="button"
@@ -1531,6 +1605,17 @@ if (billToAdd) {
             {isCopyingSummary ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <MessageCircle className="mr-2 h-4 w-4" />}
             Copy Summary
           </button>
+          {selectedLeadId && (
+            <button
+              type="button"
+              className="ss-cta-secondary border-indigo-400 text-indigo-700 hover:bg-indigo-50 sm:text-base"
+              disabled={isSavingPipeline}
+              onClick={() => void saveToPipeline()}
+            >
+              {isSavingPipeline ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <FileUp className="mr-2 h-4 w-4" />}
+              Save to Pipeline
+            </button>
+          )}
         </div>
         {latestWebProposalUrl ? (
           <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50/60 p-3 text-xs sm:text-sm">
