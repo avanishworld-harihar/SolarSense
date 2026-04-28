@@ -214,7 +214,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               // CSS var `--bar-target` is the print fallback — see globals.css.
               style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
-              animate={inView || reduced ? { height: `${target}%`, opacity: 1 } : undefined}
+              animate={{ height: `${target}%`, opacity: 1 }}
               transition={{ duration: 0.9, delay: i * 0.05, ease: [0.21, 1.02, 0.73, 1] }}
               className={`proposal-chart-bar w-full rounded-t-md ${
                 isPeak
@@ -268,14 +268,14 @@ function GenVsUseChart({
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tg}%`, minHeight: tg > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tg}%` } : { height: 0 }}
-                  animate={inView || reduced ? { height: `${tg}%` } : undefined}
+                  animate={{ height: `${tg}%` }}
                   transition={{ duration: 0.85, delay: i * 0.05 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                 />
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tu}%`, minHeight: tu > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tu}%` } : { height: 0 }}
-                  animate={inView || reduced ? { height: `${tu}%` } : undefined}
+                  animate={{ height: `${tu}%` }}
                   transition={{ duration: 0.85, delay: i * 0.05 + 0.06 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4)]"
                 />
