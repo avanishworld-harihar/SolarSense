@@ -65,6 +65,44 @@ function createClientRef(): string {
   return `ss-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function billInrFromParsed(v: number | string | null | undefined): number | undefined {
+  if (v == null || v === "") return undefined;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  const n = parseFloat(String(v).replace(/,/g, "").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function parseManualContractKva(s: string): number | undefined {
+  const t = s.trim();
+  if (!t) return undefined;
+  const n = parseFloat(t.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+/** MP smart billing — bill OCR cross-checks forwarded to the PPT / proposal API. */
+function buildMpSmartBillingApiPayload(manual: ManualProposalCustomer, latestBill: ParsedBillShape | null, previousBill: ParsedBillShape | null) {
+  const ref = latestBill ?? previousBill;
+  const purpose =
+    manual.purposeOfSupply.trim() || ref?.purpose_of_supply?.trim() || ref?.connection_type?.trim() || "";
+  const cd = parseManualContractKva(manual.contractDemandKva) ?? billInrFromParsed(ref?.contract_demand_kva ?? null);
+  return {
+    ...(purpose ? { purposeOfSupply: purpose } : {}),
+    ...(cd != null ? { contractDemandKva: cd } : {}),
+    ...(billInrFromParsed(ref?.energy_charges_inr) != null
+      ? { billEnergyChargesInr: billInrFromParsed(ref?.energy_charges_inr) }
+      : {}),
+    ...(billInrFromParsed(ref?.electricity_duty_inr) != null
+      ? { billElectricityDutyInr: billInrFromParsed(ref?.electricity_duty_inr) }
+      : {}),
+    ...(billInrFromParsed(ref?.fixed_charges_inr) != null
+      ? { billFixedChargeInr: billInrFromParsed(ref?.fixed_charges_inr) }
+      : {}),
+    ...(billInrFromParsed(ref?.metered_unit_consumption) != null
+      ? { referenceBillUnits: billInrFromParsed(ref?.metered_unit_consumption) }
+      : {})
+  };
+}
+
 type PersistenceSnapshotResponse = {
   latestBillUpload?: {
     parsedBill?: ParsedBillShape | null;
@@ -154,7 +192,9 @@ export default function ProposalPage() {
     connectionType: "",
     sanctionedLoad: "",
     billingAddress: "",
-    tariffCategory: ""
+    tariffCategory: "",
+    purposeOfSupply: "",
+    contractDemandKva: ""
   });
   const step1Label = stripStepPrefix(t("proposal_step1SelectLead"));
   const step2Label = stripStepPrefix(t("proposal_step2BillUploads"));
@@ -622,7 +662,15 @@ if (billToAdd) {
         connectionType: prev.connectionType || data.connection_type || "",
         sanctionedLoad: prev.sanctionedLoad || data.sanctioned_load || "",
         billingAddress: prev.billingAddress || data.address || "",
-        tariffCategory: prev.tariffCategory || data.tariff_category || ""
+        tariffCategory: prev.tariffCategory || data.tariff_category || "",
+        purposeOfSupply:
+          prev.purposeOfSupply ||
+          (typeof data.purpose_of_supply === "string" ? data.purpose_of_supply : "") ||
+          data.connection_type ||
+          "",
+        contractDemandKva:
+          prev.contractDemandKva ||
+          (data.contract_demand_kva != null ? String(data.contract_demand_kva).trim() : "")
       }));
 
       setMonthlyUnits((prev) => {
@@ -714,7 +762,9 @@ if (billToAdd) {
       leadPhone: lead.phone ?? "",
       officialBillName: "",
       city: lead.city,
-      discom: lead.discom
+      discom: lead.discom,
+      purposeOfSupply: "",
+      contractDemandKva: ""
     }));
     const seedCtx = getFallbackTariffContext(installerState, lead.discom);
     const monthlyKwh = estimateMonthlyKwhFromBillAmount(lead.monthly_bill, seedCtx);
@@ -803,6 +853,7 @@ if (billToAdd) {
             previousBill?.current_month_bill_amount_inr ??
             null,
           monthlyBillActuals,
+          ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
           ...buildProposalExtrasPayload()
         })
       });
@@ -882,6 +933,7 @@ if (billToAdd) {
           monthlyBillActuals,
           clientRef: clientRef || undefined,
           leadId: selectedLeadId || undefined,
+          ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
           netCostInr: effectiveResult.netCost,
           panels: effectiveResult.panels,
           ...buildProposalExtrasPayload()
@@ -1198,9 +1250,19 @@ if (billToAdd) {
             onChange={(e) => setManual((p) => ({ ...p, connectionType: e.target.value }))}
           />
           <FloatingLabelInput
+            label="Purpose of supply (as on bill, e.g. Shops/Showrooms)"
+            value={manual.purposeOfSupply}
+            onChange={(e) => setManual((p) => ({ ...p, purposeOfSupply: e.target.value }))}
+          />
+          <FloatingLabelInput
             label="Sanctioned load (e.g. 5 kW, 8.5 kVA)"
             value={manual.sanctionedLoad}
             onChange={(e) => setManual((p) => ({ ...p, sanctionedLoad: e.target.value }))}
+          />
+          <FloatingLabelInput
+            label="Contract demand — kVA (if printed separately)"
+            value={manual.contractDemandKva}
+            onChange={(e) => setManual((p) => ({ ...p, contractDemandKva: e.target.value }))}
           />
           <FloatingLabelInput
             label="Tariff category (e.g. DS-I, BPL, Commercial)"
@@ -1513,7 +1575,9 @@ function manualSnapshot(manual: ManualProposalCustomer): Record<string, string> 
     connectionType: manual.connectionType,
     sanctionedLoad: manual.sanctionedLoad,
     billingAddress: manual.billingAddress,
-    tariffCategory: manual.tariffCategory
+    tariffCategory: manual.tariffCategory,
+    purposeOfSupply: manual.purposeOfSupply,
+    contractDemandKva: manual.contractDemandKva
   };
 }
 

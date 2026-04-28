@@ -35,6 +35,13 @@ export interface ParsedBillShape {
   connection_type?: string;
   /** e.g. Domestic / Commercial / LT / HT — as printed on bill */
   tariff_category?: string;
+  /**
+   * MPEZ / MP bills: duplicate of purpose field when OCR splits it —
+   * e.g. "Shops/Showrooms". Prefer merging with connection_type lines.
+   */
+  purpose_of_supply?: string | null;
+  /** When printed separately from sanctioned load — kVA numeric or as on bill */
+  contract_demand_kva?: number | string | null;
   discom?: string;
   state?: string;
   district?: string;
@@ -45,6 +52,10 @@ export interface ParsedBillShape {
   fixed_charges_inr?: number | string | null;
   /** Energy or consumption charges — INR (Gemini). */
   energy_charges_inr?: number | string | null;
+  /** Electricity duty line — INR (strict audit). */
+  electricity_duty_inr?: number | string | null;
+  /** Other surcharges / regulatory charges (exclude ToD if split) — INR when visible. */
+  regulatory_surcharges_inr?: number | string | null;
   /** Total payable / current bill amount — INR (Gemini). */
   total_amount_payable_inr?: number | string | null;
   /** Bill section fields for strict evidence-only audit mode. */

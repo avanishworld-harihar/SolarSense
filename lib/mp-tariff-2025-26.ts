@@ -109,19 +109,39 @@ export type CategoryTariff = {
   /**
    * Generic load/demand based fixed charge mode used by LV-2 / LV-4 / LV-6.
    * One of the candidates below is selected by the engine based on inputs.
+   *
+   * LV-2.2 has TWO billing sub-types (MPERC FY 2025-26):
+   *   A) Sanctioned-Load-Based — available when connected load ≤ sanctionedLoadLimitKw (10 kW).
+   *      Engine selects this when sanctionedLoadKw ≤ limit AND no contractDemandKva given.
+   *      Energy regime: non-telescopic — ALL units billed at the regime rate
+   *        (≤50 units → ₹6.50/unit + ₹88/kW;  >50 units → ₹8.00/unit + ₹144/kW).
+   *   B) Demand-Based — mandatory for >10 kW; optional (consumer choice) for ≤10 kW.
+   *      Uses perKwUrban / perKvaUrban for fixed; flat ₹7.10/unit energy.
    */
   loadFixed?: {
+    /** Demand-based FC per kW (Urban / Rural). */
     perKwUrban?: number;
     perKwRural?: number;
+    /** Demand-based FC per kVA (Urban / Rural) — preferred when contractDemandKva given. */
     perKvaUrban?: number;
     perKvaRural?: number;
-    /** Some sub-slabs change with consumption (e.g. LV-2.1 ≤50 vs >50). */
+    /**
+     * LV-2.2 sanctioned-load-based sub-type:
+     * Max connected load (kW) below which sanctioned-load-based billing applies.
+     * Engine uses this to detect sub-type; undefined = no SL sub-type for this category.
+     */
+    sanctionedLoadLimitKw?: number;
+    /** Consumption threshold (units) that switches FC rate AND energy regime for SL sub-type. */
     consumptionSplitUnits?: number;
+    /** SL sub-type FC per kW when consumption ≤ consumptionSplitUnits. */
     perKwUrbanLow?: number;
     perKwRuralLow?: number;
+    /** SL sub-type FC per kW when consumption > consumptionSplitUnits. */
     perKwUrbanHigh?: number;
     perKwRuralHigh?: number;
+    /** Energy rate for SL sub-type when consumption ≤ consumptionSplitUnits. */
     energyRatePerUnitLow?: number;
+    /** Energy rate for SL sub-type when consumption > consumptionSplitUnits. */
     energyRatePerUnitHigh?: number;
   };
   minimumChargeInr?: number;
@@ -165,7 +185,8 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
   "LV2.1": {
     category: "LV2.1",
     applicabilityNote:
-      "Non-Domestic / Commercial — sanctioned load up to 10 kW. Two-tier energy + per-kW fixed.",
+      "Non-Domestic — Schools, educational institutions (workshops/labs), " +
+      "hostels for students / working-women / sports persons. (MPERC LV-2.1 specific list.)",
     energySlabs: [
       { fromUnit: 0,  toUnit: 50,   ratePerUnit: 6.50 },
       { fromUnit: 51, toUnit: null, ratePerUnit: 8.00 }
@@ -180,9 +201,23 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
   },
   "LV2.2": {
     category: "LV2.2",
-    applicabilityNote: "Non-Domestic / Commercial — demand-based (>10 kW load). 7.10 ₹/kWh + demand FC.",
+    applicabilityNote:
+      "Non-Domestic — Shops, showrooms, offices, hospitals, restaurants & all other " +
+      "non-domestic not in LV-2.1. " +
+      "SUB-TYPE A (Sanctioned-Load-Based, ≤10 kW): non-telescopic regime — " +
+      "≤50 u → ₹6.50/u + ₹88/kW; >50 u → ₹8.00/u + ₹144/kW. " +
+      "SUB-TYPE B (Demand-Based, >10 kW mandatory / ≤10 kW optional): ₹7.10/u + ₹302/kW.",
+    // Demand-based energy slabs (sub-type B). Engine overrides to non-telescopic for sub-type A.
     energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.10 }],
     loadFixed: {
+      // ── Sub-type A: Sanctioned-Load-Based (connected load ≤ 10 kW) ──────────────
+      sanctionedLoadLimitKw: 10,
+      consumptionSplitUnits: 50,
+      perKwUrbanLow: 88,   perKwRuralLow: 73,    // ≤50 units regime
+      perKwUrbanHigh: 144, perKwRuralHigh: 123,   // >50 units regime
+      energyRatePerUnitLow: 6.50,
+      energyRatePerUnitHigh: 8.00,
+      // ── Sub-type B: Demand-Based ─────────────────────────────────────────────────
       perKwUrban: 302, perKwRural: 220,
       perKvaUrban: 242, perKvaRural: 176
     }
@@ -367,12 +402,21 @@ export function normalizeTariffCategory(raw?: string | null): MpTariffCategory |
   }
   if (s.includes("ev")  || s.includes("charging station")) return "LV6";
   if (s.includes("agri") || s.includes("kisan") || s.includes("pump")) return "LV5.1";
-  if (s.includes("indus") || s.includes("manufact") || s.includes("workshop")) return "LV4";
+  if (s.includes("indus") || s.includes("manufact")) return "LV4";
   if (s.includes("water") && s.includes("works")) return "LV3";
   if (s.includes("street light")) return "LV3";
-  if (s.includes("commerc") || s.includes("shop") || s.includes("non-domestic") || s.includes("non domestic")) {
-    return "LV2.1";
-  }
+  // LV2.2 — shops, offices, hospitals, restaurants and all other non-domestic
+  if (
+    s.includes("shop") || s.includes("showroom") || s.includes("office") ||
+    s.includes("hospital") || s.includes("hotel") || s.includes("restaur") ||
+    s.includes("commerc") || s.includes("non-domestic") || s.includes("non domestic") ||
+    s.includes("professional") || s.includes("chamber")
+  ) return "LV2.2";
+  // LV2.1 — MPERC-specific: schools, educational, hostels for students/sports/working-women
+  if (
+    s.includes("school") || s.includes("college") || s.includes("educat") ||
+    s.includes("hostel") || s.includes("workshop") || s.includes("laborator")
+  ) return "LV2.1";
   if (s.includes("domest") || s.includes("residen") || s.includes("home stay")) return "LV1.2";
   return null;
 }

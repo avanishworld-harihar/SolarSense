@@ -19,10 +19,10 @@ import {
   type MpBillBreakdown,
   type MpBillEngineInput
 } from "@/lib/mp-bill-engine";
+import { resolveMpSmartBilling } from "@/lib/mp-smart-billing";
 import {
   MP_DISCOMS,
   detectMpDiscomFromAddress,
-  normalizeTariffCategory,
   resolveMpDiscomFromHint,
   type MpAreaProfile,
   type MpDiscomCode,
@@ -251,16 +251,6 @@ function detectDiscom(parsed: ParsedBillShape): { code: MpDiscomCode; confidence
   return { code: "MPMKVVCL", confidence: 0.3 };
 }
 
-function detectCategory(parsed: ParsedBillShape): { cat: MpTariffCategory; confidence: number } {
-  const norm = normalizeTariffCategory(parsed.tariff_category);
-  if (norm) return { cat: norm, confidence: 0.9 };
-  const conn = (parsed.connection_type ?? "").toLowerCase();
-  if (/agri|kisan|pump/.test(conn)) return { cat: "LV5.1", confidence: 0.7 };
-  if (/indus|industrial|workshop|manufact/.test(conn)) return { cat: "LV4", confidence: 0.7 };
-  if (/comm|shop|non-?domestic/.test(conn)) return { cat: "LV2.1", confidence: 0.65 };
-  return { cat: "LV1.2", confidence: 0.55 };
-}
-
 /* ------------------------------------------------------------------ */
 /* Variance reasoning                                                 */
 /* ------------------------------------------------------------------ */
@@ -323,7 +313,7 @@ function classifyVariance(args: {
     );
     return { reason: "agjy_subsidy_mismatch", explanations };
   }
-  const printedDuty = num(parsed.fppas_inr); // some bills bundle ED into "Other Charges"
+  const printedDuty = num(parsed.electricity_duty_inr);
   if (printedDuty != null && deltaAbs > 50 && Math.abs(printedDuty - breakdown.electricityDuty) > 5) {
     explanations.push(
       `Possible Electricity Duty bracket mismatch — engine used the ${breakdown.units}-unit bracket; ` +
@@ -363,22 +353,45 @@ function makeAuditRef(parsed: ParsedBillShape): string {
 
 export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOptions): MpBillAuditReport {
   const { code: discomCode, confidence: discomConfidence } = detectDiscom(parsed);
-  const { cat: category, confidence: categoryConfidence } = detectCategory(parsed);
   const meta = MP_DISCOMS[discomCode];
 
   const loadParsed = parseLoadKw(parsed.sanctioned_load);
-  const sanctionedLoadKw = options?.sanctionedLoadKwOverride ?? loadParsed.kw ?? (category === "LV1.2" ? 1 : null);
+  let sanctionedLoadKw: number | null = options?.sanctionedLoadKwOverride ?? loadParsed.kw ?? null;
+  const cdFromBill = num(parsed.contract_demand_kva);
+  const contractDemandKvaResolved = cdFromBill ?? loadParsed.kva ?? undefined;
 
   const area = detectAreaProfile(parsed);
   const period = parseBillMonthRange(parsed.bill_month);
   const units = chooseUnits(parsed);
+
+  const smartBilling = resolveMpSmartBilling({
+    tariffCategoryRaw: parsed.tariff_category,
+    purposeOfSupply: parsed.purpose_of_supply ?? parsed.connection_type,
+    connectionType: parsed.connection_type,
+    sanctionedLoadKw: sanctionedLoadKw ?? undefined,
+    contractDemandKva: contractDemandKvaResolved,
+    area,
+    energyChargesInr: num(parsed.energy_charges_inr),
+    fixedChargesInr: num(parsed.fixed_charges_inr),
+    electricityDutyInr: num(parsed.electricity_duty_inr),
+    referenceUnits: units.chosen > 0 ? units.chosen : null
+  });
+
+  const category = smartBilling.category;
+  const categoryConfidence = smartBilling.hadCategoryConflict
+    ? 0.72
+    : smartBilling.effectiveTariffRateInrPerKwh != null
+      ? 0.88
+      : 0.78;
+
+  if (sanctionedLoadKw == null && category === "LV1.2") sanctionedLoadKw = 1;
 
   const engineInput: MpBillEngineInput = {
     discomCode,
     category,
     units: units.chosen,
     sanctionedLoadKw: sanctionedLoadKw ?? undefined,
-    contractDemandKva: loadParsed.kva ?? undefined,
+    contractDemandKva: contractDemandKvaResolved,
     phase: loadParsed.phase ?? undefined,
     area,
     fppasPct: options?.fppasPct,
@@ -386,7 +399,9 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     advanceBalanceInr: options?.advanceBalanceInr,
     paidOnline: options?.paidOnline,
     principalArrearInr: num(parsed.principal_arrear_inr) ?? 0,
-    nfp: Boolean(parsed.nfp_flag)
+    nfp: Boolean(parsed.nfp_flag),
+    energyRateOverridePerUnit: smartBilling.energyRateOverridePerUnit,
+    fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr
   };
 
   const breakdown = calculateMpBill(engineInput);
@@ -395,7 +410,7 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     energyChargeInr: num(parsed.energy_charges_inr),
     fixedChargeInr: num(parsed.fixed_charges_inr),
     fppasInr: num(parsed.fppas_inr),
-    electricityDutyInr: null as number | null,
+    electricityDutyInr: num(parsed.electricity_duty_inr),
     subsidyInr: num(parsed.mp_govt_subsidy_amount_inr),
     rebateIncentiveInr: num(parsed.rebate_incentive_inr),
     arrearInr: num(parsed.principal_arrear_inr),
@@ -424,9 +439,20 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
   if (discomConfidence < 0.7) riskFlags.push(`Low DISCOM detection confidence (${discomConfidence}).`);
   if (categoryConfidence < 0.7) riskFlags.push(`Low category detection confidence (${categoryConfidence}).`);
   if (printed.nfp) riskFlags.push("NFP flag set on bill.");
-  if (sanctionedLoadKw == null && (category === "LV1.2" ? units.chosen > 150 : true)) {
-    riskFlags.push("Sanctioned load missing — fixed-charge calculation used a default of 1 kW.");
+  if (
+    options?.sanctionedLoadKwOverride == null &&
+    loadParsed.kw == null &&
+    category !== "LV1.2" &&
+    units.chosen > 0
+  ) {
+    riskFlags.push("Sanctioned load not parsed — fixed-charge / LV sub-type may be off.");
   }
+  if (smartBilling.hadCategoryConflict) {
+    riskFlags.push("Tariff header vs purpose of supply reconciled (smart multi-factor resolver).");
+  }
+
+  const smartBillingNotes =
+    smartBilling.notes.length > 0 ? `\n\n${smartBilling.notes.map((n) => `- ${n}`).join("\n")}` : "";
 
   const narrativeMd =
     `**Audit ${variance.reason === "no_variance" ? "✓ MATCH" : "⚠ MISMATCH"}** ` +
@@ -435,7 +461,8 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     `- Bill says: **₹${referenceInr.toLocaleString("en-IN")}** (${ref?.field ?? "—"})\n` +
     `- Δ = **₹${deltaInr.toLocaleString("en-IN")}** (${deltaPct}%)\n` +
     `- Reason: \`${variance.reason}\`\n\n` +
-    breakdown.notes.map((n) => `- ${n}`).join("\n");
+    breakdown.notes.map((n) => `- ${n}`).join("\n") +
+    smartBillingNotes;
 
   return {
     auditRef: makeAuditRef(parsed),
@@ -452,7 +479,7 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
       meterNumber: parsed.meter_number?.trim() || null,
       connectionDate: parsed.connection_date?.trim() || null,
       sanctionedLoadKw,
-      contractDemandKva: loadParsed.kva,
+      contractDemandKva: contractDemandKvaResolved ?? loadParsed.kva ?? null,
       phase: loadParsed.phase,
       area,
       billingMonth: parsed.bill_month?.trim() || null,

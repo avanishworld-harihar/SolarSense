@@ -21,6 +21,10 @@ export type ManualProposalCustomer = {
   sanctionedLoad: string;
   billingAddress: string;
   tariffCategory: string;
+  /** Printed purpose/use — aligns with OCR purpose_of_supply. */
+  purposeOfSupply: string;
+  /** Contract demand as printed (kVA); optional for demand-based LV2. */
+  contractDemandKva: string;
 };
 
 function coalesce(manual: string, parsed?: string) {
@@ -54,6 +58,14 @@ export function mergeCustomerForProposal(
     sanctioned_load: coalesce(manual.sanctionedLoad, parsed?.sanctioned_load),
     address: coalesce(manual.billingAddress, parsed?.address),
     tariff_category: coalesce(manual.tariffCategory, parsed?.tariff_category),
+    purpose_of_supply: coalesce(
+      manual.purposeOfSupply,
+      (parsed?.purpose_of_supply ?? parsed?.connection_type) as string | undefined
+    ),
+    contract_demand_kva:
+      manual.contractDemandKva.trim().length > 0
+        ? manual.contractDemandKva.trim()
+        : parsed?.contract_demand_kva ?? undefined,
     bill_month: parsed?.bill_month,
     months: parsed?.months
   };

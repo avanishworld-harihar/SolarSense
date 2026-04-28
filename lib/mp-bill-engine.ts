@@ -61,6 +61,13 @@ export type MpBillEngineInput = {
   principalArrearInr?: number;
   /** Optional: bill bears NFP (Not For Payment) flag. */
   nfp?: boolean;
+  /**
+   * Smart Billing: when printed Energy ÷ units proves the board applied a flat
+   * ₹/kWh that diverges from our slab replica — pin that rate for projection.
+   */
+  energyRateOverridePerUnit?: number;
+  /** Smart Billing: pin monthly fixed ₹ from a verified bill line. */
+  fixedChargeOverrideInr?: number;
 };
 
 export type MpBillLineKind =
@@ -154,6 +161,18 @@ function fixedDomestic(units: number, area: MpAreaProfile, loadKw: number, t: Ca
   return { amount, formula: `>150 units: ${points} × 0.1kW × ₹${perPoint} = ₹${amount}` };
 }
 
+/**
+ * Returns true when the LV-2.2 input should use the sanctioned-load-based sub-type.
+ * Conditions: sanctionedLoadKw is provided AND ≤ sanctionedLoadLimitKw (10 kW)
+ *             AND consumer has NOT opted for demand-based (no contractDemandKva supplied).
+ */
+function isLV22SanctionedLoad(input: MpBillEngineInput, lf: NonNullable<CategoryTariff["loadFixed"]>): boolean {
+  if (lf.sanctionedLoadLimitKw == null || lf.consumptionSplitUnits == null) return false;
+  if (input.contractDemandKva && input.contractDemandKva > 0) return false; // opted demand-based
+  const loadKw = input.sanctionedLoadKw ?? 0;
+  return loadKw > 0 && loadKw <= lf.sanctionedLoadLimitKw;
+}
+
 function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: number; formula: string } {
   const lf = t.loadFixed;
   if (!lf) return { amount: 0, formula: "no FC rule" };
@@ -161,7 +180,7 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
   const area = input.area ?? "urban";
   const isRural = area === "rural";
 
-  // LV-2.1 (consumption-split sanctioned-load model)
+  // LV-2.1 (educational/hostels — consumption-split sanctioned-load model)
   if (t.category === "LV2.1" && lf.consumptionSplitUnits != null) {
     const loadKw = Math.max(1, input.sanctionedLoadKw ?? 1);
     const isHigh = (input.units ?? 0) > lf.consumptionSplitUnits;
@@ -175,7 +194,21 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
     };
   }
 
-  // LV5.2 — unmetered: HP × per-HP rate (we stored that rate in perKwUrban)
+  // LV-2.2 Sub-type A — Sanctioned-Load-Based (≤10 kW, no demand opted).
+  if (t.category === "LV2.2" && isLV22SanctionedLoad(input, lf)) {
+    const loadKw = Math.max(1, input.sanctionedLoadKw ?? 1);
+    const isHigh = (input.units ?? 0) > (lf.consumptionSplitUnits ?? 50);
+    const perKw = isHigh
+      ? (isRural ? lf.perKwRuralHigh ?? 0 : lf.perKwUrbanHigh ?? 0)
+      : (isRural ? lf.perKwRuralLow ?? 0 : lf.perKwUrbanLow ?? 0);
+    const amt = Math.round(loadKw * perKw);
+    return {
+      amount: amt,
+      formula: `LV2.2-SL ${isHigh ? ">50u" : "≤50u"} ${area}: ${loadKw} kW × ₹${perKw} = ₹${amt}`
+    };
+  }
+
+  // LV5.2 — unmetered: HP × per-HP rate (stored in perKwUrban)
   if (t.category === "LV5.2") {
     const hp = Math.max(0, input.unmeteredHorsepower ?? 0);
     const perHp = lf.perKwUrban ?? 0;
@@ -183,7 +216,8 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
     return { amount: amt, formula: `LV5.2 unmetered: ${hp} HP × ₹${perHp}/HP = ₹${amt}` };
   }
 
-  // Demand-based with kVA preference (LV2.2 / LV4)
+  // LV-2.2 Sub-type B (Demand-Based) / LV4 / LV3 / LV6 — demand/kW-based.
+  // Prefer kVA when contractDemandKva is given.
   if (input.contractDemandKva && input.contractDemandKva > 0 && (lf.perKvaUrban || lf.perKvaRural)) {
     const perKva = isRural ? lf.perKvaRural ?? 0 : lf.perKvaUrban ?? 0;
     const amt = Math.round(input.contractDemandKva * perKva);
@@ -312,8 +346,46 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   const t = MP_TARIFF_FY_2025_26[input.category];
   if (!t) throw new Error(`Unknown MP tariff category: ${input.category}`);
 
-  const ec = computeEnergyChargeTelescopic(input.units, t.energySlabs);
-  const fc = computeFixedCharge(input);
+  /**
+   * LV-2.2 Sanctioned-Load-Based sub-type uses a NON-TELESCOPIC energy regime:
+   *   • consumption ≤ 50 units → ALL units billed at ₹6.50/unit
+   *   • consumption > 50 units → ALL units billed at ₹8.00/unit
+   * (Verified against all actual MPEZ bills — every month = units × flat rate exactly.)
+   * This is different from a telescopic calculation where only units above the slab
+   * boundary get the higher rate.
+   */
+  const lv22SL = input.category === "LV2.2" && t.loadFixed
+    ? isLV22SanctionedLoad(input, t.loadFixed)
+    : false;
+
+  let energySlabs = t.energySlabs;
+  if (lv22SL && t.loadFixed) {
+    const splitUnits = t.loadFixed.consumptionSplitUnits ?? 50;
+    const rateHigh = t.loadFixed.energyRatePerUnitHigh ?? 8.00;
+    const rateLow  = t.loadFixed.energyRatePerUnitLow  ?? 6.50;
+    // Override to a single flat slab matching the active regime:
+    energySlabs = [{ fromUnit: 0, toUnit: null, ratePerUnit: input.units > splitUnits ? rateHigh : rateLow }];
+  }
+
+  let ec = computeEnergyChargeTelescopic(input.units, energySlabs);
+  let fc = computeFixedCharge(input);
+
+  if (typeof input.energyRateOverridePerUnit === "number" && Number.isFinite(input.energyRateOverridePerUnit)) {
+    const u = Math.max(0, Math.floor(input.units));
+    const rate = input.energyRateOverridePerUnit;
+    const tot = r2(u * rate);
+    ec = {
+      total: tot,
+      perSlab: [{ from: 0, to: null, rate, unitsInSlab: u, subtotal: tot }]
+    };
+  }
+  if (typeof input.fixedChargeOverrideInr === "number" && Number.isFinite(input.fixedChargeOverrideInr)) {
+    fc = {
+      amount: Math.round(input.fixedChargeOverrideInr),
+      formula: "Board-verified fixed charge (Smart Billing override)"
+    };
+  }
+
   const fppas = computeFppas(ec.total, input.fppasPct);
   const ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount);
 
@@ -333,7 +405,8 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   netPayable = Math.round(max0(netPayable));
 
   const notes: string[] = [];
-  notes.push(`Category ${t.category}: ${t.applicabilityNote}`);
+  const subTypeNote = lv22SL ? " [Sub-type A: Sanctioned-Load-Based ≤10kW, non-telescopic]" : "";
+  notes.push(`Category ${t.category}${subTypeNote}: ${t.applicabilityNote}`);
   notes.push(`EC slabs: ${ec.perSlab.map((p) => `${p.from}-${p.to ?? "∞"}@${p.rate}=₹${p.subtotal}`).join("; ")}`);
   notes.push(`FC: ${fc.formula}`);
   notes.push(`FPPAS: ${fppas.formula}`);
@@ -342,6 +415,12 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   if (input.paidOnline) notes.push(onlineRebate.note);
   if (input.advanceBalanceInr && input.advanceBalanceInr > 0) notes.push(advance.note);
   if (input.nfp) notes.push("NFP flag: net payable forced to 0 even if gross > 0.");
+  if (input.energyRateOverridePerUnit != null) {
+    notes.push(`Smart Billing: energy rate pinned @ ₹${input.energyRateOverridePerUnit}/kWh (board cross-check).`);
+  }
+  if (input.fixedChargeOverrideInr != null) {
+    notes.push(`Smart Billing: fixed charge pinned @ ₹${input.fixedChargeOverrideInr}/mo (board cross-check).`);
+  }
 
   const lines: MpBillLine[] = [
     { kind: "energy", label: "Energy Charges (slab-wise)", amountInr: r2(ec.total), detail: { units: input.units } },

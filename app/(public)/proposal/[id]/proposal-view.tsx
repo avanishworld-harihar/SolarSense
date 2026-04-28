@@ -572,6 +572,12 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
       <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-4 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
         <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
       </div>
+      {summary.mpSmartBillingCaption ? (
+        <p className="mt-4 rounded-xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-xs leading-relaxed text-slate-800">
+          <span className="font-bold text-sky-900">MP smart billing: </span>
+          {summary.mpSmartBillingCaption}
+        </p>
+      ) : null}
 
       {/* Month-wise table */}
       <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">

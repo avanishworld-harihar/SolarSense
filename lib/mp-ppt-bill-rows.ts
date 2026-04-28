@@ -19,13 +19,13 @@
 import { calculateMpBill } from "@/lib/mp-bill-engine";
 import {
   detectMpDiscomFromAddress,
-  normalizeTariffCategory,
   resolveMpDiscomFromHint,
   type MpAreaProfile,
   type MpDiscomCode,
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
 import type { MonthlyUnits } from "@/lib/types";
+import { resolveMpSmartBilling, type MpSmartBillingResolution } from "@/lib/mp-smart-billing";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 const MONTH_KEYS: (keyof MonthlyUnits)[] = [
@@ -59,6 +59,8 @@ export type MpPptRowsInput = {
   discom?: string;
   tariffCategory?: string;
   connectionType?: string;
+  /** Dedicated purpose line (e.g. Shops/Showrooms) — multi-factor LV2 resolver. */
+  purposeOfSupply?: string;
   connectedLoadKw?: number;
   areaProfile?: MpAreaProfile;
   contractDemandKva?: number;
@@ -71,6 +73,18 @@ export type MpPptRowsInput = {
   monthlyFppasPct?: Partial<Record<keyof MonthlyUnits, number>>;
   /** Whether the consumer typically claims AGJY (LV-1.2 only). */
   agjyClaimed?: boolean;
+  /**
+   * Fixed charge (₹) printed on an actual bill — used to cross-validate which
+   * LV-2.2 sub-type is in use (sanctioned-load-based vs demand-based).
+   * E.g. if bill shows FC = ₹720 and load = 5 kW → ₹144/kW → sanctioned-load-based.
+   */
+  billFixedChargeInr?: number;
+  /** Energy charges ₹ from OCR (current/reference bill). */
+  billEnergyChargesInr?: number;
+  /** Electricity Duty ₹ — cross-check Duty line. */
+  billElectricityDutyInr?: number;
+  /** Reference month metered units (for implied ₹/unit from bill). */
+  referenceBillUnits?: number;
 };
 
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
@@ -83,14 +97,6 @@ function detectMpDiscom(input: MpPptRowsInput): MpDiscomCode | null {
   const fromAddr = detectMpDiscomFromAddress(input.state ?? "");
   if (fromAddr) return fromAddr.code;
   return null;
-}
-
-function detectMpCategory(input: MpPptRowsInput): MpTariffCategory {
-  return (
-    normalizeTariffCategory(input.tariffCategory) ||
-    normalizeTariffCategory(input.connectionType) ||
-    "LV1.2"
-  );
 }
 
 export function isMpProposalContext(input: { state?: string; discom?: string }): boolean {
@@ -108,16 +114,32 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
   fixedAnnual: number;
   discomCode: MpDiscomCode;
   category: MpTariffCategory;
+  smartBilling: MpSmartBillingResolution;
 } {
   const discomCode = detectMpDiscom(input) ?? "MPMKVVCL";
-  const category = detectMpCategory(input);
   const area: MpAreaProfile = input.areaProfile ?? "urban";
+
+  const smartBilling = resolveMpSmartBilling({
+    tariffCategoryRaw: input.tariffCategory,
+    purposeOfSupply: input.purposeOfSupply || input.connectionType,
+    connectionType: input.connectionType,
+    sanctionedLoadKw: input.connectedLoadKw,
+    contractDemandKva: input.contractDemandKva,
+    area,
+    energyChargesInr: input.billEnergyChargesInr,
+    fixedChargesInr: input.billFixedChargeInr,
+    electricityDutyInr: input.billElectricityDutyInr,
+    referenceUnits: input.referenceBillUnits
+  });
+  const category = smartBilling.category;
+
+  const erOv = smartBilling.energyRateOverridePerUnit;
+  const fcOv = smartBilling.fixedChargeOverrideInr;
 
   const rows: PptAuditRow[] = MONTH_LABELS.map((label, i) => {
     const monthKey = MONTH_KEYS[i];
     const units = n(input.monthlyUnits[monthKey]);
 
-    // 1. Prefer audited Supabase override.
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];
     if (dbAudit && Number.isFinite(dbAudit.netPayableInr) && dbAudit.netPayableInr > 0) {
       return {
@@ -132,13 +154,11 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       };
     }
 
-    // 2. Direct actuals provided by the proposal flow.
     const actual = n(Number(input.monthlyBillActuals?.[monthKey]) || 0);
     if (units <= 0 && actual <= 0) {
       return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0, source: "no_consumption" };
     }
 
-    // 3. Engine recompute via new MP tariff data.
     const breakdown = calculateMpBill({
       discomCode,
       category,
@@ -147,7 +167,9 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       contractDemandKva: input.contractDemandKva,
       area,
       fppasPct: input.monthlyFppasPct?.[monthKey],
-      agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0 && units <= 150)
+      agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0 && units <= 150),
+      energyRateOverridePerUnit: erOv,
+      fixedChargeOverrideInr: fcOv
     });
 
     if (actual > 0) {
@@ -189,8 +211,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0, source: "mp_engine_2025_26" }
   );
 
-  const summer = rows.slice(3, 7).reduce((sum, r) => sum + r.total, 0); // Apr-Jul
+  const summer = rows.slice(3, 7).reduce((sum, r) => sum + r.total, 0);
   const summerPct = totals.total > 0 ? n((summer / totals.total) * 100) : 0;
 
-  return { rows, totals, summerPct, fixedAnnual: totals.fixed, discomCode, category };
+  return { rows, totals, summerPct, fixedAnnual: totals.fixed, discomCode, category, smartBilling };
 }

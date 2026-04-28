@@ -98,6 +98,13 @@ export async function createProposal(input: CreateProposalInput): Promise<Stored
     total_reduction_pct: s.totalReduction,
     summer_pct: s.summerPct,
     fixed_annual_inr: s.fixedAnnual,
+    purpose_of_supply: p.purposeOfSupply?.trim() || null,
+    contract_demand_kva:
+      typeof p.contractDemandKva === "number" && Number.isFinite(p.contractDemandKva) ? p.contractDemandKva : null,
+    effective_tariff_rate:
+      typeof s.effectiveTariffRateInrPerKwh === "number" && Number.isFinite(s.effectiveTariffRateInrPerKwh)
+        ? s.effectiveTariffRateInrPerKwh
+        : null,
 
     installer_name: s.installer,
     installer_contact: s.contact,

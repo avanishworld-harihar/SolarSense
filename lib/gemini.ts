@@ -66,17 +66,20 @@ export async function analyzeBillWithGemini(
 
   const prompt = `Extract bill fields from this Indian electricity bill image/PDF.
 Return ONLY valid JSON (no markdown), exactly this shape:
-{"name":"","address":"","consumer_id":"","meter_number":"","connection_date":"","sanctioned_load":"","phase":"Single or Three","connection_type":"LT/HT or domestic/commercial as printed","tariff_category":"","discom":"","state":"","district":"","country":"India","bill_month":"","fixed_charges_inr":null,"energy_charges_inr":null,"total_amount_payable_inr":null,"read_type":"","bill_type_label":"","metered_unit_consumption":null,"total_amount_till_due_inr":null,"total_amount_after_due_inr":null,"current_month_bill_amount_inr":null,"principal_arrear_inr":null,"amount_received_against_bill_inr":null,"mp_govt_subsidy_amount_inr":null,"fppas_inr":null,"rebate_incentive_inr":null,"ccb_adjustment_inr":null,"nfp_flag":false,"strict_audit_mode":"strict_v1","strict_audit_notes":[],"months":{"jan":null,"feb":null,"mar":null,"apr":null,"may":null,"jun":null,"jul":null,"aug":null,"sep":null,"oct":null,"nov":null,"dec":null},"consumption_history":[],"format_memory":"","tariff_slabs_detected":[]}
+{"name":"","address":"","consumer_id":"","meter_number":"","connection_date":"","sanctioned_load":"","phase":"Single or Three","connection_type":"purpose as printed e.g. Shops/Showrooms or Domestic","purpose_of_supply":"","tariff_category":"","contract_demand_kva":null,"discom":"","state":"","district":"","country":"India","bill_month":"","fixed_charges_inr":null,"energy_charges_inr":null,"electricity_duty_inr":null,"regulatory_surcharges_inr":null,"fppas_inr":null,"total_amount_payable_inr":null,"read_type":"","bill_type_label":"","metered_unit_consumption":null,"total_amount_till_due_inr":null,"total_amount_after_due_inr":null,"current_month_bill_amount_inr":null,"principal_arrear_inr":null,"amount_received_against_bill_inr":null,"mp_govt_subsidy_amount_inr":null,"rebate_incentive_inr":null,"ccb_adjustment_inr":null,"nfp_flag":false,"strict_audit_mode":"strict_v1","strict_audit_notes":[],"months":{"jan":null,"feb":null,"mar":null,"apr":null,"may":null,"jun":null,"jul":null,"aug":null,"sep":null,"oct":null,"nov":null,"dec":null},"consumption_history":[],"format_memory":"","tariff_slabs_detected":[]}
 ${hintBlock}
 Rules:
 1) STRICT AUDIT: use only printed values; no inference/assumptions.
 2) Unknown text="", unknown numbers=null, and add note in strict_audit_notes when uncertain.
 3) Do NOT infer meter type from section headers (e.g. "Smart Meter RC/DC Amount Received" is not meter type).
-2) Include all visible history rows in consumption_history as {"month":"...","units":number}.
-3) Fill months jan..dec from history if inferable.
-4) format_memory: one short sentence on where monthly history appears; else "".
-5) tariff_slabs_detected: [] if slab table not visible.
-6) nfp_flag=true only if "NFP" or "Not For Payment" is explicitly printed.
+4) PURPOSE: copy purpose_of_supply like connection_type (Shops/Showrooms, School, Hospital, Domestic). If only one line exists, duplicate it in both fields.
+5) CHARGES: extract fixed_charges_inr, energy_charges_inr, electricity_duty_inr, fppas_inr, regulatory_surcharges_inr (other surcharges) as separate printed lines. Ignore Time-of-Day (ToD) surcharges if listed separately — set strict_audit_notes if ToD lines are mixed with flat energy.
+6) contract_demand_kva: only if "Contract Demand" or similar is printed separately (number in kVA).
+7) Include all visible history rows in consumption_history as {"month":"...","units":number}.
+8) Fill months jan..dec from history if inferable.
+9) format_memory: one short sentence on where monthly history appears; else "".
+10) tariff_slabs_detected: [] if slab table not visible.
+11) nfp_flag=true only if "NFP" or "Not For Payment" is explicitly printed.
 Return ONLY the JSON object.`;
 
   const parts: GeminiPart[] = [
@@ -250,6 +253,16 @@ export function normalizeParsedBillShape(raw: Record<string, unknown>): ParsedBi
     ),
     mp_govt_subsidy_amount_inr: toNullableNumber(raw.mp_govt_subsidy_amount_inr ?? raw.mpGovtSubsidyAmountInr),
     fppas_inr: toNullableNumber(raw.fppas_inr ?? raw.fppasInr),
+    electricity_duty_inr: toNullableNumber(raw.electricity_duty_inr ?? raw.electricityDutyInr),
+    regulatory_surcharges_inr: toNullableNumber(
+      raw.regulatory_surcharges_inr ?? raw.regulatorySurchargesInr
+    ),
+    purpose_of_supply: (() => {
+      const p = String(raw.purpose_of_supply ?? raw.purposeOfSupply ?? "").trim();
+      const c = String(raw.connection_type ?? raw.connectionType ?? "").trim();
+      return (p || c) || undefined;
+    })(),
+    contract_demand_kva: toNullableNumber(raw.contract_demand_kva ?? raw.contractDemandKva),
     rebate_incentive_inr: toNullableNumber(raw.rebate_incentive_inr ?? raw.rebateIncentiveInr),
     ccb_adjustment_inr: toNullableNumber(raw.ccb_adjustment_inr ?? raw.ccbAdjustmentInr),
     nfp_flag,

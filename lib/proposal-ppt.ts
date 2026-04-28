@@ -63,6 +63,8 @@ export type PremiumProposalPptInput = {
   state?: string;
   discom?: string;
   connectionType?: string;
+  /** Bill "Purpose" line — e.g. Shops/Showrooms (Smart Multi-Factor billing). */
+  purposeOfSupply?: string;
   tariffCategory?: string;
   connectedLoadKw?: number;
   contractDemandKva?: number;
@@ -73,6 +75,15 @@ export type PremiumProposalPptInput = {
   monthlyAuditOverrides?: Partial<Record<keyof MonthlyUnits, MpMonthlyAuditOverride>>;
   monthlyFppasPct?: Partial<Record<keyof MonthlyUnits, number>>;
   agjyClaimed?: boolean;
+  /** Board snapshot — Energy Charges line (₹) for Smart Billing cross-check. */
+  billEnergyChargesInr?: number;
+  /** Electricity Duty line (₹) — optional cross-check. */
+  billElectricityDutyInr?: number;
+  /** Metered units on the reference bill row (for implied ₹/kWh). */
+  referenceBillUnits?: number;
+  /** Fixed charge (₹) on reference bill — Smart Multi-Factor validation. */
+  billFixedChargeInr?: number;
+
   grossSystemCostInr?: number;
   pmSuryaGharSubsidyInr?: number;
   netCostInr?: number;
@@ -137,6 +148,12 @@ export type ProposalDeckSummary = {
   lifetime25Profit: number;
   summerPct: number;
   fixedAnnual: number;
+  /** MP Smart Billing — resolved sub-type label (e.g. LV2.2 · sanctioned-load ≤10 kW). */
+  mpBillingSubTypeLabel?: string;
+  /** Implied ₹/kWh from OCR Energy ÷ units when available. */
+  effectiveTariffRateInrPerKwh?: number | null;
+  /** One-line QA caption for installers. */
+  mpSmartBillingCaption?: string;
   auditRows: AuditRow[];
   auditTotals: AuditRow;
   solarVsGrid: ReturnType<typeof computeSolarVsGrid>;
@@ -316,7 +333,12 @@ function buildLegacyAuditRows(input: PremiumProposalPptInput, labels: string[]):
 }
 
 function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
-  rows: AuditRow[]; totals: AuditRow; summerPct: number; fixedAnnual: number; mode: "mp_2025_26" | "legacy";
+  rows: AuditRow[];
+  totals: AuditRow;
+  summerPct: number;
+  fixedAnnual: number;
+  mode: "mp_2025_26" | "legacy";
+  smartBilling?: import("@/lib/mp-smart-billing").MpSmartBillingResolution;
 } {
   if (isMpProposalContext({ state: input.state, discom: input.discom })) {
     const merged: Partial<Record<keyof MonthlyUnits, number>> = { ...(input.monthlyBillActuals ?? {}) };
@@ -324,20 +346,52 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
     const actualCurrentBill = n(Number(input.currentMonthBillAmountInr) || 0);
     if (billMonthKey && actualCurrentBill > 0 && !merged[billMonthKey]) merged[billMonthKey] = actualCurrentBill;
     const built = buildMpAuditRows({
-      state: input.state, discom: input.discom, tariffCategory: input.tariffCategory,
-      connectionType: input.connectionType, connectedLoadKw: input.connectedLoadKw,
-      contractDemandKva: input.contractDemandKva, areaProfile: input.areaProfile,
-      monthlyUnits: input.monthlyUnits, monthlyBillActuals: merged,
-      monthlyAuditOverrides: input.monthlyAuditOverrides, monthlyFppasPct: input.monthlyFppasPct,
-      agjyClaimed: input.agjyClaimed
+      state: input.state,
+      discom: input.discom,
+      tariffCategory: input.tariffCategory,
+      purposeOfSupply: input.purposeOfSupply,
+      connectionType: input.connectionType,
+      connectedLoadKw: input.connectedLoadKw,
+      contractDemandKva: input.contractDemandKva,
+      areaProfile: input.areaProfile,
+      monthlyUnits: input.monthlyUnits,
+      monthlyBillActuals: merged,
+      monthlyAuditOverrides: input.monthlyAuditOverrides,
+      monthlyFppasPct: input.monthlyFppasPct,
+      agjyClaimed: input.agjyClaimed,
+      billFixedChargeInr: input.billFixedChargeInr,
+      billEnergyChargesInr: input.billEnergyChargesInr,
+      billElectricityDutyInr: input.billElectricityDutyInr,
+      referenceBillUnits: input.referenceBillUnits
     });
     const rows: AuditRow[] = built.rows.map((r, i) => ({
-      label: labels[i], units: r.units, energy: r.energy, fixed: r.fixed, duty: r.duty, fuel: r.fuel, total: r.total
+      label: labels[i],
+      units: r.units,
+      energy: r.energy,
+      fixed: r.fixed,
+      duty: r.duty,
+      fuel: r.fuel,
+      total: r.total
     }));
-    const totals: AuditRow = { label: "Total", units: built.totals.units, energy: built.totals.energy, fixed: built.totals.fixed, duty: built.totals.duty, fuel: built.totals.fuel, total: built.totals.total };
-    return { rows, totals, summerPct: built.summerPct, fixedAnnual: built.fixedAnnual, mode: "mp_2025_26" };
+    const totals: AuditRow = {
+      label: "Total",
+      units: built.totals.units,
+      energy: built.totals.energy,
+      fixed: built.totals.fixed,
+      duty: built.totals.duty,
+      fuel: built.totals.fuel,
+      total: built.totals.total
+    };
+    return {
+      rows,
+      totals,
+      summerPct: built.summerPct,
+      fixedAnnual: built.fixedAnnual,
+      mode: "mp_2025_26",
+      smartBilling: built.smartBilling
+    };
   }
-  return { ...buildLegacyAuditRows(input, labels), mode: "legacy" };
+  return { ...buildLegacyAuditRows(input, labels), mode: "legacy", smartBilling: undefined };
 }
 
 // =============================================================================
@@ -347,7 +401,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
 export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalDeckSummary {
   const lang = input.lang ?? "en";
   const labels = monthLabels(lang);
-  const { rows: auditRows, totals: auditTotals, summerPct, fixedAnnual } = buildAuditRows(input, labels);
+  const { rows: auditRows, totals: auditTotals, summerPct, fixedAnnual, smartBilling } = buildAuditRows(input, labels);
   const yearlyBill = n(auditTotals.total > 0 ? auditTotals.total : input.yearlyBill);
   const afterSolar = n(input.afterSolar);
   const annualSaving = n(yearlyBill - afterSolar);
@@ -407,6 +461,12 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
       })
     : undefined;
 
+  const mpSmartBillingCaption = smartBilling
+    ? `${smartBilling.billingSubTypeLabel}${
+        smartBilling.hadCategoryConflict ? " · header/purpose reconciled" : ""
+      }${smartBilling.effectiveTariffRateInrPerKwh != null ? ` · ~₹${smartBilling.effectiveTariffRateInrPerKwh}/kWh from bill` : ""}`
+    : undefined;
+
   return {
     honoredName: withHonorific(input.customerName),
     installer: (input.installerName ?? "Harihar Solar").trim(),
@@ -426,6 +486,9 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
     lifetime25Profit,
     summerPct,
     fixedAnnual,
+    mpBillingSubTypeLabel: smartBilling?.billingSubTypeLabel,
+    effectiveTariffRateInrPerKwh: smartBilling?.effectiveTariffRateInrPerKwh ?? null,
+    mpSmartBillingCaption,
     auditRows,
     auditTotals,
     solarVsGrid,
