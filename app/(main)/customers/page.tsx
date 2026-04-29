@@ -24,13 +24,6 @@ import {
   type LeadStatusKey
 } from "@/lib/lead-status";
 import { removeLeadFollowUp } from "@/lib/lead-followup-storage";
-import {
-  normalizeSource,
-  SOURCE_FILTER_OPTIONS,
-  SOURCE_META,
-  isLeadStale,
-  type LeadSourceKey
-} from "@/lib/lead-source";
 import { cn } from "@/lib/utils";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import {
@@ -49,6 +42,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
 
 type LeadModal = "none" | "add" | "edit";
+type StageFilter = "all" | "leads" | "active-projects";
 
 function CustomersPageContent() {
   const { t } = useLanguage();
@@ -89,22 +83,24 @@ function CustomersPageContent() {
 
   const allCustomers = data ?? [];
 
-  const [sourceFilter, setSourceFilter] = useState<LeadSourceKey | "all">("all");
-  const [staleOnly, setStaleOnly] = useState(false);
+  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
 
   const customers = useMemo(() => {
     let list = allCustomers;
-    if (sourceFilter !== "all") {
-      list = list.filter((c) => normalizeSource(c.source) === sourceFilter);
-    }
-    if (staleOnly) {
-      list = list.filter((c) => isLeadStale(c.last_touched_at));
+    if (stageFilter === "leads") {
+      list = list.filter((c) => (c.customer_stage ?? "lead") === "lead");
+    } else if (stageFilter === "active-projects") {
+      list = list.filter((c) => (c.customer_stage ?? "lead") === "active-project");
     }
     return list;
-  }, [allCustomers, sourceFilter, staleOnly]);
+  }, [allCustomers, stageFilter]);
 
-  const staleCount = useMemo(
-    () => allCustomers.filter((c) => isLeadStale(c.last_touched_at)).length,
+  const stageCounts = useMemo(
+    () => ({
+      all: allCustomers.length,
+      leads: allCustomers.filter((c) => (c.customer_stage ?? "lead") === "lead").length,
+      "active-projects": allCustomers.filter((c) => (c.customer_stage ?? "lead") === "active-project").length
+    }),
     [allCustomers]
   );
 
@@ -451,43 +447,40 @@ function CustomersPageContent() {
         </div>
         </div>
 
-        {/* ── Filter chips — Stripe/Linear style: small, flush, no gap clutter ── */}
         <div className="page-lite-item flex flex-wrap gap-1.5 sm:gap-2">
-          {SOURCE_FILTER_OPTIONS.map((opt) => {
-            const isActive = sourceFilter === opt.value;
-            const chipMeta = opt.value !== "all" ? SOURCE_META[opt.value as LeadSourceKey] : null;
+          {(
+            [
+              { key: "all", label: t("customers_filterAll") },
+              { key: "leads", label: t("customers_filterLeads") },
+              { key: "active-projects", label: t("customers_filterActiveProjects") }
+            ] as const
+          ).map((opt) => {
+            const isActive = stageFilter === opt.key;
             return (
               <button
-                key={opt.value}
+                key={opt.key}
                 type="button"
-                onClick={() => setSourceFilter(opt.value as LeadSourceKey | "all")}
+                onClick={() => setStageFilter(opt.key)}
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all sm:text-xs",
                   isActive
-                    ? chipMeta
-                      ? chipMeta.chipActiveClass
-                      : "border-brand-700 bg-brand-700 text-white"
+                    ? "border-brand-700 bg-brand-700 text-white"
                     : "border-slate-200/80 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-300"
                 )}
                 aria-pressed={isActive}
               >
-                {opt.label}
+                <span>{opt.label}</span>
+                <span
+                  className={cn(
+                    "inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] tabular-nums",
+                    isActive ? "bg-white/20 text-white" : "bg-slate-200/80 text-slate-700"
+                  )}
+                >
+                  {stageCounts[opt.key]}
+                </span>
               </button>
             );
           })}
-          <button
-            type="button"
-            onClick={() => setStaleOnly((v) => !v)}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all sm:text-xs",
-              staleOnly
-                ? "border-amber-500 bg-amber-500 text-white"
-                : "border-amber-200/80 bg-amber-50/70 text-amber-700 hover:bg-amber-100 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-300"
-            )}
-            aria-pressed={staleOnly}
-          >
-            Stale · {staleCount}
-          </button>
         </div>
 
         <div className="page-lite-item ss-card-subtle p-3 sm:p-4 md:p-5">

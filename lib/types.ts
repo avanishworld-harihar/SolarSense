@@ -19,6 +19,8 @@ export type CustomerLead = {
   /** Indian state / UT. */
   state?: string | null;
   email?: string | null;
+  /** Derived from projects linkage for Customers UI. */
+  customer_stage?: "lead" | "in-pipeline" | "active-project";
 };
 
 export type MonthKey = "jan" | "feb" | "mar" | "apr" | "may" | "jun" | "jul" | "aug" | "sep" | "oct" | "nov" | "dec";

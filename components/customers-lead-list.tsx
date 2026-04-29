@@ -131,6 +131,23 @@ function LeadSourceBadge({ sourceRaw }: { sourceRaw: string | null | undefined }
   );
 }
 
+type CustomerStage = "lead" | "in-pipeline" | "active-project";
+
+const CUSTOMER_STAGE_META: Record<CustomerStage, { labelKey: string; className: string }> = {
+  lead: {
+    labelKey: "customers_stageLead",
+    className: "border-slate-200/90 bg-slate-50/90 text-slate-700"
+  },
+  "in-pipeline": {
+    labelKey: "customers_stageInPipeline",
+    className: "border-amber-200/90 bg-amber-50/90 text-amber-800"
+  },
+  "active-project": {
+    labelKey: "customers_stageActiveProject",
+    className: "border-emerald-200/90 bg-emerald-50/90 text-emerald-800"
+  }
+};
+
 export function CustomersLeadList({
   customers,
   loading,
@@ -213,6 +230,9 @@ export function CustomersLeadList({
             const waUrl = customer.phone ? buildLeadWhatsAppUrl(customer.phone, customer.name, installerName, locale) : null;
             const statusLabel = t(LEAD_STATUS_I18N_KEY[statusKey]);
             const stale = isLeadStale(customer.last_touched_at);
+            const stage = (customer.customer_stage ?? "lead") as CustomerStage;
+            const stageMeta = CUSTOMER_STAGE_META[stage];
+            const activeProject = stage === "active-project";
 
             const canMutateLead =
               Boolean(onEditLead || onDeleteLead) && !customer.id.startsWith("optimistic-");
@@ -223,7 +243,8 @@ export function CustomersLeadList({
                 className={cn(
                   "group/card ss-card relative overflow-hidden p-4",
                   "backdrop-blur-xl backdrop-saturate-150 transition-[box-shadow,transform] duration-200",
-                  "hover:border-white/75 hover:shadow-[0_16px_48px_rgba(11,34,64,0.12)] active:scale-[0.998] md:grid md:grid-cols-12 md:items-center md:gap-4 md:p-4 md:px-5"
+                  "hover:border-white/75 hover:shadow-[0_16px_48px_rgba(11,34,64,0.12)] active:scale-[0.998] md:grid md:grid-cols-12 md:items-center md:gap-4 md:p-4 md:px-5",
+                  activeProject && "border-emerald-200/80 bg-emerald-50/40 shadow-[0_0_0_1px_rgba(16,185,129,0.14),0_16px_38px_rgba(5,150,105,0.08)]"
                 )}
               >
                 <div
@@ -284,6 +305,14 @@ export function CustomersLeadList({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <h3 className="truncate text-base font-extrabold tracking-tight text-brand-900 sm:text-lg">{customer.name}</h3>
                       <LeadSourceBadge sourceRaw={customer.source} />
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider sm:text-[10px]",
+                          stageMeta.className
+                        )}
+                      >
+                        {t(stageMeta.labelKey)}
+                      </span>
                     </div>
                     {customer.phone ? (
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
