@@ -1086,6 +1086,10 @@ export default function ProposalPage() {
         const j = (await resp.json().catch(() => ({}))) as { error?: string };
         throw new Error(j.error || "Pipeline save failed");
       }
+      const pj = (await resp.json().catch(() => ({}))) as { ok?: boolean; data?: { id?: string }; error?: string };
+      if (!pj.ok || !pj.data?.id) {
+        throw new Error(pj.error || "Pipeline record was not created");
+      }
       void mutateGlobal(PIPELINE_SWR_KEY);
       void mutateGlobal(CUSTOMERS_SWR_KEY);
       void mutateGlobal(DASHBOARD_STATS_SWR_KEY);

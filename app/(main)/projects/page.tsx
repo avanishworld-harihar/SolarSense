@@ -41,7 +41,7 @@ const TAB_DEFS: { id: ProjectsView; labelKey: string; fallback: string; descript
 
 async function fetchPipeline(url: string): Promise<PipelineProjectRow[]> {
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, { cache: "no-store" });
     const j = (await r.json()) as { ok?: boolean; data?: unknown };
     if (!j.ok || !Array.isArray(j.data)) return [];
     return j.data as PipelineProjectRow[];
@@ -108,7 +108,7 @@ function ProjectsBoard() {
   const { data, error, isLoading, mutate: mutatePipeline } = useSWR(PIPELINE_SWR_KEY, fetchPipeline, {
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
-    dedupingInterval: 60_000,
+    dedupingInterval: 5_000,
     keepPreviousData: true
   });
 

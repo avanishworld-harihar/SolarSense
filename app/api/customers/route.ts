@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listCustomers } from "@/lib/supabase";
+import { listCustomers, listPipelineProjects } from "@/lib/supabase";
 import { processInboundLead } from "@/lib/inbound-leads";
 import type { CustomerLead } from "@/lib/types";
 import { z } from "zod";
@@ -38,7 +38,21 @@ export async function GET() {
   try {
     const raw = await listCustomers();
     const customers = (raw as Record<string, unknown>[]).map(mapCustomerRow);
-    return NextResponse.json({ ok: true, data: customers });
+    const pipeline = await listPipelineProjects();
+    const stageByLeadId = new Map<string, "in-pipeline" | "active-project">();
+    for (const p of pipeline) {
+      if (!p.lead_id) continue;
+      const status = String(p.status ?? "").toLowerCase();
+      const stage = status.includes("done") || status.includes("active") || status.includes("install")
+        ? "active-project"
+        : "in-pipeline";
+      stageByLeadId.set(p.lead_id, stage);
+    }
+    const decorated = customers.map((c) => ({
+      ...c,
+      customer_stage: stageByLeadId.get(c.id) ?? "lead"
+    }));
+    return NextResponse.json({ ok: true, data: decorated });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to load customers";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
