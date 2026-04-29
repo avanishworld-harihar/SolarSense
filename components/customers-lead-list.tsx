@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Building2, IndianRupee, MapPin, MessageCircle, Phone, PhoneCall, Send, Users, Wifi } from "lucide-react";
+import { Building2, IndianRupee, MapPin, MessageCircle, Pencil, Phone, PhoneCall, Send, Trash2, Users, Wifi } from "lucide-react";
 
-import { CardActionDots } from "@/components/card-action-dots";
 import type { CustomerLead } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -231,20 +230,32 @@ export function CustomersLeadList({
                   className="pointer-events-none absolute -right-6 -top-10 h-28 w-28 rounded-full bg-gradient-to-br from-indigo-400/10 to-solar-400/10 blur-2xl"
                   aria-hidden
                 />
+                {canMutateLead ? (
+                  <div className="absolute right-3 top-3 z-20 flex items-center gap-1">
+                    {onEditLead ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditLead(customer)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border-[0.5px] border-slate-200/90 bg-white/90 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-brand-700"
+                        aria-label={t("customers_editLeadAria")}
+                      >
+                        <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
+                      </button>
+                    ) : null}
+                    {onDeleteLead ? (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteLead(customer)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border-[0.5px] border-red-200/90 bg-white/90 text-red-600 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
+                        aria-label={t("customers_deleteLeadAria")}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="relative md:col-span-5">
-                  {canMutateLead ? (
-                    <CardActionDots
-                      className="absolute right-0 top-0 z-10"
-                      editAriaLabel={t("customers_editLeadAria")}
-                      deleteAriaLabel={t("customers_deleteLeadAria")}
-                      interaction="menu"
-                      editText="Edit"
-                      deleteText="Delete"
-                      onEdit={onEditLead ? () => onEditLead(customer) : undefined}
-                      onDelete={onDeleteLead ? () => onDeleteLead(customer) : undefined}
-                    />
-                  ) : null}
                   <div
                     className={cn(
                       "relative flex items-start gap-3 md:items-center md:gap-4",
