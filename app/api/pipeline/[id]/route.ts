@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { patchPipelineProject } from "@/lib/supabase";
+import { deletePipelineProject, patchPipelineProject } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +65,29 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
         : error instanceof Error
           ? error.message
           : "Patch failed";
+    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, ctx: RouteCtx) {
+  try {
+    const { id } = await ctx.params;
+    if (!id) {
+      return NextResponse.json({ ok: false, error: "missing id" }, { status: 400 });
+    }
+    const result = await deletePipelineProject(id);
+    if (!result.ok) {
+      if (result.reason === "not_found") {
+        return NextResponse.json({ ok: false, error: "project_not_found" }, { status: 404 });
+      }
+      if (result.reason === "db_unavailable") {
+        return NextResponse.json({ ok: false, error: "db_unavailable" }, { status: 503 });
+      }
+      return NextResponse.json({ ok: false, error: result.reason }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Delete failed";
     return NextResponse.json({ ok: false, error: message }, { status: 400 });
   }
 }

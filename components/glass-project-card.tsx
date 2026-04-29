@@ -4,6 +4,7 @@ import { Archive, ArchiveRestore, Eye, EyeOff, FolderKanban, PencilLine, X } fro
 import Link from "next/link";
 import { memo, useCallback, useEffect, useState } from "react";
 
+import { CardActionDots } from "@/components/card-action-dots";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjectCardTouchMode } from "@/hooks/use-project-card-touch-mode";
@@ -35,6 +36,10 @@ export type GlassProjectSummary = {
   dashboardVisible?: boolean;
   /** CRM v2 — soft-archive ISO timestamp. */
   archivedAt?: string | null;
+  /** Raw CRM fields for edit modal */
+  officialName?: string | null;
+  leadId?: string | null;
+  leadName?: string | null;
 };
 
 export type ProjectCardPatch = {
@@ -56,7 +61,9 @@ function statusNeedsStalePulse(status: GlassProjectSummary["status"], updatedAtI
 function GlassProjectCardInner({
   project,
   className,
-  onPatch
+  onPatch,
+  onEditProject,
+  onDeleteProject
 }: {
   project: GlassProjectSummary;
   className?: string;
@@ -66,6 +73,8 @@ function GlassProjectCardInner({
    * SWR mutation + revalidation. When omitted, the card stays read-only.
    */
   onPatch?: (id: string, patch: ProjectCardPatch) => Promise<void> | void;
+  onEditProject?: (project: GlassProjectSummary) => void;
+  onDeleteProject?: (project: GlassProjectSummary) => void;
 }) {
   const { t } = useLanguage();
   const stalePulse = statusNeedsStalePulse(project.status, project.updatedAt);
@@ -137,14 +146,23 @@ function GlassProjectCardInner({
       }}
         className={cn(
           glassBase,
-          "project-card-hover-lift project-card-touch-feedback relative isolate overflow-visible rounded-2xl",
+          "group/card project-card-hover-lift project-card-touch-feedback relative isolate overflow-visible rounded-2xl",
           !touchMode && "cursor-pointer",
           touchExpanded && "project-card-touch-open",
           statusGlowClass,
           className
         )}
       >
-      <CardHeader className="relative z-[2] space-y-2 p-3 pb-2 sm:p-4 sm:pb-2">
+      {onEditProject || onDeleteProject ? (
+        <CardActionDots
+          className="absolute right-2 top-2 z-20 sm:right-3 sm:top-3"
+          editAriaLabel={t("projects_editProjectAria")}
+          deleteAriaLabel={t("projects_deleteProjectAria")}
+          onEdit={onEditProject ? () => onEditProject(project) : undefined}
+          onDelete={onDeleteProject ? () => onDeleteProject(project) : undefined}
+        />
+      ) : null}
+      <CardHeader className="relative z-[2] space-y-2 p-3 pb-2 pr-12 sm:p-4 sm:pb-2 sm:pr-14">
         <div className="flex items-start gap-2.5 sm:gap-3">
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-white/55 bg-white/55 text-brand-700 shadow-[0_4px_14px_rgba(11,34,64,0.08)] ring-1 ring-white/50 backdrop-blur-sm dark:border-white/12 dark:bg-white/[0.08] dark:text-brand-200 dark:shadow-[0_4px_18px_rgba(0,0,0,0.35)] dark:ring-white/10 sm:h-10 sm:w-10"

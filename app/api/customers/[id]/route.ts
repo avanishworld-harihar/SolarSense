@@ -84,3 +84,28 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
     return NextResponse.json({ ok: false, error: message }, { status: 400 });
   }
 }
+
+export async function DELETE(_req: NextRequest, ctx: RouteCtx) {
+  try {
+    const { id } = await ctx.params;
+    if (!id) return NextResponse.json({ ok: false, error: "missing id" }, { status: 400 });
+    if (!supabase) {
+      return NextResponse.json({ ok: false, error: "db_unavailable" }, { status: 503 });
+    }
+    const leadsTable = await resolveLeadsTable();
+    if (!leadsTable) {
+      return NextResponse.json({ ok: false, error: "leads_table_missing" }, { status: 500 });
+    }
+    const { data, error } = await supabase.from(leadsTable).delete().eq("id", id).select("id").maybeSingle();
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    }
+    if (!data) {
+      return NextResponse.json({ ok: false, error: "lead_not_found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Delete failed";
+    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+  }
+}

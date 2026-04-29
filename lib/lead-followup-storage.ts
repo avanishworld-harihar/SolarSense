@@ -30,6 +30,13 @@ export function recordLeadFollowUp(leadId: string) {
   writeMap(m);
 }
 
+export function removeLeadFollowUp(leadId: string) {
+  const m = readLeadFollowUpMap();
+  if (!(leadId in m)) return;
+  delete m[leadId];
+  writeMap(m);
+}
+
 export function getLeadFollowUpTimestamp(leadId: string): number | null {
   const t = readLeadFollowUpMap()[leadId];
   return typeof t === "number" && Number.isFinite(t) ? t : null;

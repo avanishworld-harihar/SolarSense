@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Building2, IndianRupee, MapPin, MessageCircle, Phone, PhoneCall, Send, Users, Wifi } from "lucide-react";
 
+import { CardActionDots } from "@/components/card-action-dots";
 import type { CustomerLead } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -134,7 +135,9 @@ function LeadSourceBadge({ sourceRaw }: { sourceRaw: string | null | undefined }
 export function CustomersLeadList({
   customers,
   loading,
-  onStatusChange
+  onStatusChange,
+  onEditLead,
+  onDeleteLead
 }: {
   customers: CustomerLead[];
   loading: boolean;
@@ -144,6 +147,8 @@ export function CustomersLeadList({
    * component.
    */
   onStatusChange?: (leadId: string, next: LeadStatusKey) => void;
+  onEditLead?: (customer: CustomerLead) => void;
+  onDeleteLead?: (customer: CustomerLead) => void;
 }) {
   const { locale, t } = useLanguage();
   const showHeader = !loading && customers.length > 0;
@@ -210,11 +215,14 @@ export function CustomersLeadList({
             const statusLabel = t(LEAD_STATUS_I18N_KEY[statusKey]);
             const stale = isLeadStale(customer.last_touched_at);
 
+            const canMutateLead =
+              Boolean(onEditLead || onDeleteLead) && !customer.id.startsWith("optimistic-");
+
             return (
               <article
                 key={customer.id}
                 className={cn(
-                  "group ss-card relative overflow-hidden p-4",
+                  "group/card ss-card relative overflow-hidden p-4",
                   "backdrop-blur-xl backdrop-saturate-150 transition-[box-shadow,transform] duration-200",
                   "hover:border-white/75 hover:shadow-[0_16px_48px_rgba(11,34,64,0.12)] active:scale-[0.998] md:grid md:grid-cols-12 md:items-center md:gap-4 md:p-4 md:px-5"
                 )}
@@ -224,7 +232,22 @@ export function CustomersLeadList({
                   aria-hidden
                 />
 
-                <div className="relative flex items-start gap-3 md:col-span-5 md:items-center md:gap-4">
+                <div className="relative md:col-span-5">
+                  {canMutateLead ? (
+                    <CardActionDots
+                      className="absolute right-0 top-0 z-10"
+                      editAriaLabel={t("customers_editLeadAria")}
+                      deleteAriaLabel={t("customers_deleteLeadAria")}
+                      onEdit={onEditLead ? () => onEditLead(customer) : undefined}
+                      onDelete={onDeleteLead ? () => onDeleteLead(customer) : undefined}
+                    />
+                  ) : null}
+                  <div
+                    className={cn(
+                      "relative flex items-start gap-3 md:items-center md:gap-4",
+                      canMutateLead ? "pr-14 sm:pr-16" : ""
+                    )}
+                  >
                   <div className="relative shrink-0">
                     <div
                       className={cn(
@@ -316,6 +339,7 @@ export function CustomersLeadList({
                     ) : (
                       <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
                     )}
+                  </div>
                   </div>
                 </div>
 

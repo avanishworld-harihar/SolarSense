@@ -17,7 +17,13 @@ import {
 } from "@/lib/dashboard-stats-client";
 import { OfflineDataNotice } from "@/components/offline-data-notice";
 import { useInstallerDiscoms } from "@/hooks/use-installer-discoms";
-import { LEAD_STATUS_I18N_KEY, LEAD_STATUS_OPTIONS, type LeadStatusKey } from "@/lib/lead-status";
+import {
+  LEAD_STATUS_I18N_KEY,
+  LEAD_STATUS_OPTIONS,
+  normalizeLeadStatus,
+  type LeadStatusKey
+} from "@/lib/lead-status";
+import { removeLeadFollowUp } from "@/lib/lead-followup-storage";
 import {
   normalizeSource,
   SOURCE_FILTER_OPTIONS,
@@ -42,6 +48,8 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
 
+type LeadModal = "none" | "add" | "edit";
+
 function CustomersPageContent() {
   const { t } = useLanguage();
   const toast = useToast();
@@ -50,7 +58,9 @@ function CustomersPageContent() {
   const online = useOnlineStatus();
   const { mutate: mutateGlobal } = useSWRConfig();
   const openFromQuery = searchParams.get("add") === "1";
-  const [showAddModal, setShowAddModal] = useState(openFromQuery);
+  const [leadModal, setLeadModal] = useState<LeadModal>(() => (openFromQuery ? "add" : "none"));
+  const [editLeadId, setEditLeadId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CustomerLead | null>(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -106,7 +116,8 @@ function CustomersPageContent() {
   }, [mutate]);
 
   useEffect(() => {
-    setShowAddModal(openFromQuery);
+    setLeadModal(openFromQuery ? "add" : "none");
+    if (!openFromQuery) setEditLeadId(null);
   }, [openFromQuery]);
 
   useEffect(() => {
@@ -133,14 +144,14 @@ function CustomersPageContent() {
   }, []);
 
   useEffect(() => {
-    if (!showAddModal) return;
+    if (leadModal !== "add") return;
     const { state, discom } = readInstallerRegion();
     setForm((p) => ({
       ...p,
       state: state || p.state,
       discom: discom || p.discom
     }));
-  }, [showAddModal]);
+  }, [leadModal]);
 
   useEffect(() => {
     if (!form.state.trim()) return;
@@ -152,12 +163,12 @@ function CustomersPageContent() {
   }, [form.state, leadDiscomOptions]);
 
   useEffect(() => {
-    if (!showAddModal) return;
+    if (leadModal !== "add") return;
     const s = form.state.trim();
     const d = form.discom.trim();
     if (!s || !d) return;
     writeInstallerRegion(s, d);
-  }, [showAddModal, form.state, form.discom]);
+  }, [leadModal, form.state, form.discom]);
 
   /**
    * Optimistic pipeline status change. Mutates the SWR cache instantly so the
@@ -214,6 +225,62 @@ function CustomersPageContent() {
     );
   }
 
+  function closeLeadModal() {
+    setLeadModal("none");
+    setEditLeadId(null);
+    setError("");
+    const r = readInstallerRegion();
+    setForm({
+      name: "",
+      city: "",
+      state: r.state,
+      discom: r.discom,
+      monthly_bill: "",
+      status: "new",
+      phone: ""
+    });
+  }
+
+  function openEditLead(customer: CustomerLead) {
+    if (customer.id.startsWith("optimistic-")) return;
+    setError("");
+    setEditLeadId(customer.id);
+    setLeadModal("edit");
+    setForm({
+      name: customer.name,
+      city: customer.city,
+      state: (customer.state ?? "").trim(),
+      discom: customer.discom,
+      monthly_bill: String(customer.monthly_bill ?? ""),
+      status: normalizeLeadStatus(customer.status),
+      phone: (customer.phone ?? "").trim()
+    });
+  }
+
+  async function confirmDeleteLead() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    const prev = data ?? [];
+    setDeleteTarget(null);
+    void mutate(
+      (p) => (p ?? []).filter((c) => c.id !== id),
+      { revalidate: false }
+    );
+    try {
+      const r = await fetch(`/api/customers/${id}`, { method: "DELETE" });
+      const j = (await r.json()) as { ok?: boolean; error?: string };
+      if (!j.ok) throw new Error(j.error || "Delete failed");
+      removeLeadFollowUp(id);
+      await mutate();
+      bumpDashboardLeads(-1);
+      await mutateGlobal(DASHBOARD_STATS_SWR_KEY, undefined, { revalidate: true });
+      toast.success(t("customers_leadDeleted"), t("customers_leadDeletedSub"));
+    } catch (e) {
+      await mutate(prev, { revalidate: false });
+      toast.error(t("customers_leadDeleteFailed"), e instanceof Error ? e.message : "Please try again.");
+    }
+  }
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -233,6 +300,35 @@ function CustomersPageContent() {
       Number.isNaN(payload.monthly_bill)
     ) {
       setError(t("customers_fillRequired"));
+      return;
+    }
+
+    if (leadModal === "edit" && editLeadId) {
+      void (async () => {
+        try {
+          const r = await fetch(`/api/customers/${editLeadId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: payload.name,
+              city: payload.city,
+              state: form.state.trim() || undefined,
+              discom: payload.discom,
+              monthly_bill: payload.monthly_bill,
+              status: payload.status,
+              phone: form.phone.trim() ? form.phone.trim() : null
+            })
+          });
+          const j = (await r.json()) as { ok?: boolean; error?: string };
+          if (!j.ok) throw new Error(j.error || "Could not update lead");
+          await mutate();
+          await mutateGlobal(DASHBOARD_STATS_SWR_KEY, undefined, { revalidate: true });
+          closeLeadModal();
+          toast.success(t("customers_leadUpdated"), t("customers_leadUpdatedSub"));
+        } catch (e) {
+          toast.error(t("customers_leadUpdateFailed"), e instanceof Error ? e.message : "Please try again.");
+        }
+      })();
       return;
     }
 
@@ -263,7 +359,8 @@ function CustomersPageContent() {
         phone: ""
       });
     }
-    setShowAddModal(false);
+    setLeadModal("none");
+    setEditLeadId(null);
     router.push("/");
 
     void (async () => {
@@ -343,7 +440,10 @@ function CustomersPageContent() {
             <button
               type="button"
               className="ss-cta-primary mt-2 w-full shrink-0 rounded-2xl px-5 py-3 sm:mt-0 sm:w-auto sm:py-3.5"
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setEditLeadId(null);
+                setLeadModal("add");
+              }}
             >
               {t("customers_addLeadCta")}
             </button>
@@ -395,19 +495,23 @@ function CustomersPageContent() {
             customers={customers}
             loading={showListSkeleton}
             onStatusChange={handleStatusChange}
+            onEditLead={openEditLead}
+            onDeleteLead={(c) => setDeleteTarget(c)}
           />
         </div>
       </div>
 
-      {showAddModal && (
+      {leadModal !== "none" && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 backdrop-blur-[12px] p-0 sm:items-center sm:p-4">
           <div className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/55 bg-[hsl(var(--card))/0.96] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_30px_70px_-26px_rgba(15,23,42,0.48),0_8px_20px_-10px_rgba(15,23,42,0.24)] sm:max-h-[90vh] sm:pb-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-base font-extrabold text-brand-800 sm:text-lg">{t("customers_addModalTitle")}</h3>
+              <h3 className="text-base font-extrabold text-brand-800 sm:text-lg">
+                {leadModal === "edit" ? t("customers_editLeadTitle") : t("customers_addModalTitle")}
+              </h3>
               <button
                 type="button"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600 transition-colors duration-200 hover:bg-slate-200"
-                onClick={() => setShowAddModal(false)}
+                onClick={closeLeadModal}
                 aria-label={t("actions_close")}
               >
                 ×
@@ -503,9 +607,43 @@ function CustomersPageContent() {
                 className="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 px-4 py-3 text-sm font-extrabold text-white shadow-[0_14px_30px_-16px_rgba(20,184,166,0.9)] transition-all duration-200 hover:brightness-105"
                 type="submit"
               >
-                {t("actions_saveCustomer")}
+                {leadModal === "edit" ? t("customers_saveLeadChanges") : t("actions_saveCustomer")}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-lead-title"
+            className="w-full max-w-sm rounded-2xl border border-white/50 bg-[hsl(var(--card))] p-5 shadow-xl"
+          >
+            <h3 id="delete-lead-title" className="text-base font-extrabold text-brand-900">
+              {t("customers_deleteConfirmTitle")}
+            </h3>
+            <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+              {t("customers_deleteConfirmBody", { name: deleteTarget.name })}
+            </p>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+                onClick={() => setDeleteTarget(null)}
+              >
+                {t("customers_deleteCancel")}
+              </button>
+              <button
+                type="button"
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition-colors hover:bg-red-700"
+                onClick={() => void confirmDeleteLead()}
+              >
+                {t("customers_deleteConfirmCta")}
+              </button>
+            </div>
           </div>
         </div>
       )}

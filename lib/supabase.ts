@@ -101,6 +101,13 @@ export function formatPipelineDisplayName(official: string | null, leadName: str
   return `${o} (${l})`;
 }
 
+/** Normalize project row → CRM lead UUID (PostgREST uses snake_case `lead_id`). */
+function projectRowLeadId(r: Record<string, unknown>): string | null {
+  const v = r.lead_id ?? r.leadId;
+  if (v == null || v === "") return null;
+  return String(v);
+}
+
 export async function listPipelineProjects(): Promise<PipelineProjectRow[]> {
   if (!supabase) return [];
   const { data: projects, error } = await supabase
@@ -111,7 +118,7 @@ export async function listPipelineProjects(): Promise<PipelineProjectRow[]> {
   if (error) return [];
 
   const rows = (projects ?? []) as Record<string, unknown>[];
-  const leadIds = [...new Set(rows.map((r) => r.lead_id).filter(Boolean))] as string[];
+  const leadIds = [...new Set(rows.map((r) => projectRowLeadId(r)).filter(Boolean))] as string[];
   const leadMap = new Map<string, string>();
 
   if (leadIds.length) {
@@ -125,20 +132,23 @@ export async function listPipelineProjects(): Promise<PipelineProjectRow[]> {
     }
   }
 
-  return rows.map((r) => ({
-    id: String(r.id),
-    lead_id: r.lead_id != null ? String(r.lead_id) : null,
-    official_name: r.official_name != null ? String(r.official_name) : null,
-    lead_name: r.lead_id != null ? leadMap.get(String(r.lead_id)) ?? null : null,
-    capacity_kw: r.capacity_kw != null ? String(r.capacity_kw) : null,
-    detail: r.detail != null ? String(r.detail) : null,
-    status: String(r.status ?? "pending"),
-    install_progress: Number(r.install_progress) || 0,
-    next_action: r.next_action != null ? String(r.next_action) : null,
-    updated_at: r.updated_at != null ? String(r.updated_at) : null,
-    dashboard_visible: r.dashboard_visible === false ? false : true,
-    archived_at: r.archived_at != null ? String(r.archived_at) : null
-  }));
+  return rows.map((r) => {
+    const leadId = projectRowLeadId(r);
+    return {
+      id: String(r.id),
+      lead_id: leadId,
+      official_name: r.official_name != null ? String(r.official_name) : null,
+      lead_name: leadId != null ? leadMap.get(leadId) ?? null : null,
+      capacity_kw: r.capacity_kw != null ? String(r.capacity_kw) : null,
+      detail: r.detail != null ? String(r.detail) : null,
+      status: String(r.status ?? "pending"),
+      install_progress: Number(r.install_progress) || 0,
+      next_action: r.next_action != null ? String(r.next_action) : null,
+      updated_at: r.updated_at != null ? String(r.updated_at) : null,
+      dashboard_visible: r.dashboard_visible === false ? false : true,
+      archived_at: r.archived_at != null ? String(r.archived_at) : null
+    };
+  });
 }
 
 /**
@@ -169,7 +179,7 @@ export async function patchPipelineProject(
   if (patch.install_progress !== undefined) {
     updateRow.install_progress = Math.min(100, Math.max(0, Math.round(patch.install_progress)));
   }
-  if (patch.capacity_kw !== undefined) updateRow.capacity_kw = patch.capacity_kw;
+  if (patch.capacity_kw !== undefined) updateRow.capacity_kw = patch.capacity_kw?.trim() || null;
   if (patch.official_name !== undefined) updateRow.official_name = patch.official_name?.trim() || null;
   if (patch.detail !== undefined) updateRow.detail = patch.detail?.trim() || null;
 
@@ -181,6 +191,17 @@ export async function patchPipelineProject(
     .single();
   if (error) throw error;
   return data as Record<string, unknown>;
+}
+
+/** Hard-delete a pipeline row (CRM board). Caller should revalidate SWR + dashboard stats. */
+export async function deletePipelineProject(
+  id: string
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!supabase) return { ok: false, reason: "db_unavailable" };
+  const { data, error } = await supabase.from("projects").delete().eq("id", id).select("id").maybeSingle();
+  if (error) return { ok: false, reason: error.message };
+  if (!data) return { ok: false, reason: "not_found" };
+  return { ok: true };
 }
 
 export async function upsertPipelineProject(payload: {
