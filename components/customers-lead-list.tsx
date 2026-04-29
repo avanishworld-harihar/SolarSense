@@ -238,6 +238,9 @@ export function CustomersLeadList({
                       className="absolute right-0 top-0 z-10"
                       editAriaLabel={t("customers_editLeadAria")}
                       deleteAriaLabel={t("customers_deleteLeadAria")}
+                      interaction="menu"
+                      editText="Edit"
+                      deleteText="Delete"
                       onEdit={onEditLead ? () => onEditLead(customer) : undefined}
                       onDelete={onDeleteLead ? () => onDeleteLead(customer) : undefined}
                     />
