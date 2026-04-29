@@ -174,12 +174,29 @@ function saveSession(snap: SessionSnap) {
   }
 }
 
+function isReloadNavigation(): boolean {
+  if (typeof window === "undefined") return false;
+  const nav = window.performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+  return nav?.type === "reload";
+}
+
 export default function ProposalPage() {
   const { t } = useLanguage();
   const toast = useToast();
   const { mutate: mutateGlobal } = useSWRConfig();
 
-  const sessionSnap = useMemo(() => loadSession(), []);
+  const bootFromReload = useMemo(() => isReloadNavigation(), []);
+  const sessionSnap = useMemo(() => {
+    if (bootFromReload) {
+      try {
+        sessionStorage.removeItem(SESSION_STATE_KEY);
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
+    return loadSession();
+  }, [bootFromReload]);
 
   const [monthlyUnits, setMonthlyUnits] = useState<MonthlyUnits>(() => sessionSnap?.monthlyUnits ?? emptyMonthlyUnits());
   const [latestBill, setLatestBill] = useState<ParsedBillShape | null>(sessionSnap?.latestBill ?? null);
@@ -302,6 +319,42 @@ export default function ProposalPage() {
     };
     window.addEventListener(INSTALLER_REGION_EVENT, sync);
     return () => window.removeEventListener(INSTALLER_REGION_EVENT, sync);
+  }, []);
+
+  /**
+   * Mobile fallback pull-to-refresh: when user drags down from top, force a
+   * hard reload so proposal state resets (matches browser refresh intent).
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let startY = 0;
+    let armed = false;
+    let triggered = false;
+    const THRESHOLD = 90;
+    const onTouchStart = (e: TouchEvent) => {
+      if (window.scrollY > 0) {
+        armed = false;
+        return;
+      }
+      startY = e.touches[0]?.clientY ?? 0;
+      armed = true;
+      triggered = false;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!armed || triggered) return;
+      if (window.scrollY > 0) return;
+      const y = e.touches[0]?.clientY ?? 0;
+      if (y - startY > THRESHOLD) {
+        triggered = true;
+        window.location.reload();
+      }
+    };
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+    };
   }, []);
 
   useEffect(() => {
@@ -528,6 +581,10 @@ export default function ProposalPage() {
   }, [requiredSecondaryCount]);
 
   useEffect(() => {
+    if (bootFromReload) {
+      setHydratedFromServer(true);
+      return;
+    }
     if (!restoreRes || hydratedFromServer) return;
     const calc = restoreRes.latestCalculation;
     const bill = restoreRes.latestBillUpload;
@@ -585,7 +642,7 @@ export default function ProposalPage() {
       setBillAnalysis(t("proposal_billAutofillDone"));
     }
     setHydratedFromServer(true);
-  }, [restoreRes, hydratedFromServer, billAnalysis, t, sessionSnap]);
+  }, [restoreRes, hydratedFromServer, billAnalysis, t, sessionSnap, bootFromReload]);
 
   useEffect(() => {
     if (!clientRef) return;
@@ -822,6 +879,47 @@ export default function ProposalPage() {
   function onMonthChange(key: keyof MonthlyUnits, value: string) {
     const n = parseInt(value || "0", 10);
     setMonthlyUnits((prev) => ({ ...prev, [key]: Number.isNaN(n) ? 0 : Math.max(0, n) }));
+  }
+
+  function resetProposalForm() {
+    uploadQueueRef.current = [];
+    uploadWorkerRunningRef.current = false;
+    setSelectedLeadId("");
+    setMonthlyUnits(emptyMonthlyUnits());
+    setLatestBill(null);
+    setAdditionalBills(Array.from({ length: requiredSecondaryCount }, () => null));
+    setAuditedMonthTotals({});
+    setBillAnalysis("");
+    setBillAnalysisTone("neutral");
+    setScanTimingBadge("");
+    setLatestWebProposalUrl(null);
+    setOverrideSolarKw("");
+    setOverridePanels("");
+    setShowProposalSettings(false);
+    setManual({
+      leadContactName: "",
+      leadPhone: "",
+      billPhone: "",
+      officialBillName: "",
+      city: "",
+      discom: "",
+      state: "",
+      consumerId: "",
+      meterNumber: "",
+      connectionDate: "",
+      phase: "",
+      connectionType: "",
+      sanctionedLoad: "",
+      billingAddress: "",
+      tariffCategory: "",
+      purposeOfSupply: "",
+      contractDemandKva: ""
+    });
+    try {
+      sessionStorage.removeItem(SESSION_STATE_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 
   function applyLeadFromCrm(lead: CustomerLead) {
@@ -1094,6 +1192,7 @@ export default function ProposalPage() {
       void mutateGlobal(CUSTOMERS_SWR_KEY);
       void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
       toast.success("Saved to pipeline", `${customerName} — ${effectiveResult.solarKw} kW added to project pipeline.`);
+      resetProposalForm();
     } catch (err) {
       toast.error("Pipeline save failed", err instanceof Error ? err.message : "Could not save.");
     } finally {
@@ -1125,7 +1224,16 @@ export default function ProposalPage() {
     <>
       <div className="ss-page-shell">
         <div className="ss-step-card space-y-2">
-        <span className="ss-step-chip">Step 1</span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="ss-step-chip">Step 1</span>
+          <button
+            type="button"
+            onClick={resetProposalForm}
+            className="rounded-full border border-slate-300 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+          >
+            Clear Form
+          </button>
+        </div>
         <FloatingLabelSelect
           label={step1Label}
           suppressHydrationWarning
