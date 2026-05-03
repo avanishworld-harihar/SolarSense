@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, Eye, EyeOff, FolderKanban, PencilLine, X } from "lucide-react";
+import { Archive, ArchiveRestore, Eye, EyeOff, FolderKanban, PencilLine, Send, X } from "lucide-react";
 import Link from "next/link";
 import { memo, useCallback, useEffect, useState } from "react";
 
@@ -251,6 +251,16 @@ function GlassProjectCardInner({
               Open project details
               <span className="text-sm leading-none">+</span>
             </button>
+            {project.leadId ? (
+              <Link
+                href={`/proposal?leadId=${encodeURIComponent(project.leadId)}`}
+                className="inline-flex min-h-10 items-center justify-between rounded-xl border border-teal-200/70 bg-teal-50/80 px-3 text-xs font-extrabold text-teal-900 transition active:scale-[0.99]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {t("projects_resumeProposal")}
+                <Send className="h-3.5 w-3.5" />
+              </Link>
+            ) : null}
             <Link
               href="/projects"
               className="inline-flex min-h-10 items-center justify-between rounded-xl border border-indigo-200/70 bg-indigo-50/80 px-3 text-xs font-extrabold text-indigo-800 transition active:scale-[0.99]"
@@ -365,6 +375,16 @@ function GlassProjectCardInner({
               </div>
             ) : null}
 
+            {project.leadId ? (
+              <Link
+                href={`/proposal?leadId=${encodeURIComponent(project.leadId)}`}
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-teal-300 bg-teal-50 px-3 text-sm font-extrabold text-teal-900 shadow-sm transition hover:bg-teal-100 dark:border-teal-500/45 dark:bg-teal-950/45 dark:text-teal-100 dark:hover:bg-teal-900/50"
+                onClick={() => setSheetOpen(false)}
+              >
+                <Send className="h-4 w-4 shrink-0" strokeWidth={2} />
+                {t("projects_resumeProposal")}
+              </Link>
+            ) : null}
             <Link
               href="/projects"
               className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-indigo-300 bg-indigo-50 px-3 text-sm font-extrabold text-indigo-800 dark:border-indigo-500/50 dark:bg-indigo-950/50 dark:text-indigo-200"

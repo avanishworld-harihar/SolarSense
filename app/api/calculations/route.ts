@@ -43,8 +43,8 @@ const postSchema = z.object({
 export async function GET(req: NextRequest) {
   const clientRef = req.nextUrl.searchParams.get("clientRef")?.trim() ?? "";
   const leadId = req.nextUrl.searchParams.get("leadId")?.trim() ?? "";
-  if (!clientRef) {
-    return NextResponse.json({ ok: false, error: "clientRef required" }, { status: 400 });
+  if (!clientRef && !leadId) {
+    return NextResponse.json({ ok: false, error: "clientRef or leadId required" }, { status: 400 });
   }
   try {
     const data = await getLatestPersistenceSnapshot(clientRef, leadId || undefined);

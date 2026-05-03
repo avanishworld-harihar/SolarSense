@@ -1,5 +1,6 @@
 "use client";
 
+import { Send } from "lucide-react";
 import { GlassProjectCard, type GlassProjectSummary, type ProjectCardPatch } from "@/components/glass-project-card";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { useLanguage } from "@/lib/language-context";
 import { formatPipelineDisplayName, type PipelineProjectRow } from "@/lib/supabase";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FormEvent } from "react";
 import { Suspense, useCallback, useMemo, useState } from "react";
@@ -403,6 +405,16 @@ function ProjectsBoard() {
                 <span className="text-slate-500">{t("projects_leadContactReadonly")}: </span>
                 {editingPipelineRow?.lead_name?.trim() || "—"}
               </p>
+              {editingPipelineRow?.lead_id ? (
+                <Link
+                  href={`/proposal?leadId=${encodeURIComponent(editingPipelineRow.lead_id)}`}
+                  className="mb-1 flex min-h-10 items-center justify-center gap-2 rounded-xl border border-teal-300 bg-teal-50 px-3 text-xs font-extrabold text-teal-900 shadow-sm transition hover:bg-teal-100 dark:border-teal-500/45 dark:bg-teal-950/40 dark:text-teal-100"
+                  onClick={() => closeProjectEditModal()}
+                >
+                  <Send className="h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+                  {t("projects_resumeProposal")}
+                </Link>
+              ) : null}
               <FloatingLabelInput
                 label={t("projects_labelOfficialName")}
                 containerClassName="my-4"

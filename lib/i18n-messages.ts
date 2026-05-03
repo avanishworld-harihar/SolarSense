@@ -156,6 +156,8 @@ export const EN = {
   proposal_step1SelectLead: "Step 1: Choose lead from CRM",
   proposal_step1LeadHint:
     "After you pick a lead, contact name and phone lock here; bill name stays in a separate field.",
+  proposal_billPersistLeadHint:
+    "Select the CRM lead in Step 1 before uploading bills — SOL.52 saves the scan and numbers on that lead so you can reopen this proposal later without uploading again (Customers → Proposal, or Projects → Resume proposal).",
   proposal_leadContactBlockTitle: "Lead contact (CRM — call here)",
   proposal_leadPhoneLabel: "Phone",
   proposal_step2BillUploads: "Step 2: Upload two bills (Latest + Previous)",
@@ -232,6 +234,7 @@ export const EN = {
   projects_labelNextAction: "Next action",
   projects_labelProgress: "Install progress (%)",
   projects_leadContactReadonly: "Lead contact (CRM)",
+  projects_resumeProposal: "Resume proposal (saved bill)",
   projects_formBoardStatus: "Card status",
 
   more_title: "More",
@@ -411,6 +414,8 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   proposal_step1SelectLead: "CRM लीड सूची से चुनें",
   proposal_step1LeadHint:
     "लीड चुनते ही संपर्क नाम और फ़ोन लॉक; बिल पर नाम अलग फ़ील्ड में।",
+  proposal_billPersistLeadHint:
+    "बिल अपलोड से पहले चरण 1 में CRM लीड चुनें — स्कैन और नंबर उसी लीड पर सेव होंगे, बाद में दोबारा अपलोड किए बिना प्रस्ताव खोल सकेंगे (ग्राहक → प्रस्ताव या प्रोजेक्ट्स से)।",
   proposal_step2BillUploads: "चरण 2: दो बिल अपलोड करें (नया + पिछला)",
   proposal_step2BillUploadsSub: "वैकल्पिक — ऑटो-फ़िल के लिए; मैन्युअल भी चलेगा।",
   proposal_monthlyUnitsTitle: "मासिक यूनिट",
@@ -446,6 +451,7 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   projects_labelNextAction: "अगला कदम",
   projects_labelProgress: "इंस्टॉल प्रोग्रेस (%)",
   projects_leadContactReadonly: "लीड संपर्क (CRM)",
+  projects_resumeProposal: "प्रस्ताव जारी रखें (सेव बिल)",
   projects_formBoardStatus: "कार्ड स्थिति",
 
   more_languageLine: "भाषा: अंग्रेज़ी, हिंदी, तमिल व अन्य — Coming soon",
@@ -563,11 +569,14 @@ export const TA: Partial<Record<keyof typeof EN, string>> = {
 
   proposal_selectCustomer: "முதலில் வாடிக்கையாளரைத் தேர்வு செய்யவும்",
   proposal_step1SelectLead: "படி 1: CRM இலிருந்து லீடு",
+  proposal_billPersistLeadHint:
+    "பில்லை பதிவேற்றும் முன் படி 1 இல் CRM லீடைத் தேர்ந்தெடுக்கவும் — ஸ்கேனும் எண்களும் அந்த லீடில் சேமிக்கப்படும்; பின்னர் மீண்டும் பதிவேற்றாமல் முன்மொழிவைத் திறக்கலாம்.",
   proposal_savePipelineCta: "பைப்லைனில் சேமி (திட்டங்கள்)",
   proposal_pipelineSaved: "பைப்லைன் புதுப்பிக்கப்பட்டது.",
   proposal_pipelineDefaultNextAction: "முன்மொழிவு பின்தொடர்தல் + சைட் சர்வே",
   projects_nextActionAboveProgress: "அடுத்த நடவடிக்கை",
   projects_stalePulseHint: "3+ நாட்கள் இந்த நிலை — கவனிக்கவும்",
+  projects_resumeProposal: "முன்மொழிவைத் தொடரவும் (சேமித்த பில்)",
 
   more_languageLine: "மொழி: ஆங்கிலம், இந்தி, தமிழ் மற்றும் பல — Coming soon",
   more_brandingLine: "நிறுவன பிராண்டிங் — Coming soon",

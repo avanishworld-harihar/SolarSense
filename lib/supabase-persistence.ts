@@ -136,6 +136,24 @@ async function recentRows(client: SupabaseClient, table: string): Promise<Row[]>
   return (data as Row[] | null) ?? [];
 }
 
+/** Latest bill/calc row for a CRM lead (indexed lookup — not limited to recent 30). */
+async function latestRowForLead(client: SupabaseClient, table: string, leadId: string): Promise<Row | null> {
+  const idCols = ["lead_id", "customer_id"];
+  for (const col of idCols) {
+    const { data, error } = await client
+      .from(table)
+      .select("*")
+      .eq(col, leadId)
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!error && data) return data as Row;
+    const miss = missingColumn((error && error.message) || "");
+    if (miss === col) continue;
+  }
+  return null;
+}
+
 function rowMatches(row: Row, clientRef: string, leadId?: string | null): boolean {
   const ref = clientRef.trim();
   const lead = leadId?.trim();
@@ -212,9 +230,24 @@ export async function getLatestPersistenceSnapshot(clientRef: string, leadId?: s
   const client = writeClient();
   if (!client) return { latestBillUpload: null, latestCalculation: null };
 
-  const [billRows, calcRows] = await Promise.all([recentRows(client, "bill_uploads"), recentRows(client, "calculations")]);
-  const billRow = billRows.find((row) => rowMatches(row, clientRef, leadId)) ?? null;
-  const calcRow = calcRows.find((row) => rowMatches(row, clientRef, leadId)) ?? null;
+  const lead = leadId?.trim() ?? "";
+  let billRow: Row | null = null;
+  let calcRow: Row | null = null;
+
+  if (lead) {
+    const [b, c] = await Promise.all([
+      latestRowForLead(client, "bill_uploads", lead),
+      latestRowForLead(client, "calculations", lead)
+    ]);
+    billRow = b;
+    calcRow = c;
+  }
+
+  if (!billRow || !calcRow) {
+    const [billRows, calcRows] = await Promise.all([recentRows(client, "bill_uploads"), recentRows(client, "calculations")]);
+    if (!billRow) billRow = billRows.find((row) => rowMatches(row, clientRef, leadId)) ?? null;
+    if (!calcRow) calcRow = calcRows.find((row) => rowMatches(row, clientRef, leadId)) ?? null;
+  }
 
   const latestBillUpload = billRow
     ? {

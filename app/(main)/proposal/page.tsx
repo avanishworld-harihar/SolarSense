@@ -466,10 +466,15 @@ export default function ProposalPage() {
    * TypeScript "used before declaration" error).
    */
   const deepLinkLeadIdRef = useRef<string | null>(null);
+  /** Until CRM pick applies, keeps `leadId` from URL so `/api/calculations` can load saved bill/calc. */
+  const [urlLeadIdForRestore, setUrlLeadIdForRestore] = useState("");
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("leadId");
-    if (id) deepLinkLeadIdRef.current = id;
+    const id = new URLSearchParams(window.location.search).get("leadId")?.trim();
+    if (id) {
+      deepLinkLeadIdRef.current = id;
+      setUrlLeadIdForRestore(id);
+    }
   }, []);
   useEffect(() => {
     const id = deepLinkLeadIdRef.current;
@@ -479,6 +484,7 @@ export default function ProposalPage() {
     setSelectedLeadId(id);
     applyLeadFromCrm(lead);
     deepLinkLeadIdRef.current = null;
+    setUrlLeadIdForRestore("");
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("leadId");
@@ -488,11 +494,15 @@ export default function ProposalPage() {
     // are the real reactive dependencies here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customers, selectedLeadId]);
+  const restoreLeadKey = (selectedLeadId || urlLeadIdForRestore).trim();
   const restoreUrl =
-    clientRef.length > 0
-      ? `/api/calculations?clientRef=${encodeURIComponent(clientRef)}${
-          selectedLeadId ? `&leadId=${encodeURIComponent(selectedLeadId)}` : ""
-        }`
+    clientRef.length > 0 || restoreLeadKey.length > 0
+      ? (() => {
+          const p = new URLSearchParams();
+          if (clientRef.length > 0) p.set("clientRef", clientRef);
+          if (restoreLeadKey.length > 0) p.set("leadId", restoreLeadKey);
+          return `/api/calculations?${p.toString()}`;
+        })()
       : null;
   const { data: restoreRes } = useSWR(restoreUrl, async (url: string) => {
     const res = await fetch(url, { cache: "no-store" });
@@ -1277,6 +1287,11 @@ export default function ProposalPage() {
         <p className="mt-2 text-xs font-medium leading-snug text-slate-600 sm:text-sm">
           {t("proposal_step2BillUploadsSub")} {billingRule.averagingHint}
         </p>
+        {!leadSelected ? (
+          <p className="mt-2 rounded-lg border border-amber-200/90 bg-amber-50/90 px-2.5 py-2 text-[11px] font-semibold leading-snug text-amber-950 sm:text-xs">
+            {t("proposal_billPersistLeadHint")}
+          </p>
+        ) : null}
         {uploadRequirement.requiredBills > 1 ? (
           <p className="mt-1 text-[11px] font-semibold text-indigo-700 sm:text-xs">
             SOL.52 upload planner: this DISCOM currently needs {uploadRequirement.requiredBills} bills for 12-month coverage.
