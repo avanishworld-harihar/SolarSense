@@ -53,9 +53,10 @@ export interface CustomerInput {
 }
 
 async function countFirstAvailable(candidates: string[]) {
-  if (!supabase) return { table: null as string | null, count: 0 };
+  const client = createSupabaseAdmin() ?? supabase;
+  if (!client) return { table: null as string | null, count: 0 };
   for (const table of candidates) {
-    const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true });
+    const { count, error } = await client.from(table).select("*", { count: "exact", head: true });
     if (!error) return { table, count: count ?? 0 };
   }
   return { table: null as string | null, count: 0 };
@@ -263,10 +264,11 @@ export async function upsertPipelineProject(payload: {
 }
 
 export async function listCustomers() {
-  if (!supabase) return [];
+  const client = createSupabaseAdmin() ?? supabase;
+  if (!client) return [];
   const leadsTable = await resolveLeadsTable();
   if (!leadsTable) return [];
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from(leadsTable)
     .select("*")
     .order("created_at", { ascending: false })
@@ -285,10 +287,11 @@ export async function bumpLeadStatus(
   leadId: string,
   status: string
 ): Promise<Record<string, unknown> | null> {
-  if (!supabase) return null;
+  const client = createSupabaseAdmin() ?? supabase;
+  if (!client) return null;
   const leadsTable = await resolveLeadsTable();
   if (!leadsTable) return null;
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from(leadsTable)
     .update({ status, last_touched_at: new Date().toISOString() })
     .eq("id", leadId)
@@ -297,7 +300,7 @@ export async function bumpLeadStatus(
   if (error) {
     /* `last_touched_at` is added by 012_crm_v2.sql; if the migration hasn't
      * run yet, retry without that column so dev environments still work. */
-    const retry = await supabase
+    const retry = await client
       .from(leadsTable)
       .update({ status })
       .eq("id", leadId)

@@ -198,8 +198,17 @@ function CustomersPageContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: next })
         });
-        const j = (await r.json()) as { ok?: boolean; error?: string };
+        const j = (await r.json()) as { ok?: boolean; data?: CustomerLead; error?: string };
         if (!j.ok) throw new Error(j.error || "Could not update status");
+        if (j.data?.id === leadId) {
+          await mutate(
+            (current) => {
+              const list = current ?? [];
+              return list.map((c) => (c.id === leadId ? { ...c, ...j.data! } : c));
+            },
+            { revalidate: false }
+          );
+        }
         await mutate();
         await mutateGlobal(DASHBOARD_STATS_SWR_KEY, undefined, { revalidate: true });
         toast.success("Pipeline updated", `Moved to ${LEAD_STATUS_OPTIONS.find((o) => o.value === next)?.label ?? next}.`);

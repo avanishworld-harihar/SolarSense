@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { mapCustomerRow } from "@/lib/customers-map";
 import { LEAD_STATUS_KEYS } from "@/lib/lead-status";
+import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { bumpLeadStatus, supabase, resolveLeadsTable } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -39,11 +41,12 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
       if (!updated) {
         return NextResponse.json({ ok: false, error: "lead_not_found_or_db_unavailable" }, { status: 404 });
       }
-      return NextResponse.json({ ok: true, data: updated });
+      return NextResponse.json({ ok: true, data: mapCustomerRow(updated) });
     }
 
     /** Generic field patch (name / city / etc.) — also bumps last_touched_at. */
-    if (!supabase) {
+    const db = createSupabaseAdmin() ?? supabase;
+    if (!db) {
       return NextResponse.json({ ok: false, error: "db_unavailable" }, { status: 503 });
     }
     const leadsTable = await resolveLeadsTable();
@@ -54,7 +57,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
       ...patch,
       last_touched_at: new Date().toISOString()
     };
-    const primary = await supabase
+    const primary = await db
       .from(leadsTable)
       .update(updatePayload)
       .eq("id", id)
@@ -64,7 +67,7 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
       /* Retry without last_touched_at for envs where 012 has not yet run. */
       const { last_touched_at: _drop, ...fallback } = updatePayload;
       void _drop;
-      const retry = await supabase
+      const retry = await db
         .from(leadsTable)
         .update(fallback)
         .eq("id", id)
@@ -73,9 +76,9 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
       if (retry.error) {
         return NextResponse.json({ ok: false, error: retry.error.message }, { status: 400 });
       }
-      return NextResponse.json({ ok: true, data: retry.data });
+      return NextResponse.json({ ok: true, data: mapCustomerRow(retry.data as Record<string, unknown>) });
     }
-    return NextResponse.json({ ok: true, data: primary.data });
+    return NextResponse.json({ ok: true, data: mapCustomerRow(primary.data as Record<string, unknown>) });
   } catch (error) {
     const message =
       error instanceof z.ZodError
