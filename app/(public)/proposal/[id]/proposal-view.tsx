@@ -26,6 +26,7 @@ import {
   Zap
 } from "lucide-react";
 import type { ProposalDeckSummary } from "@/lib/proposal-ppt";
+import { PROPOSAL_BRANDING_UPDATED_EVENT, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
 import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
 
@@ -558,7 +559,7 @@ function HeroCover({
         >
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300 sm:text-xs">Engineered Locally</p>
           <p className="mt-1 text-lg font-extrabold tracking-tight sm:text-2xl">100% Local team, end-to-end EPC</p>
-          <p className="mt-1 text-xs text-white/70 sm:text-sm">Site survey · Design · Install · Net-meter · 5 yr aftercare.</p>
+          <p className="mt-1 text-xs text-white/70 sm:text-sm">Site survey · Design · Install · Net-meter · 1 yr aftercare.</p>
         </motion.div>
       )}
     </section>
@@ -1730,6 +1731,19 @@ export default function ProposalView({
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
   const [selectedAmcYears, setSelectedAmcYears] = useState<1 | 5 | 10>(1);
   const [darkMode, setDarkMode] = useState(false);
+  /** Prefer snapshot from DB; if missing (older proposals), fall back to this browser's saved branding. */
+  const [displayInstallerLogoUrl, setDisplayInstallerLogoUrl] = useState("");
+
+  useEffect(() => {
+    const sync = () => {
+      const fromServer = installerLogoUrl?.trim() ?? "";
+      const fromLocal = readProposalBrandingSettings().installerLogoUrl?.trim() ?? "";
+      setDisplayInstallerLogoUrl(fromServer || fromLocal);
+    };
+    sync();
+    window.addEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, sync);
+    return () => window.removeEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, sync);
+  }, [installerLogoUrl]);
 
   const D = dict(lang);
   const monthLbls = monthLabels(lang);
@@ -1832,7 +1846,13 @@ export default function ProposalView({
 
       {/* PAGE 1 — COVER (Identity + customer + about + bottom-bleed image) */}
       <div className="proposal-page" data-page="cover">
-        <HeroCover D={D} summary={summary} installerLogoUrl={installerLogoUrl} location={undefined} siteImages={siteImages} />
+        <HeroCover
+          D={D}
+          summary={summary}
+          installerLogoUrl={displayInstallerLogoUrl || undefined}
+          location={undefined}
+          siteImages={siteImages}
+        />
       </div>
 
       {/* PAGE 2 — THE EXPERTISE (Domestic / Commercial / Industrial verticals) */}

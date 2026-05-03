@@ -74,14 +74,29 @@ export function pickBrandSet(opts: {
  * Standard residential/commercial BOM derived from the chosen system size.
  * Quantities scale with kW; brand strings reflect Indian market leaders.
  */
+/** Free AMC period shown on BOM row 6 (matches installer’s AMC plan selection, default 1 yr). */
+export type BomFreeAmcYears = 1 | 5 | 10;
+
+function bomNetMeterAmcCopy(freeAmcYears: BomFreeAmcYears): { spec: string; warranty: string } {
+  const y = freeAmcYears;
+  return {
+    spec: `DISCOM application, commissioning, ${y}-yr free AMC`,
+    warranty: `${y} yr free`
+  };
+}
+
 export function buildBom(opts: {
   systemKw: number;
   preferredPanelBrand?: DeckBrand;
+  /** Included free AMC on the BOM; defaults to 1 year. */
+  includedFreeAmcYears?: BomFreeAmcYears;
 }): DeckBomItem[] {
   const kw = Math.max(1, Math.round(opts.systemKw || 1));
   const panelWatt = 540;
   const panelCount = Math.max(1, Math.ceil((kw * 1000) / panelWatt));
   const brands = pickBrandSet({ preferredPanelBrand: opts.preferredPanelBrand, systemKw: kw });
+  const freeAmcYears = opts.includedFreeAmcYears ?? 1;
+  const netMeterAmc = bomNetMeterAmcCopy(freeAmcYears);
   return [
     {
       slot: 1,
@@ -121,9 +136,9 @@ export function buildBom(opts: {
     {
       slot: 6,
       title: "Net Metering & AMC",
-      spec: "DISCOM application, commissioning, 5-yr free AMC",
+      spec: netMeterAmc.spec,
       brand: "Harihar Solar Service Desk",
-      warranty: "5 yr free"
+      warranty: netMeterAmc.warranty
     }
   ];
 }
@@ -365,7 +380,7 @@ export function defaultCompanyProfile(lang: "en" | "hi" = "en"): CompanyProfile 
         "100% स्थानीय टीम — हमेशा 24/7 उपलब्ध",
         "PM सूर्य घर सब्सिडी कागज़ी कार्य निःशुल्क",
         "नेट मीटरिंग आवेदन हम करेंगे",
-        "5 वर्ष की निःशुल्क AMC"
+        "1 वर्ष की निःशुल्क AMC"
       ]
     };
   }
@@ -383,7 +398,7 @@ export function defaultCompanyProfile(lang: "en" | "hi" = "en"): CompanyProfile 
       "100% local team — 24/7 availability",
       "PM Surya Ghar subsidy paperwork — FREE",
       "We file the net-meter application",
-      "5-year free AMC included"
+      "1-year free AMC included"
     ]
   };
 }

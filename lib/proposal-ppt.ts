@@ -410,7 +410,12 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
   const totalReduction = yearlyBill > 0 ? Math.round((annualSaving / yearlyBill) * 100) : 0;
 
   const brands = pickBrandSet({ preferredPanelBrand: input.panelBrand, systemKw: input.systemKw });
-  const defaultBom = buildBom({ systemKw: input.systemKw, preferredPanelBrand: input.panelBrand });
+  const amcSelectedYears = (input.amcSelectedYears ?? 1) as 1 | 5 | 10;
+  const defaultBom = buildBom({
+    systemKw: input.systemKw,
+    preferredPanelBrand: input.panelBrand,
+    includedFreeAmcYears: amcSelectedYears
+  });
   // Merge per-project BOM overrides on top of the default BOM, by slot.
   const overridesBySlot = new Map<number, NonNullable<typeof input.bomOverrides>[number]>();
   for (const o of input.bomOverrides ?? []) {
@@ -448,8 +453,6 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
 
   const paymentMilestones = buildPaymentMilestones(grossSystemCost);
   const amcOptions = buildAmcOptions(grossSystemCost, lang);
-  const amcSelectedYears = (input.amcSelectedYears ?? 1) as 1 | 5 | 10;
-
   const baseCompany = defaultCompanyProfile(lang);
   const companyProfile: CompanyProfile = { ...baseCompany, ...(input.companyProfile ?? {}) };
 

@@ -12,6 +12,9 @@ export type ProposalBrandingSettings = {
 
 const STORAGE_KEY = "ss_proposal_branding_settings_v1";
 
+/** Dispatched on `window` after `writeProposalBrandingSettings` updates localStorage. */
+export const PROPOSAL_BRANDING_UPDATED_EVENT = "ss-proposal-branding-updated";
+
 export const DEFAULT_PROPOSAL_BRANDING_SETTINGS: ProposalBrandingSettings = {
   installerName: "Harihar Solar",
   installerContact: "+91-9993322267",
@@ -50,7 +53,7 @@ export function writeProposalBrandingSettings(next: ProposalBrandingSettings) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    window.dispatchEvent(new Event("ss-proposal-branding-updated"));
+    window.dispatchEvent(new Event(PROPOSAL_BRANDING_UPDATED_EVENT));
   } catch {
     /* ignore storage errors */
   }

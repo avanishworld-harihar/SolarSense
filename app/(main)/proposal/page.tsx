@@ -18,7 +18,7 @@ import {
 } from "@/lib/bill-parse";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import { INSTALLER_REGION_EVENT, readInstallerRegion } from "@/lib/installer-region-storage";
-import { readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
+import { PROPOSAL_BRANDING_UPDATED_EVENT, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast-center";
@@ -261,13 +261,19 @@ export default function ProposalPage() {
     }
     setClientRef(ref);
 
-    // Pre-populate payment QR from branding settings (set once in More > Banking & Payments).
-    try {
-      const branding = readProposalBrandingSettings();
-      if (branding.paymentQrCodeUrl) setBankPaymentQrCodeUrl(branding.paymentQrCodeUrl);
-    } catch {
-      /* ignore */
-    }
+    // Pre-populate payment QR + company logo from branding (More > Company / Banking).
+    const applyBrandingFromStorage = () => {
+      try {
+        const branding = readProposalBrandingSettings();
+        if (branding.paymentQrCodeUrl) setBankPaymentQrCodeUrl(branding.paymentQrCodeUrl);
+        if (branding.installerLogoUrl?.trim()) setInstallerLogoUrl(branding.installerLogoUrl.trim());
+      } catch {
+        /* ignore */
+      }
+    };
+    applyBrandingFromStorage();
+    window.addEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, applyBrandingFromStorage);
+    return () => window.removeEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, applyBrandingFromStorage);
   }, []);
 
   useEffect(() => {

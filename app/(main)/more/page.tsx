@@ -377,8 +377,17 @@ export default function MorePage() {
       const res = await fetch("/api/company-logo-upload", { method: "POST", body: form });
       const payload = (await res.json()) as { ok?: boolean; url?: string; error?: string };
       if (!res.ok || !payload.ok || !payload.url) throw new Error(payload.error || "Logo upload failed.");
-      setCompanyLogo(payload.url);
-      markSaved("Logo uploaded to Supabase Storage.");
+      const nextUrl = payload.url;
+      setCompanyLogo(nextUrl);
+      writeProposalBrandingSettings({
+        installerName: companyName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName,
+        installerContact: companyContact.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact,
+        installerLogoUrl: nextUrl,
+        personalizedBranding,
+        themePreset,
+        paymentQrCodeUrl: paymentQrCodeUrl.trim()
+      });
+      markSaved("Logo uploaded and saved for proposals & header.");
     } catch (e) {
       markIssue(e instanceof Error ? e.message : "Logo upload failed.");
     } finally {
