@@ -14,6 +14,10 @@ export type InboundLeadInput = {
   discom?: string;
   monthly_bill?: number;
   email?: string | null;
+  /** Optional DISCOM consumer number (bill). */
+  consumer_id?: string | null;
+  /** Site survey CRM step (`not_started` | `scheduled` | `complete`). */
+  survey_status?: string | null;
   source: LeadSource;
   source_meta?: Record<string, unknown> | null;
 };
@@ -34,6 +38,14 @@ export type InboundLeadResult = {
  */
 export async function processInboundLead(input: InboundLeadInput): Promise<InboundLeadResult> {
   const phone = input.phone.replace(/[^\d+]/g, "");
+  const consumerTrim =
+    input.consumer_id != null && String(input.consumer_id).trim().length > 0
+      ? String(input.consumer_id).trim()
+      : undefined;
+  const surveyTrim =
+    input.survey_status != null && String(input.survey_status).trim().length > 0
+      ? String(input.survey_status).trim().toLowerCase()
+      : undefined;
   const customerInput: CustomerInput = {
     name: input.name.trim(),
     city: (input.city ?? "").trim(),
@@ -44,7 +56,9 @@ export async function processInboundLead(input: InboundLeadInput): Promise<Inbou
     phone,
     status: "new",
     source: input.source,
-    source_meta: input.source_meta ?? null
+    source_meta: input.source_meta ?? null,
+    ...(consumerTrim ? { consumer_id: consumerTrim } : {}),
+    ...(surveyTrim ? { survey_status: surveyTrim } : {})
   };
 
   if (phone) {

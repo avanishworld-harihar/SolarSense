@@ -23,6 +23,7 @@ import {
   normalizeLeadStatus,
   type LeadStatusKey
 } from "@/lib/lead-status";
+import { LEAD_SURVEY_STATUS_OPTIONS } from "@/lib/proposal-survey-gate";
 import { removeLeadFollowUp } from "@/lib/lead-followup-storage";
 import { cn } from "@/lib/utils";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
@@ -42,7 +43,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
 
 type LeadModal = "none" | "add" | "edit";
-type StageFilter = "all" | "leads" | "active-projects";
+type StageFilter = "all" | "leads" | "proposal-sent" | "active-projects";
 
 function CustomersPageContent() {
   const { t } = useLanguage();
@@ -63,7 +64,9 @@ function CustomersPageContent() {
     discom: "",
     monthly_bill: "",
     status: "new",
-    phone: ""
+    phone: "",
+    consumer_id: "",
+    survey_status: ""
   });
   const { options: leadDiscomOptions, loading: leadDiscomListLoading } = useInstallerDiscoms(form.state);
   const leadDiscomSelectOptions = useMemo(
@@ -75,7 +78,8 @@ function CustomersPageContent() {
 
   const { data, error: loadError, isLoading, mutate } = useSWR<CustomerLead[]>(CUSTOMERS_SWR_KEY, fetchCustomers, {
     dedupingInterval: 25_000,
-    revalidateOnFocus: false,
+    /** After web proposal in another tab, returning here should show `proposal-sent` + green CTA. */
+    revalidateOnFocus: true,
     revalidateOnReconnect: true,
     keepPreviousData: true,
     onSuccess: (list) => writeCustomersCache(list)
@@ -89,6 +93,8 @@ function CustomersPageContent() {
     let list = allCustomers;
     if (stageFilter === "leads") {
       list = list.filter((c) => (c.customer_stage ?? "lead") === "lead");
+    } else if (stageFilter === "proposal-sent") {
+      list = list.filter((c) => normalizeLeadStatus(c.status) === "proposal-sent");
     } else if (stageFilter === "active-projects") {
       list = list.filter((c) => (c.customer_stage ?? "lead") === "active-project");
     }
@@ -99,6 +105,7 @@ function CustomersPageContent() {
     () => ({
       all: allCustomers.length,
       leads: allCustomers.filter((c) => (c.customer_stage ?? "lead") === "lead").length,
+      "proposal-sent": allCustomers.filter((c) => normalizeLeadStatus(c.status) === "proposal-sent").length,
       "active-projects": allCustomers.filter((c) => (c.customer_stage ?? "lead") === "active-project").length
     }),
     [allCustomers]
@@ -173,13 +180,17 @@ function CustomersPageContent() {
    * lifts out of any "stale" filter automatically.
    */
   function handleStatusChange(leadId: string, next: LeadStatusKey) {
-    const prev = data ?? [];
-    const before = prev.find((c) => c.id === leadId)?.status;
-    if (before === next) return;
-    void mutate(
-      prev.map((c) => (c.id === leadId ? { ...c, status: next } : c)),
-      { revalidate: false }
-    );
+    let beforeStatus: string | undefined;
+    void mutate((current) => {
+      const list = current ?? [];
+      const row = list.find((c) => c.id === leadId);
+      beforeStatus = row?.status;
+      if (row?.status === next) return list;
+      return list.map((c) => (c.id === leadId ? { ...c, status: next } : c));
+    }, { revalidate: false });
+
+    if (beforeStatus === next) return;
+
     void (async () => {
       try {
         const r = await fetch(`/api/customers/${leadId}`, {
@@ -193,10 +204,10 @@ function CustomersPageContent() {
         await mutateGlobal(DASHBOARD_STATS_SWR_KEY, undefined, { revalidate: true });
         toast.success("Pipeline updated", `Moved to ${LEAD_STATUS_OPTIONS.find((o) => o.value === next)?.label ?? next}.`);
       } catch (e) {
-        await mutate(
-          prev.map((c) => (c.id === leadId ? { ...c, status: before ?? c.status } : c)),
-          { revalidate: false }
-        );
+        await mutate((current) => {
+          const list = current ?? [];
+          return list.map((c) => (c.id === leadId ? { ...c, status: beforeStatus ?? c.status } : c));
+        }, { revalidate: false });
         toast.error("Status update failed", e instanceof Error ? e.message : "Please try again.");
       }
     })();
@@ -233,7 +244,9 @@ function CustomersPageContent() {
       discom: r.discom,
       monthly_bill: "",
       status: "new",
-      phone: ""
+      phone: "",
+      consumer_id: "",
+      survey_status: ""
     });
   }
 
@@ -249,7 +262,13 @@ function CustomersPageContent() {
       discom: customer.discom,
       monthly_bill: String(customer.monthly_bill ?? ""),
       status: normalizeLeadStatus(customer.status),
-      phone: (customer.phone ?? "").trim()
+      phone: (customer.phone ?? "").trim(),
+      consumer_id: (customer.consumer_id ?? "").trim(),
+      survey_status: (() => {
+        const s = (customer.survey_status ?? "").trim().toLowerCase().replace(/-/g, "_");
+        if (s === "not_started" || s === "scheduled" || s === "complete") return s;
+        return "";
+      })()
     });
   }
 
@@ -312,7 +331,11 @@ function CustomersPageContent() {
               discom: payload.discom,
               monthly_bill: payload.monthly_bill,
               status: payload.status,
-              phone: form.phone.trim() ? form.phone.trim() : null
+              phone: form.phone.trim() ? form.phone.trim() : null,
+              consumer_id: form.consumer_id.trim() ? form.consumer_id.trim() : null,
+              survey_status: form.survey_status.trim()
+                ? form.survey_status.trim().toLowerCase()
+                : null
             })
           });
           const j = (await r.json()) as { ok?: boolean; error?: string };
@@ -336,7 +359,9 @@ function CustomersPageContent() {
       discom: payload.discom,
       monthly_bill: payload.monthly_bill,
       status: payload.status,
-      phone: payload.phone ?? null
+      phone: payload.phone ?? null,
+      consumer_id: form.consumer_id.trim() ? form.consumer_id.trim() : null,
+      survey_status: form.survey_status.trim() ? form.survey_status.trim().toLowerCase() : null
     };
 
     void mutate((prev) => [optimisticRow, ...(prev ?? [])], { revalidate: false });
@@ -352,7 +377,9 @@ function CustomersPageContent() {
         discom: r.discom,
         monthly_bill: "",
         status: "new",
-        phone: ""
+        phone: "",
+        consumer_id: "",
+        survey_status: ""
       });
     }
     setLeadModal("none");
@@ -361,10 +388,13 @@ function CustomersPageContent() {
 
     void (async () => {
       try {
+        const postBody: Record<string, unknown> = { ...payload, state: form.state.trim() || undefined };
+        if (form.consumer_id.trim()) postBody.consumer_id = form.consumer_id.trim();
+        if (form.survey_status.trim()) postBody.survey_status = form.survey_status.trim().toLowerCase();
         const response = await fetch("/api/customers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(postBody)
         });
         const result = await response.json() as { ok?: boolean; deduped?: boolean; error?: string; data?: CustomerLead };
         if (!result.ok) throw new Error(result.error || "Could not save customer");
@@ -452,6 +482,7 @@ function CustomersPageContent() {
             [
               { key: "all", label: t("customers_filterAll") },
               { key: "leads", label: t("customers_filterLeads") },
+              { key: "proposal-sent", label: t("customers_filterProposalSent") },
               { key: "active-projects", label: t("customers_filterActiveProjects") }
             ] as const
           ).map((opt) => {
@@ -581,6 +612,27 @@ function CustomersPageContent() {
                 value={form.phone}
                 onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
               />
+              <FloatingLabelInput
+                label={t("customers_placeholderConsumerId")}
+                containerClassName="my-4"
+                className={modalFloatingClass}
+                value={form.consumer_id}
+                onChange={(e) => setForm((p) => ({ ...p, consumer_id: e.target.value }))}
+              />
+              <FloatingLabelSelect
+                suppressHydrationWarning
+                label={t("customers_labelSurveyStatus")}
+                containerClassName="my-4"
+                className={modalFloatingClass}
+                value={form.survey_status}
+                onChange={(e) => setForm((p) => ({ ...p, survey_status: e.target.value }))}
+              >
+                {LEAD_SURVEY_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value || "unset"} value={opt.value}>
+                    {t(opt.labelKey)}
+                  </option>
+                ))}
+              </FloatingLabelSelect>
               <FloatingLabelSelect
                 suppressHydrationWarning
                 label={t("customers_tablePipeline")}

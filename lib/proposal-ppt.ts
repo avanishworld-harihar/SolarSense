@@ -1,6 +1,7 @@
 import PptxGenJS from "pptxgenjs";
 import QRCode from "qrcode";
 import type { MonthlyUnits } from "@/lib/types";
+import { computeGrossSystemCostInr } from "@/lib/solar-engine";
 import { applyTariffCategoryOverride, estimateMonthlyBillBreakdownWithContext, getFallbackTariffContext } from "@/lib/tariff-engine";
 import { buildMpAuditRows, isMpProposalContext, type MpMonthlyAuditOverride } from "@/lib/mp-ppt-bill-rows";
 import {
@@ -425,7 +426,8 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
       warranty: (o.warranty ?? row.warranty).toString()
     };
   });
-  const grossSystemCost = n(input.grossSystemCostInr ?? input.systemKw * 62400);
+  /** Default matches `computeGrossSystemCostInr` in `lib/solar-engine.ts`. Override via `grossSystemCostInr`. */
+  const grossSystemCost = n(input.grossSystemCostInr ?? computeGrossSystemCostInr(input.systemKw));
   const pmSubsidy = n(input.pmSuryaGharSubsidyInr ?? computePmSuryaGharSubsidy(input.systemKw));
   const netCost = n(input.netCostInr ?? Math.max(0, grossSystemCost - pmSubsidy));
   const paybackYears = honestPaybackYears({ paybackHint: input.paybackYears, netCostInr: netCost, annualSavingInr: annualSaving });

@@ -19,7 +19,15 @@ function mapCustomerRow(row: Record<string, unknown>): CustomerLead {
     source: row.source != null ? String(row.source) : null,
     last_touched_at: row.last_touched_at != null ? String(row.last_touched_at) : null,
     state: row.state != null ? String(row.state) : null,
-    email: row.email != null ? String(row.email) : null
+    email: row.email != null ? String(row.email) : null,
+    consumer_id:
+      row.consumer_id != null && String(row.consumer_id).trim()
+        ? String(row.consumer_id).trim()
+        : null,
+    survey_status:
+      row.survey_status != null && String(row.survey_status).trim()
+        ? String(row.survey_status).trim().toLowerCase()
+        : null
   };
 }
 
@@ -31,7 +39,9 @@ const customerSchema = z.object({
   status: z.string().optional(),
   phone: z.string().optional(),
   state: z.string().optional(),
-  email: z.string().email().optional()
+  email: z.string().email().optional(),
+  consumer_id: z.string().max(160).optional(),
+  survey_status: z.string().max(40).optional()
 });
 
 export async function GET() {
@@ -77,6 +87,8 @@ export async function POST(req: NextRequest) {
       discom: payload.discom,
       monthly_bill: payload.monthly_bill,
       email: payload.email ?? null,
+      consumer_id: payload.consumer_id?.trim() || null,
+      survey_status: payload.survey_status?.trim().toLowerCase() || null,
       source: "manual"
     });
     const mappedData = mapCustomerRow(result.data as Record<string, unknown>);

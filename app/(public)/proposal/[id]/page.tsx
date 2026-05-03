@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { isLeadSurveyCompleteForProposal } from "@/lib/proposal-survey-gate";
+import { getLeadSurveyStatus } from "@/lib/supabase";
 import { getProposalById, trackProposalView } from "@/lib/proposals-store";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import ProposalView from "./proposal-view";
@@ -40,6 +42,10 @@ export default async function PublicProposalPage({ params }: PageProps) {
   const siteImages = Array.isArray(pptInput?.siteImages) ? (pptInput?.siteImages as string[]) : undefined;
   const installerLogoUrl = typeof pptInput?.installerLogoUrl === "string" ? (pptInput?.installerLogoUrl as string) : undefined;
 
+  const leadId = proposal.lead_id?.trim() ? proposal.lead_id.trim() : null;
+  const surveyStatus = await getLeadSurveyStatus(leadId);
+  const showSurveyWorkflowSection = isLeadSurveyCompleteForProposal(surveyStatus);
+
   return (
     <ProposalView
       id={id}
@@ -53,6 +59,7 @@ export default async function PublicProposalPage({ params }: PageProps) {
       generatedAt={proposal.generated_at}
       siteImages={siteImages}
       installerLogoUrl={installerLogoUrl}
+      showSurveyWorkflowSection={showSurveyWorkflowSection}
     />
   );
 }

@@ -1,14 +1,12 @@
 /**
- * Sol.52 CRM pipeline (4 stages).
- *
- * Site Survey is intentionally NOT a CRM stage anymore — it lives only on the
- * Project pipeline as a `next_action` once a proposal is sent. CRM is for the
- * pre-sale relationship; project pipeline is for the build.
+ * Sol.52 CRM lead pipeline — ordered funnel through install handoff (`won`).
  */
 export const LEAD_STATUS_KEYS = [
   "new",
   "contacted",
   "proposal-sent",
+  "site-survey",
+  "design",
   "won"
 ] as const;
 
@@ -19,6 +17,8 @@ export const LEAD_STATUS_I18N_KEY: Record<LeadStatusKey, string> = {
   new: "leadStatus_new",
   contacted: "leadStatus_contacted",
   "proposal-sent": "leadStatus_proposalSent",
+  "site-survey": "leadStatus_siteSurvey",
+  design: "leadStatus_design",
   won: "leadStatus_won"
 };
 
@@ -31,10 +31,15 @@ const LEGACY_MAP: Record<string, LeadStatusKey> = {
   lead: "new",
   new: "new",
   contacted: "contacted",
-  "site-survey-scheduled": "contacted",
-  "site_survey_scheduled": "contacted",
+  /** Older CRM rows — map into the explicit site-survey stage. */
+  "site-survey-scheduled": "site-survey",
+  "site_survey_scheduled": "site-survey",
+  survey: "site-survey",
+  "site-survey": "site-survey",
+  "site_survey": "site-survey",
   "proposal-sent": "proposal-sent",
   proposalsent: "proposal-sent",
+  design: "design",
   won: "won"
 };
 
@@ -49,6 +54,8 @@ export const LEAD_STATUS_OPTIONS: { value: LeadStatusKey; label: string }[] = [
   { value: "new", label: "New" },
   { value: "contacted", label: "Contacted" },
   { value: "proposal-sent", label: "Proposal sent" },
+  { value: "site-survey", label: "Site survey" },
+  { value: "design", label: "Design" },
   { value: "won", label: "Won" }
 ];
 
@@ -70,6 +77,16 @@ export const LEAD_STATUS_BADGE: Record<
     label: "Proposal sent",
     className:
       "border-brand-300/60 bg-gradient-to-br from-brand-100 to-brand-50 text-brand-900 shadow-sm shadow-brand-900/5"
+  },
+  "site-survey": {
+    label: "Site survey",
+    className:
+      "border-amber-300/60 bg-gradient-to-br from-amber-100 to-amber-50 text-amber-950 shadow-sm shadow-amber-900/5"
+  },
+  design: {
+    label: "Design",
+    className:
+      "border-cyan-300/60 bg-gradient-to-br from-cyan-100 to-sky-50 text-cyan-950 shadow-sm shadow-cyan-900/5"
   },
   won: {
     label: "Won",

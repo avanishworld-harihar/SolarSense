@@ -127,6 +127,8 @@ type ProposalViewProps = {
   siteImages?: string[];
   /** Optional company logo URL. */
   installerLogoUrl?: string;
+  /** When true, show the site survey + install workflow page (CRM `survey_status` complete). */
+  showSurveyWorkflowSection?: boolean;
 };
 
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
@@ -1721,7 +1723,8 @@ export default function ProposalView({
   summary,
   installer,
   siteImages,
-  installerLogoUrl
+  installerLogoUrl,
+  showSurveyWorkflowSection = false
 }: ProposalViewProps) {
   const [downloading, setDownloading] = useState(false);
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
@@ -1858,10 +1861,12 @@ export default function ProposalView({
         <BomSection D={D} lang={lang} summary={summary} />
       </div>
 
-      {/* PAGE 7 — NEW: SURVEY & SITE DESIGN (Engineering depth) */}
-      <div className="proposal-page" data-page="survey">
-        <SurveyAndWorkflowSection D={D} lang={lang} siteImages={siteImages} />
-      </div>
+      {/* PAGE 7 — Survey & workflow (only after CRM marks site survey complete) */}
+      {showSurveyWorkflowSection ? (
+        <div className="proposal-page" data-page="survey">
+          <SurveyAndWorkflowSection D={D} lang={lang} siteImages={siteImages} />
+        </div>
+      ) : null}
 
       {/* PAGE 8 — AMC SERVICE (Aftercare detail) */}
       <div className="proposal-page" data-page="amc">

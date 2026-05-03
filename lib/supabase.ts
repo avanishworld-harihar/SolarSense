@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import { normalizeLeadStatus } from "@/lib/lead-status";
+import { createSupabaseAdmin } from "@/lib/supabase-admin";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -37,6 +39,10 @@ export interface CustomerInput {
   monthly_bill: number;
   status?: string;
   phone?: string;
+  /** Optional DISCOM consumer / CA number from bill. */
+  consumer_id?: string | null;
+  /** Site survey gate for web proposal (`not_started` | `scheduled` | `complete`). */
+  survey_status?: string | null;
   /** CRM v2 attribution. Defaults to `'manual'` for the in-app add modal. */
   source?: LeadSource;
   /** Raw provider payload (form_id, ad_id, wa_message_id, etc.). */
@@ -65,6 +71,8 @@ export type PipelineProjectRow = {
   lead_id: string | null;
   official_name: string | null;
   lead_name: string | null;
+  /** Linked lead CRM `status` (raw from DB); used for server-side filters. */
+  lead_status?: string | null;
   capacity_kw: string | null;
   detail: string | null;
   status: string;
@@ -75,6 +83,14 @@ export type PipelineProjectRow = {
   dashboard_visible: boolean;
   /** CRM v2 — soft-archive timestamp (end-of-life). */
   archived_at: string | null;
+};
+
+export type ListPipelineProjectsOptions = {
+  /**
+   * When true, only projects whose linked lead is CRM-won appear (Projects tab
+   * spec). Customers / dashboard still use the full list when omitted.
+   */
+  wonLeadsOnly?: boolean;
 };
 
 /**
@@ -108,7 +124,7 @@ function projectRowLeadId(r: Record<string, unknown>): string | null {
   return String(v);
 }
 
-export async function listPipelineProjects(): Promise<PipelineProjectRow[]> {
+export async function listPipelineProjects(options?: ListPipelineProjectsOptions): Promise<PipelineProjectRow[]> {
   if (!supabase) return [];
   const { data: projects, error } = await supabase
     .from("projects")
@@ -120,25 +136,30 @@ export async function listPipelineProjects(): Promise<PipelineProjectRow[]> {
   const rows = (projects ?? []) as Record<string, unknown>[];
   const leadIds = [...new Set(rows.map((r) => projectRowLeadId(r)).filter(Boolean))] as string[];
   const leadMap = new Map<string, string>();
+  const leadStatusMap = new Map<string, string>();
 
   if (leadIds.length) {
     const leadsTable = await resolveLeadsTable();
     if (leadsTable) {
-      const { data: leads } = await supabase.from(leadsTable).select("id,name").in("id", leadIds);
+      const { data: leads } = await supabase.from(leadsTable).select("id,name,status").in("id", leadIds);
       for (const L of leads ?? []) {
-        const row = L as { id: unknown; name: unknown };
-        leadMap.set(String(row.id), String(row.name ?? ""));
+        const row = L as { id: unknown; name: unknown; status?: unknown };
+        const id = String(row.id);
+        leadMap.set(id, String(row.name ?? ""));
+        if (row.status != null) leadStatusMap.set(id, String(row.status));
       }
     }
   }
 
-  return rows.map((r) => {
+  const mapped = rows.map((r) => {
     const leadId = projectRowLeadId(r);
+    const leadStatus = leadId != null ? leadStatusMap.get(leadId) ?? null : null;
     return {
       id: String(r.id),
       lead_id: leadId,
       official_name: r.official_name != null ? String(r.official_name) : null,
       lead_name: leadId != null ? leadMap.get(leadId) ?? null : null,
+      lead_status: leadStatus,
       capacity_kw: r.capacity_kw != null ? String(r.capacity_kw) : null,
       detail: r.detail != null ? String(r.detail) : null,
       status: String(r.status ?? "pending"),
@@ -149,6 +170,11 @@ export async function listPipelineProjects(): Promise<PipelineProjectRow[]> {
       archived_at: r.archived_at != null ? String(r.archived_at) : null
     };
   });
+
+  if (options?.wonLeadsOnly) {
+    return mapped.filter((row) => normalizeLeadStatus(row.lead_status) === "won");
+  }
+  return mapped;
 }
 
 /**
@@ -294,6 +320,26 @@ export async function touchLead(leadId: string): Promise<void> {
     .eq("id", leadId);
 }
 
+/** Latest `survey_status` on the lead row (null if missing / offline / no column). */
+export async function getLeadSurveyStatus(leadId: string | null | undefined): Promise<string | null> {
+  const client = createSupabaseAdmin() ?? supabase;
+  if (!client) return null;
+  const id = leadId?.trim();
+  if (!id) return null;
+  const leadsTable = await resolveLeadsTable();
+  if (!leadsTable) return null;
+  try {
+    const { data, error } = await client.from(leadsTable).select("survey_status").eq("id", id).maybeSingle();
+    if (error) return null;
+    const raw = (data as { survey_status?: unknown } | null)?.survey_status;
+    if (raw == null) return null;
+    const s = String(raw).trim();
+    return s.length > 0 ? s : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Look up an existing lead by phone (case-insensitive). Backed by the unique
  * partial index on `lower(phone)` from `012_crm_v2.sql`, so this is O(log n).
@@ -337,6 +383,14 @@ export async function refreshLeadFromInbound(
   if (patch.monthly_bill && patch.monthly_bill > 0) updateRow.monthly_bill = patch.monthly_bill;
   if (patch.source && patch.source !== "manual") updateRow.source = patch.source;
   if (patch.source_meta) updateRow.source_meta = patch.source_meta;
+  if (patch.consumer_id !== undefined) {
+    const c = patch.consumer_id != null ? String(patch.consumer_id).trim() : "";
+    updateRow.consumer_id = c.length > 0 ? c : null;
+  }
+  if (patch.survey_status !== undefined) {
+    const s = patch.survey_status != null ? String(patch.survey_status).trim().toLowerCase() : "";
+    updateRow.survey_status = s.length > 0 ? s : null;
+  }
 
   const { data, error } = await supabase
     .from(leadsTable)
@@ -350,6 +404,14 @@ export async function refreshLeadFromInbound(
     if (patch.city) fallback.city = patch.city;
     if (patch.discom) fallback.discom = patch.discom;
     if (patch.monthly_bill && patch.monthly_bill > 0) fallback.monthly_bill = patch.monthly_bill;
+    if (patch.consumer_id !== undefined) {
+      const c = patch.consumer_id != null ? String(patch.consumer_id).trim() : "";
+      fallback.consumer_id = c.length > 0 ? c : null;
+    }
+    if (patch.survey_status !== undefined) {
+      const s = patch.survey_status != null ? String(patch.survey_status).trim().toLowerCase() : "";
+      fallback.survey_status = s.length > 0 ? s : null;
+    }
     if (Object.keys(fallback).length === 0) return null;
     const retry = await supabase
       .from(leadsTable)
@@ -379,6 +441,14 @@ export async function createCustomer(payload: CustomerInput) {
   if (payload.email !== undefined) basePayload.email = payload.email ?? null;
   if (payload.source !== undefined) basePayload.source = payload.source;
   if (payload.source_meta !== undefined) basePayload.source_meta = payload.source_meta ?? null;
+  if (payload.consumer_id !== undefined && payload.consumer_id != null) {
+    const c = String(payload.consumer_id).trim();
+    if (c.length > 0) basePayload.consumer_id = c;
+  }
+  if (payload.survey_status !== undefined && payload.survey_status != null) {
+    const s = String(payload.survey_status).trim().toLowerCase();
+    if (s.length > 0) basePayload.survey_status = s;
+  }
   basePayload.last_touched_at = new Date().toISOString();
 
   /** Strip CRM v2 columns for retry against pre-012 schemas. */

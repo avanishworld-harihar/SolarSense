@@ -224,6 +224,12 @@ export function CustomersLeadList({
         {!loading &&
           customers.map((customer) => {
             const statusKey = normalizeLeadStatus(customer.status);
+            const proposalLinkClass = cn(
+              "inline-flex h-8 items-center justify-center gap-1 rounded-xl border-[0.5px] px-2.5 text-[11px] font-bold uppercase tracking-wide shadow-sm transition-colors sm:text-xs",
+              statusKey === "proposal-sent"
+                ? "border-emerald-300/90 bg-emerald-50/95 text-emerald-800 hover:bg-emerald-100 hover:text-emerald-900"
+                : "border-brand-200/80 bg-brand-50/90 text-brand-700 hover:bg-brand-100 hover:text-brand-800"
+            );
             const bill = Number(customer.monthly_bill || 0);
             const ts = followMap[customer.id];
             const followLabel = ts != null ? formatLastFollowUpLocale(locale, ts) : t("customers_neverFollowedUp");
@@ -340,8 +346,12 @@ export function CustomersLeadList({
                         ) : null}
                         <Link
                           href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                          className="inline-flex h-8 items-center justify-center gap-1 rounded-xl border-[0.5px] border-brand-200/80 bg-brand-50/90 px-2.5 text-[11px] font-bold uppercase tracking-wide text-brand-700 shadow-sm transition-colors hover:bg-brand-100 hover:text-brand-800 sm:text-xs"
-                          aria-label={`Send proposal to ${customer.name}`}
+                          className={proposalLinkClass}
+                          aria-label={
+                            statusKey === "proposal-sent"
+                              ? `Proposal sent — open or update for ${customer.name}`
+                              : `Send proposal to ${customer.name}`
+                          }
                         >
                           <Send className="h-3.5 w-3.5" strokeWidth={2} />
                           <span>Proposal</span>
@@ -352,8 +362,12 @@ export function CustomersLeadList({
                         <p>{t("customers_noPhoneOnFile")}</p>
                         <Link
                           href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                          className="inline-flex h-8 items-center justify-center gap-1 rounded-xl border-[0.5px] border-brand-200/80 bg-brand-50/90 px-2.5 text-[11px] font-bold uppercase tracking-wide text-brand-700 shadow-sm transition-colors hover:bg-brand-100 hover:text-brand-800 sm:text-xs"
-                          aria-label={`Send proposal to ${customer.name}`}
+                          className={proposalLinkClass}
+                          aria-label={
+                            statusKey === "proposal-sent"
+                              ? `Proposal sent — open or update for ${customer.name}`
+                              : `Send proposal to ${customer.name}`
+                          }
                         >
                           <Send className="h-3.5 w-3.5" strokeWidth={2} />
                           <span>Proposal</span>
@@ -373,6 +387,7 @@ export function CustomersLeadList({
                   <div className="shrink-0 md:hidden">
                     {onStatusChange ? (
                       <LeadStatusPillSelect
+                        key={`${customer.id}-${statusKey}`}
                         leadId={customer.id}
                         statusKey={statusKey}
                         label={statusLabel}
@@ -410,6 +425,7 @@ export function CustomersLeadList({
                 <div className="relative mt-4 hidden justify-end md:col-span-2 md:mt-0 md:flex">
                   {onStatusChange ? (
                     <LeadStatusPillSelect
+                      key={`${customer.id}-${statusKey}`}
                       leadId={customer.id}
                       statusKey={statusKey}
                       label={statusLabel}

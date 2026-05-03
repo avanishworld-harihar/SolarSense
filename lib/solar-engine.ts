@@ -41,6 +41,19 @@ export type CalculateSolarOptions = {
   areaProfile?: "urban" | "rural";
 };
 
+/**
+ * Installed system gross (pre-subsidy), piecewise from list price:
+ * 3 kW → ₹2,00,000 · 5 kW → ₹3,00,000 · same ₹50k/kW slope above 5 kW;
+ * below 3 kW scales proportionally from the 3 kW anchor.
+ */
+export function computeGrossSystemCostInr(systemKw: number): number {
+  const kw = Math.max(0, Number(systemKw) || 0);
+  if (kw <= 0) return 0;
+  if (kw <= 3) return Math.round((200_000 / 3) * kw);
+  if (kw <= 5) return Math.round(200_000 + (kw - 3) * 50_000);
+  return Math.round(300_000 + (kw - 5) * 50_000);
+}
+
 export function calculateSolar(
   monthlyUnits: MonthlyUnits,
   ctx: TariffContext = DEFAULT_TARIFF_CONTEXT,
@@ -70,7 +83,7 @@ export function calculateSolar(
   const monthlySavings = Math.round((monthlyBill * (selfUse / Math.max(annualUnits, 1))) * 0.9);
   const annualSavings = monthlySavings * 12;
 
-  const grossCost = Math.round(solarKw * 50000);
+  const grossCost = computeGrossSystemCostInr(solarKw);
   const centralSubsidy =
     solarKw <= 2 ? Math.round(solarKw * 30000) : Math.min(78000, Math.round(60000 + (solarKw - 2) * 18000));
   const netCost = Math.max(0, grossCost - centralSubsidy);

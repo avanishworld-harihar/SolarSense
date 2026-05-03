@@ -16,7 +16,9 @@ const patchSchema = z
     discom: z.string().max(160).optional(),
     email: z.string().email().max(160).optional().nullable(),
     phone: z.string().max(40).optional().nullable(),
-    monthly_bill: z.number().nonnegative().optional()
+    monthly_bill: z.number().nonnegative().optional(),
+    consumer_id: z.string().max(160).optional().nullable(),
+    survey_status: z.string().max(40).optional().nullable()
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Empty patch" });
 

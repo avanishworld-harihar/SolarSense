@@ -190,15 +190,14 @@ export function computeSolarVsGrid(opts: {
 }
 
 /**
- * Best-effort net-post-subsidy cost. PM Surya Ghar 2024 caps:
- *   1 kW → 30,000 ; 2 kW → 60,000 ; 3 kW+ → 78,000 (max).
+ * PM Surya Ghar (domestic rooftop) — same rule as `lib/solar-engine.ts`:
+ * ≤2 kW: ₹30,000/kW; above 2 kW up to cap: ₹60,000 + ₹18,000/kW for extra; max ₹78,000.
  */
 export function computePmSuryaGharSubsidy(systemKw: number): number {
-  const kw = Math.max(0, Math.round(systemKw || 0));
+  const kw = Math.max(0, Number(systemKw) || 0);
   if (kw <= 0) return 0;
-  if (kw === 1) return 30000;
-  if (kw === 2) return 60000;
-  return 78000;
+  if (kw <= 2) return Math.round(kw * 30000);
+  return Math.min(78000, Math.round(60000 + (kw - 2) * 18000));
 }
 
 /**

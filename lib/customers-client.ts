@@ -76,3 +76,16 @@ export async function fetchCustomers(path: string): Promise<CustomerLead[]> {
     throw new Error("No saved customer list yet. Open Customers online once to cache leads.");
   }
 }
+
+/**
+ * Same data as `fetchCustomers` but never throws — for Proposal and other screens
+ * that must tolerate offline/API errors while sharing the `/api/customers` SWR key
+ * with the Customers page (cache shape must stay `CustomerLead[]`).
+ */
+export async function fetchCustomersLoose(path: string): Promise<CustomerLead[]> {
+  try {
+    return await fetchCustomers(path);
+  } catch {
+    return readCustomersCache() ?? [];
+  }
+}

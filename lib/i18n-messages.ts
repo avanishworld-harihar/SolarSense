@@ -100,6 +100,12 @@ export const EN = {
   customers_placeholderDiscom: "DISCOM",
   customers_placeholderBill: "Monthly bill (INR)",
   customers_placeholderPhone: "Phone (optional)",
+  customers_placeholderConsumerId: "Consumer ID (optional)",
+  customers_labelSurveyStatus: "Site survey status",
+  customers_surveyStatusUnset: "Not set",
+  customers_surveyStatusNotStarted: "Not started",
+  customers_surveyStatusScheduled: "Scheduled",
+  customers_surveyStatusComplete: "Complete",
   customers_lastFollowUpLabel: "Last follow-up",
   customers_neverFollowedUp: "No follow-up logged yet",
   customers_whatsappAria: "Open WhatsApp message",
@@ -113,6 +119,7 @@ export const EN = {
   customers_tablePipeline: "Pipeline",
   customers_filterAll: "All",
   customers_filterLeads: "Leads",
+  customers_filterProposalSent: "Proposal sent",
   customers_filterActiveProjects: "Active Projects",
   customers_stageLead: "Lead",
   customers_stageInPipeline: "In Pipeline",
@@ -194,7 +201,8 @@ export const EN = {
   projects_title: "Projects",
   projects_pipeline: "Project pipeline",
   projects_pipelineSub: "Linked to CRM — title: Official name (Lead name).",
-  projects_pipelineEmpty: "No rows yet — on Proposal pick a lead and tap Save to pipeline.",
+  projects_pipelineEmpty:
+    "No projects yet. When a lead is marked Won in Customers, their pipeline card appears here.",
   projects_pipelineLoadErr: "Could not load pipeline.",
   projects_statusActive: "Active",
   projects_statusPending: "Pending",
@@ -257,6 +265,8 @@ export const EN = {
   leadStatus_contacted: "Contacted",
   leadStatus_siteSurveyScheduled: "Site survey scheduled",
   leadStatus_proposalSent: "Proposal sent",
+  leadStatus_siteSurvey: "Site survey",
+  leadStatus_design: "Design",
   leadStatus_won: "Won",
 
   charts_avgMonthlyBill: "Avg monthly bill",
@@ -350,8 +360,15 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   customers_regionSyncHint:
     "डिफ़ॉल्ट इंस्टॉलर सेटअप जैसा। यहाँ बदलने पर ऐप आगे भी यही उपयोग करेगा।",
   customers_placeholderName: "ग्राहक का नाम",
+  customers_placeholderConsumerId: "उपभोक्ता ID (वैकल्पिक)",
+  customers_labelSurveyStatus: "साइट सर्वे स्टेटस",
+  customers_surveyStatusUnset: "सेट नहीं",
+  customers_surveyStatusNotStarted: "शुरू नहीं",
+  customers_surveyStatusScheduled: "शेड्यूल",
+  customers_surveyStatusComplete: "पूरा",
   customers_filterAll: "सभी",
   customers_filterLeads: "लीड्स",
+  customers_filterProposalSent: "प्रस्ताव भेजा",
   customers_filterActiveProjects: "एक्टिव प्रोजेक्ट",
   customers_stageLead: "लीड",
   customers_stageInPipeline: "पाइपलाइन",
@@ -374,6 +391,9 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   customers_leadDeletedSub: "लीड डिलीट हो चुकी है।",
   customers_leadDeleteFailed: "लीड नहीं हट सकी",
   customers_leadUpdateFailed: "लीड अपडेट नहीं हो सका",
+
+  leadStatus_siteSurvey: "साइट सर्वे",
+  leadStatus_design: "डिज़ाइन",
 
   followup_just: "अभी-अभी संपर्क",
   followup_min: "आखिरी संपर्क {n} मिनट पहले",
@@ -403,7 +423,8 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   proposal_billAnalysisIdle: "यूनिट ग्रिड भरें — चार्ट तभी सही होंगे।",
 
   projects_pipelineSub: "CRM लिंक — शीर्षक: आधिकारिक नाम (लीड नाम)।",
-  projects_pipelineEmpty: "कोई पंक्ति नहीं — प्रस्ताव पर लीड चुनकर पाइपलाइन सेव दबाएँ।",
+  projects_pipelineEmpty:
+    "अभी कोई प्रोजेक्ट नहीं। ग्राहकों में लीड को Won चिह्नित करने पर उसकी पाइपलाइन यहाँ दिखेगी।",
   projects_nextActionAboveProgress: "अगला कदम",
   projects_stalePulseHint: "3+ दिन इसी स्थिति में — ध्यान दें",
   projects_editProjectTitle: "प्रोजेक्ट बदलें",
@@ -523,6 +544,11 @@ export const TA: Partial<Record<keyof typeof EN, string>> = {
   customers_whatsappPrefill:
     "வணக்கம் {customerName}, நான் {installerName} இலிருந்து — சோலார் விசாரணைக்காக. 2 நிமிடம் பேசலாமா?",
   customers_noPhoneOnFile: "தொலைபேசி இல்லை",
+  customers_labelSurveyStatus: "சைட் சர்வே நிலை",
+  customers_surveyStatusUnset: "அமைக்கப்படவில்லை",
+  customers_surveyStatusNotStarted: "தொடங்கவில்லை",
+  customers_surveyStatusScheduled: "திட்டமிடப்பட்டது",
+  customers_surveyStatusComplete: "முடிந்தது",
 
   followup_just: "இப்போது தொடர்பு",
   followup_min: "கடைசி தொடர்பு {n} நிமிடம் முன்",

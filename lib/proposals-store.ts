@@ -121,6 +121,8 @@ export async function createProposal(input: CreateProposalInput): Promise<Stored
 }
 
 export type ProposalRecord = StoredProposal & {
+  /** Linked CRM lead — used to read live `survey_status` for the web proposal. */
+  lead_id?: string | null;
   ppt_input: PremiumProposalPptInput;
   summary: ProposalDeckSummary;
   generated_at: string;

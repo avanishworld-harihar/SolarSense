@@ -19,6 +19,13 @@ export type CustomerLead = {
   /** Indian state / UT. */
   state?: string | null;
   email?: string | null;
+  /** Optional DISCOM consumer / CA number. */
+  consumer_id?: string | null;
+  /**
+   * Site survey CRM step — when `complete`, the public web proposal shows the
+   * survey + install workflow page (`not_started` | `scheduled` | `complete`).
+   */
+  survey_status?: string | null;
   /** Derived from projects linkage for Customers UI. */
   customer_stage?: "lead" | "in-pipeline" | "active-project";
 };

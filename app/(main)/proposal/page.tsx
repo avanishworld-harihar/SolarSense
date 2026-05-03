@@ -7,7 +7,7 @@ import {
   estimateMonthlyKwhFromBillAmount,
   getFallbackTariffContext
 } from "@/lib/tariff-engine";
-import { calculateSolar, DEFAULT_TARIFF_CONTEXT } from "@/lib/solar-engine";
+import { calculateSolar, computeGrossSystemCostInr, DEFAULT_TARIFF_CONTEXT } from "@/lib/solar-engine";
 import type { CustomerLead, MonthlyUnits } from "@/lib/types";
 import type { TariffContext } from "@/lib/tariff-types";
 import {
@@ -30,7 +30,7 @@ import {
 import { mergeCustomerForProposal, type ManualProposalCustomer } from "@/lib/merge-proposal-customer";
 import { ProposalImageUploader } from "@/components/proposal-image-uploader";
 import { swrDiscomsWithOfflineCache, swrTariffWithOfflineCache } from "@/lib/proposal-swr-fetchers";
-import { CUSTOMERS_SWR_KEY } from "@/lib/customers-client";
+import { CUSTOMERS_SWR_KEY, fetchCustomersLoose } from "@/lib/customers-client";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
 import { cn } from "@/lib/utils";
 import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
@@ -134,18 +134,6 @@ type UploadTask = {
   file: File;
 };
 
-/** CRM list: never throw — empty dropdown if API/Supabase unavailable */
-async function swrCustomersSafe(url: string) {
-  try {
-    const r = await fetch(url);
-    const j = (await r.json()) as { ok?: boolean; data?: unknown };
-    if (!j.ok || !Array.isArray(j.data)) return { data: [] as CustomerLead[] };
-    return { data: j.data as CustomerLead[] };
-  } catch {
-    return { data: [] as CustomerLead[] };
-  }
-}
-
 type SessionSnap = {
   manual: ManualProposalCustomer;
   monthlyUnits: MonthlyUnits;
@@ -238,7 +226,6 @@ export default function ProposalPage() {
   const lastCalcPersistSignatureRef = useRef("");
   const uploadQueueRef = useRef<UploadTask[]>([]);
   const uploadWorkerRunningRef = useRef(false);
-  const customerCacheRef = useRef<CustomerLead[]>([]);
   const [manual, setManual] = useState<ManualProposalCustomer>(sessionSnap?.manual ?? {
     leadContactName: "",
     leadPhone: "",
@@ -461,15 +448,16 @@ export default function ProposalPage() {
   });
   const discomOptions = discomsRes?.data ?? [];
 
-  const { data: customersRes } = useSWR("/api/customers", swrCustomersSafe, { revalidateOnFocus: false });
-  const fetchedCustomers: CustomerLead[] = Array.isArray(customersRes?.data)
-    ? (customersRes!.data as CustomerLead[])
-    : [];
-  if (fetchedCustomers.length > 0) {
-    customerCacheRef.current = fetchedCustomers;
-  }
-  const customers: CustomerLead[] = fetchedCustomers.length > 0 ? fetchedCustomers : customerCacheRef.current;
-  const isCustomersLoading = !customersRes;
+  const {
+    data: customersData,
+    isLoading: isCustomersSwrLoading
+  } = useSWR(CUSTOMERS_SWR_KEY, fetchCustomersLoose, {
+    revalidateOnFocus: false,
+    dedupingInterval: 25_000,
+    keepPreviousData: true
+  });
+  const customers: CustomerLead[] = customersData ?? [];
+  const isCustomersLoading = isCustomersSwrLoading && customersData === undefined;
 
   /**
    * Deep-link auto-select: `/proposal?leadId=<id>` lands here from the CRM
@@ -531,7 +519,7 @@ export default function ProposalPage() {
     const selfUse = Math.min(annualGeneration, result.annualUnits);
     const monthlySavings = Math.round((result.currentMonthlyBill * (selfUse / Math.max(result.annualUnits, 1))) * 0.9);
     const annualSavings = monthlySavings * 12;
-    const grossCost = Math.round(solarKw * 50000);
+    const grossCost = computeGrossSystemCostInr(solarKw);
     const centralSubsidy = solarKw <= 2 ? Math.round(solarKw * 30000) : Math.min(78000, Math.round(60000 + (solarKw - 2) * 18000));
     const netCost = Math.max(0, grossCost - centralSubsidy);
     const paybackYears = annualSavings > 0 ? Number((netCost / annualSavings).toFixed(1)) : 0;
@@ -1022,6 +1010,9 @@ export default function ProposalPage() {
             null,
           monthlyBillActuals,
           ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
+          grossSystemCostInr: effectiveResult.grossCost,
+          pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
+          netCostInr: effectiveResult.netCost,
           ...buildProposalExtrasPayload()
         })
       });
@@ -1102,6 +1093,8 @@ export default function ProposalPage() {
           clientRef: clientRef || undefined,
           leadId: selectedLeadId || undefined,
           ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
+          grossSystemCostInr: effectiveResult.grossCost,
+          pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
           netCostInr: effectiveResult.netCost,
           panels: effectiveResult.panels,
           ...buildProposalExtrasPayload()
@@ -1129,7 +1122,7 @@ export default function ProposalPage() {
        */
       if (selectedLeadId) {
         void mutateGlobal(PIPELINE_SWR_KEY);
-        void mutateGlobal(CUSTOMERS_SWR_KEY);
+        void mutateGlobal(CUSTOMERS_SWR_KEY, undefined, { revalidate: true });
         void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
       }
       window.open(shareUrl, "_blank", "noopener,noreferrer");
@@ -1189,7 +1182,7 @@ export default function ProposalPage() {
         throw new Error(pj.error || "Pipeline record was not created");
       }
       void mutateGlobal(PIPELINE_SWR_KEY);
-      void mutateGlobal(CUSTOMERS_SWR_KEY);
+      void mutateGlobal(CUSTOMERS_SWR_KEY, undefined, { revalidate: true });
       void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
       toast.success("Saved to pipeline", `${customerName} — ${effectiveResult.solarKw} kW added to project pipeline.`);
       resetProposalForm();

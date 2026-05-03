@@ -16,7 +16,7 @@ const postSchema = z.object({
 
 export async function GET() {
   try {
-    const data = await listPipelineProjects();
+    const data = await listPipelineProjects({ wonLeadsOnly: true });
     return NextResponse.json({ ok: true, data }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Pipeline load failed";
