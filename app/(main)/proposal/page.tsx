@@ -201,7 +201,7 @@ export default function ProposalPage() {
   const [latestWebProposalUrl, setLatestWebProposalUrl] = useState<string | null>(null);
   // Proposal Builder Settings — controls the 12-slide deck.
   const [proposalLang, setProposalLang] = useState<"en" | "hi">("en");
-  const [amcSelectedYears, setAmcSelectedYears] = useState<1 | 5 | 10>(5);
+  const [amcSelectedYears, setAmcSelectedYears] = useState<1 | 5 | 10>(1);
   const [financeRatePct, setFinanceRatePct] = useState(7);
   const [bankAccountName, setBankAccountName] = useState("Harihar Solar");
   const [bankAccountNumber, setBankAccountNumber] = useState("");

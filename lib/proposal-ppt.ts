@@ -87,6 +87,7 @@ export type PremiumProposalPptInput = {
 
   grossSystemCostInr?: number;
   pmSuryaGharSubsidyInr?: number;
+  /** @deprecated Deck summary always uses `gross − subsidy`; kept on payload for older rows only. */
   netCostInr?: number;
   panelBrand?: DeckBrand;
   installerName?: string;
@@ -104,7 +105,7 @@ export type PremiumProposalPptInput = {
   /** Finance / EMI configuration. */
   financeOption?: ProposalFinanceOption;
 
-  /** AMC selection (1 / 5 / 10 yr). Defaults to 5. */
+  /** AMC selection (1 / 5 / 10 yr). Defaults to 1 (free first-year AMC). */
   amcSelectedYears?: 1 | 5 | 10;
 
   /** Override Harihar Solar default company profile. */
@@ -429,7 +430,8 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
   /** Default matches `computeGrossSystemCostInr` in `lib/solar-engine.ts`. Override via `grossSystemCostInr`. */
   const grossSystemCost = n(input.grossSystemCostInr ?? computeGrossSystemCostInr(input.systemKw));
   const pmSubsidy = n(input.pmSuryaGharSubsidyInr ?? computePmSuryaGharSubsidy(input.systemKw));
-  const netCost = n(input.netCostInr ?? Math.max(0, grossSystemCost - pmSubsidy));
+  /** Always gross − subsidy — never trust persisted `netCostInr` alone (it can drift vs. gross/subsidy). */
+  const netCost = n(Math.max(0, grossSystemCost - pmSubsidy));
   const paybackYears = honestPaybackYears({ paybackHint: input.paybackYears, netCostInr: netCost, annualSavingInr: annualSaving });
   const lifetime25Profit = n(annualSaving * 25 - netCost);
   const solarVsGrid = computeSolarVsGrid({ yearlyBill, netCostInr: netCost });
@@ -446,7 +448,7 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
 
   const paymentMilestones = buildPaymentMilestones(grossSystemCost);
   const amcOptions = buildAmcOptions(grossSystemCost, lang);
-  const amcSelectedYears = (input.amcSelectedYears ?? 5) as 1 | 5 | 10;
+  const amcSelectedYears = (input.amcSelectedYears ?? 1) as 1 | 5 | 10;
 
   const baseCompany = defaultCompanyProfile(lang);
   const companyProfile: CompanyProfile = { ...baseCompany, ...(input.companyProfile ?? {}) };

@@ -1728,7 +1728,7 @@ export default function ProposalView({
 }: ProposalViewProps) {
   const [downloading, setDownloading] = useState(false);
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
-  const [selectedAmcYears, setSelectedAmcYears] = useState<1 | 5 | 10>(summary.amcSelectedYears ?? 5);
+  const [selectedAmcYears, setSelectedAmcYears] = useState<1 | 5 | 10>(summary.amcSelectedYears ?? 1);
   const [darkMode, setDarkMode] = useState(false);
 
   const D = dict(lang);
