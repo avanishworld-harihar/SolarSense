@@ -158,6 +158,43 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function classifyLearningGuard(parsed: ParsedBillShape): {
+  shouldSkipSelfLearning: boolean;
+  reason: string | null;
+} {
+  const readType = String(parsed.read_type ?? "").toLowerCase();
+  const billType = String(parsed.bill_type_label ?? "").toLowerCase();
+  const metered = toNumber(parsed.metered_unit_consumption);
+  const currentBill = toNumber(parsed.current_month_bill_amount_inr);
+  const arrear = toNumber(parsed.principal_arrear_inr);
+
+  if (parsed.nfp_flag || /\bnfp\b|not\s*for\s*payment/.test(billType)) {
+    return {
+      shouldSkipSelfLearning: true,
+      reason: "This bill is marked NFP / Not For Payment. Auto-learning is disabled for safety."
+    };
+  }
+  if (/\bassessment|assessed|provisional\b/.test(readType)) {
+    return {
+      shouldSkipSelfLearning: true,
+      reason: "This bill is assessment/provisional type. Auto-learning is disabled for safety."
+    };
+  }
+  if (metered != null && metered <= 0 && currentBill != null && currentBill > 0) {
+    return {
+      shouldSkipSelfLearning: true,
+      reason: "Metered units are zero while bill amount is non-zero. Auto-learning is disabled for safety."
+    };
+  }
+  if (arrear != null && Math.abs(arrear) > 0.5) {
+    return {
+      shouldSkipSelfLearning: true,
+      reason: "Arrear-adjusted bill detected. Auto-learning is disabled for safety."
+    };
+  }
+  return { shouldSkipSelfLearning: false, reason: null };
+}
+
 function buildStrictAuditAmountReason(parsed: ParsedBillShape): {
   mode: "strict_v1";
   meteredUnitConsumption: number | null;
@@ -220,9 +257,14 @@ async function queuePostScanTasks(input: {
   parsed: ParsedBillShape;
   usedAiFallback: boolean;
   scannerMode: BillAiProvider | "fallback_manual" | "local_pdf";
+  disableSelfLearning?: boolean;
 }): Promise<void> {
-  const { parsed, usedAiFallback, scannerMode } = input;
+  const { parsed, usedAiFallback, scannerMode, disableSelfLearning } = input;
   if (usedAiFallback || scannerMode !== "anthropic") return;
+  if (disableSelfLearning) {
+    console.info("[analyze-bill] self-learning skipped for guarded bill pattern.");
+    return;
+  }
 
   const [compareRes, discoveryRes, calibrationRes] = await Promise.all([
     compareBillRatesWithDatabase(parsed),
@@ -427,13 +469,15 @@ export async function POST(req: NextRequest) {
         dutyRateDeltaPctPoint: 0
       }
     };
+    const learningGuard = classifyLearningGuard(parsed);
     const parseConfidence = usedAiFallback && scannerMode === "fallback_manual" ? 0 : estimateParseConfidence(parsed);
     fireAndForget(
       "post-scan-checks",
       queuePostScanTasks({
         parsed,
         usedAiFallback,
-        scannerMode
+        scannerMode,
+        disableSelfLearning: learningGuard.shouldSkipSelfLearning
       })
     );
 
@@ -469,6 +513,13 @@ export async function POST(req: NextRequest) {
         discoveryAlert: undefined,
         parseQualityAlert: undefined,
         calibrationAlert: undefined,
+        learningGuardAlert: learningGuard.shouldSkipSelfLearning
+          ? {
+              type: "info",
+              status: "guarded_non_smart_pattern",
+              message: learningGuard.reason
+            }
+          : undefined,
         aiFallbackAlert,
         scannerMode,
         aiModelTier,

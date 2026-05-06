@@ -725,6 +725,7 @@ export default function ProposalPage() {
         payload.discoveryAlert?.message,
         payload.parseQualityAlert?.message,
         payload.calibrationAlert?.message,
+        payload.learningGuardAlert?.message,
         payload.aiFallbackAlert?.message
       ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
       const canUseScannerAutofill = scannerMode !== "fallback_manual";
