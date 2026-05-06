@@ -415,7 +415,20 @@ export default function ProposalPage() {
   );
   const previousBill = additionalBills[0] ?? null;
   const isAnySecondaryBusy = isAnalyzingAdditional.some(Boolean);
-  const requiredSecondaryCount = Math.max(0, uploadRequirement.requiredBills - 1);
+  const uploadedCoverageMonths = useMemo(() => {
+    const merged = new Set<keyof MonthlyUnits>();
+    const allBills = [latestBill, ...additionalBills].filter(Boolean) as ParsedBillShape[];
+    for (const bill of allBills) {
+      for (const key of extractDetectedMonths(bill)) merged.add(key);
+    }
+    return merged.size;
+  }, [latestBill, additionalBills]);
+  const requiredSecondaryCount = useMemo(() => {
+    const base = Math.max(0, uploadRequirement.requiredBills - 1);
+    if (uploadedCoverageMonths < 12) return base;
+    // If we already covered all 12 months with uploaded bills, don't force extra slots.
+    return Math.min(base, additionalBills.filter(Boolean).length);
+  }, [uploadRequirement.requiredBills, uploadedCoverageMonths, additionalBills]);
   const secondaryAlignment = useMemo(
     () =>
       uploadRequirement.secondaryOffsets.map((offset, idx) => {
@@ -722,6 +735,7 @@ export default function ProposalPage() {
       const aiModelTier = payload.aiModelTier as "haiku" | "sonnet" | "fallback" | undefined;
       const scanDurationMs = Number(payload.scanDurationMs ?? 0);
       const analysisMessages = [
+        payload.learningUpdateInfo?.message,
         payload.tariffCycleInfo?.message,
         payload.tariffAlert?.message,
         payload.discoveryAlert?.message,

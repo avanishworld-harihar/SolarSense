@@ -596,6 +596,14 @@ export async function POST(req: NextRequest) {
               message: "New tariff cycle bill detected (Apr 2026+). Old-tariff mismatch alerts are suppressed."
             }
           : undefined,
+        learningUpdateInfo:
+          !learningGuard.shouldSkipSelfLearning && !usedAiFallback && scannerMode === "anthropic"
+            ? {
+                type: "info",
+                status: "learning_update_applied",
+                message: "Bill quality looks good. SOL.52 will use this scan to improve billing profile accuracy."
+              }
+            : undefined,
         aiFallbackAlert,
         scannerMode,
         aiModelTier,
