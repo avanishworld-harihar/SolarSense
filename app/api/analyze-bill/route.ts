@@ -195,6 +195,26 @@ function classifyLearningGuard(parsed: ParsedBillShape): {
   return { shouldSkipSelfLearning: false, reason: null };
 }
 
+async function resetLearnedProfileForGuardedBill(parsed: ParsedBillShape): Promise<boolean> {
+  const state = String(parsed.state ?? "").trim();
+  const discom = String(parsed.discom ?? "").trim();
+  if (!state || !discom) return false;
+  try {
+    const res = await upsertDiscomBillProfile({
+      state,
+      discom,
+      historyWindowMonths: 12,
+      requiredBills: 1,
+      confidence: 0.2,
+      source: "guard_reset_non_smart"
+    });
+    return Boolean(res.ok);
+  } catch (error) {
+    console.warn("[analyze-bill] guarded profile reset failed:", error);
+    return false;
+  }
+}
+
 function buildStrictAuditAmountReason(parsed: ParsedBillShape): {
   mode: "strict_v1";
   meteredUnitConsumption: number | null;
@@ -470,6 +490,10 @@ export async function POST(req: NextRequest) {
       }
     };
     const learningGuard = classifyLearningGuard(parsed);
+    let learningResetApplied = false;
+    if (learningGuard.shouldSkipSelfLearning) {
+      learningResetApplied = await resetLearnedProfileForGuardedBill(parsed);
+    }
     const parseConfidence = usedAiFallback && scannerMode === "fallback_manual" ? 0 : estimateParseConfidence(parsed);
     fireAndForget(
       "post-scan-checks",
@@ -517,7 +541,9 @@ export async function POST(req: NextRequest) {
           ? {
               type: "info",
               status: "guarded_non_smart_pattern",
-              message: learningGuard.reason
+              message: learningResetApplied
+                ? `${learningGuard.reason} Previous learned profile for this DISCOM has been reset to safe defaults.`
+                : learningGuard.reason
             }
           : undefined,
         aiFallbackAlert,

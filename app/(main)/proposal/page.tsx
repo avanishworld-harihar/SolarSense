@@ -718,6 +718,7 @@ export default function ProposalPage() {
       const payload = await response.json();
       if (!payload.ok) throw new Error(payload.error || "Bill analysis failed");
       const scannerMode = payload.scannerMode as "anthropic" | "fallback_manual" | "local_pdf" | undefined;
+      const learningGuardActive = Boolean(payload.learningGuardAlert);
       const aiModelTier = payload.aiModelTier as "haiku" | "sonnet" | "fallback" | undefined;
       const scanDurationMs = Number(payload.scanDurationMs ?? 0);
       const analysisMessages = [
@@ -760,7 +761,7 @@ export default function ProposalPage() {
           : "";
       if (slot === "latest") {
         setLatestBill(data);
-        const inferred = inferProfileFromBill(data);
+        const inferred = learningGuardActive ? null : inferProfileFromBill(data);
         if (inferred && data.state?.trim() && data.discom?.trim()) {
           const key = profileKey(data.state, data.discom);
           setLearnedBillProfiles((prev) => ({ ...prev, [key]: inferred }));
