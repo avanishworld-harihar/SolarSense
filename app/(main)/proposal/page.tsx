@@ -842,7 +842,10 @@ export default function ProposalPage() {
       setMonthlyUnits((prev) => {
         const merged = mergeParsedMonthsIntoUnits(prev, data.months);
         if (slot !== "latest") return merged;
-        const shouldInjectFallback = isFirstLatestUpload || countFilledMonths(merged) < 4;
+        const hasUsableHistoryWindow = (data.consumption_history?.length ?? 0) >= 4;
+        // If bill already has a proper month-history table, never synthesize seasonal
+        // fallback units (it causes misleading tiny values on smart/assessment bills).
+        const shouldInjectFallback = !hasUsableHistoryWindow && (isFirstLatestUpload || countFilledMonths(merged) < 4);
         if (!shouldInjectFallback) return merged;
         const sixMonthAutofill = buildSixMonthAutofill(data);
         const next = { ...merged };
