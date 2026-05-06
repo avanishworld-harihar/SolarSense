@@ -171,25 +171,29 @@ function classifyLearningGuard(parsed: ParsedBillShape): {
   if (parsed.nfp_flag || /\bnfp\b|not\s*for\s*payment/.test(billType)) {
     return {
       shouldSkipSelfLearning: true,
-      reason: "This bill is marked NFP / Not For Payment. Auto-learning is disabled for safety."
+      reason:
+        "Non-smart / special meter pattern detected: bill marked NFP (Not For Payment). Auto-learning is disabled; please verify manually."
     };
   }
   if (/\bassessment|assessed|provisional\b/.test(readType)) {
     return {
       shouldSkipSelfLearning: true,
-      reason: "This bill is assessment/provisional type. Auto-learning is disabled for safety."
+      reason:
+        "Non-smart / special meter pattern detected: assessment/provisional billing found. Auto-learning is disabled; please verify manually."
     };
   }
   if (metered != null && metered <= 0 && currentBill != null && currentBill > 0) {
     return {
       shouldSkipSelfLearning: true,
-      reason: "Metered units are zero while bill amount is non-zero. Auto-learning is disabled for safety."
+      reason:
+        "Non-smart / special meter pattern detected: metered units are zero but bill amount is non-zero. Auto-learning is disabled; please verify manually."
     };
   }
   if (arrear != null && Math.abs(arrear) > 0.5) {
     return {
       shouldSkipSelfLearning: true,
-      reason: "Arrear-adjusted bill detected. Auto-learning is disabled for safety."
+      reason:
+        "Non-smart / special meter pattern detected: arrear-adjusted bill. Auto-learning is disabled; please verify manually."
     };
   }
   return { shouldSkipSelfLearning: false, reason: null };
