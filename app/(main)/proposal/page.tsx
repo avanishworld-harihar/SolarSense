@@ -34,7 +34,7 @@ import { CUSTOMERS_SWR_KEY, fetchCustomersLoose } from "@/lib/customers-client";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
 import { cn } from "@/lib/utils";
 import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 
 const PIPELINE_SWR_KEY = "/api/pipeline";
