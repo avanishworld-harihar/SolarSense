@@ -188,10 +188,10 @@ function parseBillMonthYear(raw: string | undefined): { year: number; monthIndex
 }
 
 function isNewTariffCycleBill(parsed: ParsedBillShape): boolean {
-  const parsedMonth = parseBillMonthYear(parsed.bill_month);
-  if (!parsedMonth) return false;
-  // Cutover: Apr 2026 onwards should not be judged by old FY 2025-26 mismatch logic.
-  return parsedMonth.year > 2026 || (parsedMonth.year === 2026 && parsedMonth.monthIndex >= 3);
+  void parsed;
+  // Current rollout decision: keep old FY 2025-26 behavior for all months.
+  // New tariff-cycle split will be enabled in a dedicated release.
+  return false;
 }
 
 function classifyLearningGuard(parsed: ParsedBillShape): {

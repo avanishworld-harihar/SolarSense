@@ -786,7 +786,10 @@ export default function ProposalPage() {
       }
 
       const data = payload.data as ParsedBillShape;
-      const parsedUnits = mergeParsedMonthsIntoUnits(emptyMonthlyUnits(), data.months);
+      const parsedUnits = {
+        ...mergeParsedMonthsIntoUnits(emptyMonthlyUnits(), data.months),
+        ...buildUnitsFromConsumptionHistory(data)
+      };
       const parsedMonthCount = countFilledMonths(parsedUnits);
       const missingMonthHint =
         parsedMonthCount < 4
@@ -840,7 +843,9 @@ export default function ProposalPage() {
       }));
 
       setMonthlyUnits((prev) => {
-        const merged = mergeParsedMonthsIntoUnits(prev, data.months);
+        const base = slot === "latest" ? emptyMonthlyUnits() : prev;
+        let merged = mergeParsedMonthsIntoUnits(base, data.months);
+        merged = { ...merged, ...buildUnitsFromConsumptionHistory(data) };
         if (slot !== "latest") return merged;
         const hasUsableHistoryWindow = (data.consumption_history?.length ?? 0) >= 4;
         // If bill already has a proper month-history table, never synthesize seasonal
@@ -2068,6 +2073,28 @@ function extractDetectedMonths(parsed: ParsedBillShape | null): Set<keyof Monthl
   }
 
   return detected;
+}
+
+function buildUnitsFromConsumptionHistory(parsed: ParsedBillShape | null): Partial<MonthlyUnits> {
+  const out: Partial<MonthlyUnits> = {};
+  if (!parsed) return out;
+  const history = parsed.consumption_history ?? [];
+  for (const row of history) {
+    if (!row) continue;
+    const units = Number(row.units ?? 0);
+    if (!Number.isFinite(units) || units <= 0) continue;
+    const parts = String(row.month ?? "")
+      .split(/[\s/-]+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    for (const part of parts) {
+      const key = normalizeMonthToken(part);
+      if (!key) continue;
+      out[key] = Math.max(0, Math.round(units));
+      break;
+    }
+  }
+  return out;
 }
 
 function parseLatestMonthIndex(label: string | undefined): number {
