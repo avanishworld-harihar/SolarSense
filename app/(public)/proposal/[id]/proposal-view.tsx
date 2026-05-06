@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { MotionConfig, motion, useInView, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
@@ -227,7 +227,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
               animate={{ height: `${target}%`, opacity: 1 }}
-              transition={{ duration: 0.9, delay: i * 0.05, ease: [0.21, 1.02, 0.73, 1] }}
+              transition={{ duration: 0.45, delay: i * 0.015, ease: "easeOut" }}
               className={`proposal-chart-bar w-full rounded-t-md ${
                 isPeak
                   ? "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.55),0_2px_10px_rgba(244,63,94,0.35)]"
@@ -284,14 +284,14 @@ function GenVsUseChart({
                   style={{ ["--bar-target" as string]: `${tg}%`, minHeight: tg > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tg}%` } : { height: 0 }}
                   animate={{ height: `${tg}%` }}
-                  transition={{ duration: 0.85, delay: i * 0.05 }}
+                  transition={{ duration: 0.4, delay: i * 0.015, ease: "easeOut" }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                 />
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tu}%`, minHeight: tu > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tu}%` } : { height: 0 }}
                   animate={{ height: `${tu}%` }}
-                  transition={{ duration: 0.85, delay: i * 0.05 + 0.06 }}
+                  transition={{ duration: 0.4, delay: i * 0.015 + 0.025, ease: "easeOut" }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4)]"
                 />
               </div>
@@ -1810,12 +1810,13 @@ export default function ProposalView({
   // document is constrained to A4 width (`max-w-[210mm]`) for a real "document"
   // feel; on mobile the sections stack vertically full-bleed.
   return (
-    <div
-      className={`proposal-document mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
-        darkMode ? "bg-slate-950 text-white" : "bg-transparent"
-      }`}
-      data-theme={darkMode ? "dark" : "light"}
-    >
+    <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="user">
+      <div
+        className={`proposal-document mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
+          darkMode ? "bg-slate-950 text-white" : "bg-transparent"
+        }`}
+        data-theme={darkMode ? "dark" : "light"}
+      >
       {/* Floating controls — hidden in print */}
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2 print:hidden">
         <button
@@ -1945,6 +1946,7 @@ export default function ProposalView({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </MotionConfig>
   );
 }
