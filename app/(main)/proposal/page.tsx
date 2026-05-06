@@ -392,13 +392,31 @@ export default function ProposalPage() {
   );
   // Keep required uploader count consistent across devices by using server profile only.
   const effectiveLearnedProfile = syncedBillProfileRes ?? null;
+  const normalizeUploadRequirement = useCallback(
+    (input: ReturnType<typeof getBillingUploadRequirement>): ReturnType<typeof getBillingUploadRequirement> => {
+      // MP seasonal mode should stay deterministic: latest + one 6-month-back bill.
+      const isMpSeasonalMode =
+        billingRule.mode === "latest_and_months_back" &&
+        (billingRule.secondaryOffsetMonths ?? 0) === 6 &&
+        (billingRule.historyWindowMonthsPerBill ?? 0) === 6;
+      if (!isMpSeasonalMode) return input;
+      const cappedRequired = Math.min(2, Math.max(1, input.requiredBills));
+      return {
+        requiredBills: cappedRequired,
+        secondaryOffsets: input.secondaryOffsets.slice(0, Math.max(0, cappedRequired - 1)),
+        secondaryLabels: input.secondaryLabels.slice(0, Math.max(0, cappedRequired - 1))
+      };
+    },
+    [billingRule]
+  );
   const uploadRequirement = useMemo(
     () => {
       const detectedHistoryMonths = latestBill?.consumption_history?.length ?? effectiveLearnedProfile?.historyWindowMonths ?? null;
-      const base = getBillingUploadRequirement(billingRule, latestBill?.bill_month, detectedHistoryMonths);
+      const base = normalizeUploadRequirement(getBillingUploadRequirement(billingRule, latestBill?.bill_month, detectedHistoryMonths));
       if (base.requiredBills > 1) return base;
       if (!effectiveLearnedProfile || effectiveLearnedProfile.requiredBills <= 1) return base;
-      return getBillingUploadRequirement(
+      return normalizeUploadRequirement(
+        getBillingUploadRequirement(
         {
           ...billingRule,
           mode: "latest_and_months_back",
@@ -409,9 +427,9 @@ export default function ProposalPage() {
         },
         latestBill?.bill_month,
         effectiveLearnedProfile.historyWindowMonths
-      );
+      ));
     },
-    [billingRule, latestBill?.bill_month, latestBill?.consumption_history, effectiveLearnedProfile]
+    [billingRule, latestBill?.bill_month, latestBill?.consumption_history, effectiveLearnedProfile, normalizeUploadRequirement]
   );
   const previousBill = additionalBills[0] ?? null;
   const isAnySecondaryBusy = isAnalyzingAdditional.some(Boolean);
