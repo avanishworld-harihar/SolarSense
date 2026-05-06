@@ -213,7 +213,6 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
     ? labels
     : Array.from({ length: safeValues.length }, (_, i) => labels[i] ?? `M${i + 1}`);
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduced = useReducedMotion();
   const peakSet = new Set(peakIndices ?? []);
   return (
@@ -227,13 +226,13 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               // CSS var `--bar-target` is the print fallback — see globals.css.
               style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
+              animate={{ height: `${target}%`, opacity: 1 }}
               transition={{ duration: 0.9, delay: i * 0.05, ease: [0.21, 1.02, 0.73, 1] }}
               className={`proposal-chart-bar w-full rounded-t-md ${
                 isPeak
                   ? "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.55),0_2px_10px_rgba(244,63,94,0.35)]"
                   : "bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.45),0_2px_10px_rgba(14,165,233,0.25)]"
               }`}
-              animate={inView ? { height: `${target}%`, opacity: 1 } : undefined}
               aria-label={`${safeLabels[i]}: ${v}`}
             />
             <span className="text-[10px] font-medium text-slate-500">{safeLabels[i]}</span>
@@ -263,7 +262,6 @@ function GenVsUseChart({
   const safeUse = use.slice(0, len).map((v) => toFiniteNonNegative(v));
   const max = Math.max(1, ...safeGen, ...safeUse);
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
   const reduced = useReducedMotion();
   return (
     <div className="flex flex-col gap-3">
@@ -285,14 +283,14 @@ function GenVsUseChart({
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tg}%`, minHeight: tg > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tg}%` } : { height: 0 }}
-                  animate={inView ? { height: `${tg}%` } : undefined}
+                  animate={{ height: `${tg}%` }}
                   transition={{ duration: 0.85, delay: i * 0.05 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                 />
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tu}%`, minHeight: tu > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tu}%` } : { height: 0 }}
-                  animate={inView ? { height: `${tu}%` } : undefined}
+                  animate={{ height: `${tu}%` }}
                   transition={{ duration: 0.85, delay: i * 0.05 + 0.06 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4)]"
                 />
