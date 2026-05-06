@@ -227,7 +227,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
               animate={{ height: `${target}%`, opacity: 1 }}
-              transition={{ duration: 0.45, delay: i * 0.015, ease: "easeOut" }}
+              transition={{ type: "spring", delay: i * 0.018, stiffness: 120, damping: 20, mass: 0.9 }}
               className={`proposal-chart-bar w-full rounded-t-md ${
                 isPeak
                   ? "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.55),0_2px_10px_rgba(244,63,94,0.35)]"
@@ -284,14 +284,14 @@ function GenVsUseChart({
                   style={{ ["--bar-target" as string]: `${tg}%`, minHeight: tg > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tg}%` } : { height: 0 }}
                   animate={{ height: `${tg}%` }}
-                  transition={{ duration: 0.4, delay: i * 0.015, ease: "easeOut" }}
+                  transition={{ type: "spring", delay: i * 0.018, stiffness: 116, damping: 20, mass: 0.9 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                 />
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tu}%`, minHeight: tu > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tu}%` } : { height: 0 }}
                   animate={{ height: `${tu}%` }}
-                  transition={{ duration: 0.4, delay: i * 0.015 + 0.025, ease: "easeOut" }}
+                  transition={{ type: "spring", delay: i * 0.018 + 0.02, stiffness: 116, damping: 20, mass: 0.9 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4)]"
                 />
               </div>
