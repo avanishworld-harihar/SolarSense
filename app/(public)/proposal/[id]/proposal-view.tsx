@@ -221,7 +221,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
         const target = (v / max) * 100;
         const isPeak = peakSet.has(i);
         return (
-          <div key={`${safeLabels[i]}-${i}`} className="flex h-full flex-1 flex-col items-center gap-1.5">
+          <div key={`${safeLabels[i]}-${i}`} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
             <motion.div
               // CSS var `--bar-target` is the print fallback — see globals.css.
               style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
@@ -278,7 +278,7 @@ function GenVsUseChart({
           const tg = (safeGen[i] / max) * 100;
           const tu = (safeUse[i] / max) * 100;
           return (
-            <div key={`${label}-${i}`} className="flex h-full flex-1 flex-col items-center gap-1.5">
+            <div key={`${label}-${i}`} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
               <div className="flex h-full w-full items-end gap-0.5">
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tg}%`, minHeight: tg > 0 ? 2 : 0 }}
