@@ -114,6 +114,15 @@ function AnimatedNumber({ value, suffix = "", className }: { value: number; suff
   );
 }
 
+function useMountAnimationReady(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return ready;
+}
+
 type ProposalViewProps = {
   id: string;
   customerName: string;
@@ -185,7 +194,7 @@ function StatTile({
       }`}
     >
       <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${dark ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
-      <p className={`mt-2 text-2xl font-bold sm:text-3xl ${toneClass}`}>{displayValue}</p>
+      <p className={`mt-2 break-words text-2xl font-bold leading-tight sm:text-3xl ${toneClass}`}>{displayValue}</p>
     </motion.div>
   );
 }
@@ -214,6 +223,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
     : Array.from({ length: safeValues.length }, (_, i) => labels[i] ?? `M${i + 1}`);
   const ref = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  const animateReady = useMountAnimationReady();
   const peakSet = new Set(peakIndices ?? []);
   return (
     <div ref={ref} className="flex h-56 items-end gap-1.5 sm:h-72 sm:gap-2 lg:h-80">
@@ -226,7 +236,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               // CSS var `--bar-target` is the print fallback — see globals.css.
               style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
-              animate={{ height: `${target}%`, opacity: 1 }}
+              animate={animateReady ? { height: `${target}%`, opacity: 1 } : undefined}
               transition={{ type: "spring", delay: i * 0.018, stiffness: 120, damping: 20, mass: 0.9 }}
               className={`proposal-chart-bar w-full rounded-t-md ${
                 isPeak
@@ -263,6 +273,7 @@ function GenVsUseChart({
   const max = Math.max(1, ...safeGen, ...safeUse);
   const ref = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
+  const animateReady = useMountAnimationReady();
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4 text-[11px]">
@@ -283,14 +294,14 @@ function GenVsUseChart({
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tg}%`, minHeight: tg > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tg}%` } : { height: 0 }}
-                  animate={{ height: `${tg}%` }}
+                  animate={animateReady ? { height: `${tg}%` } : undefined}
                   transition={{ type: "spring", delay: i * 0.018, stiffness: 116, damping: 20, mass: 0.9 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                 />
                 <motion.div
                   style={{ ["--bar-target" as string]: `${tu}%`, minHeight: tu > 0 ? 2 : 0 }}
                   initial={reduced ? { height: `${tu}%` } : { height: 0 }}
-                  animate={{ height: `${tu}%` }}
+                  animate={animateReady ? { height: `${tu}%` } : undefined}
                   transition={{ type: "spring", delay: i * 0.018 + 0.02, stiffness: 116, damping: 20, mass: 0.9 }}
                   className="proposal-chart-bar flex-1 rounded-t-sm bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_10px_rgba(14,165,233,0.4)]"
                 />
@@ -1810,7 +1821,7 @@ export default function ProposalView({
   // document is constrained to A4 width (`max-w-[210mm]`) for a real "document"
   // feel; on mobile the sections stack vertically full-bleed.
   return (
-    <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="user">
+    <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="never">
       <div
         className={`proposal-document mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
           darkMode ? "bg-slate-950 text-white" : "bg-transparent"
