@@ -538,9 +538,9 @@ function HeroCover({
       <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
         <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} />
         <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} />
-        <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} rawValue={summary.netCost} tone="blue" delay={0.15} />
+        <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} tone="blue" delay={0.15} />
         <StatTile label={D["common.payback"]} value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`} tone="green" delay={0.2} />
-        <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} rawValue={summary.lifetime25Profit} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} />
+        <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} />
       </div>
       <p className="mt-3 text-[10px] italic text-slate-500 sm:text-[11px]">{D["common.engineNote"]}</p>
 
