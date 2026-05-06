@@ -178,7 +178,8 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
     domesticFixed: {
       upto50Urban: 76,  upto50Rural: 62,
       upto150Urban: 129, upto150Rural: 106,
-      above150PerPointKwUrban: 28, above150PerPointKwRural: 26,
+      // FY 2025-26 LV1.2 (>150 units): ₹8.80 / ₹8.20 per 0.1 kW.
+      above150PerPointKwUrban: 8.8, above150PerPointKwRural: 8.2,
       loadStepKw: 0.1
     }
   },

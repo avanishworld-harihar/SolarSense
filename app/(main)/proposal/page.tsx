@@ -1878,6 +1878,19 @@ function numericBillAmount(raw: unknown): number | null {
   return Math.round(parsed);
 }
 
+function pickActualMonthBillAmount(bill: ParsedBillShape): number | null {
+  const currentMonth = numericBillAmount(bill.current_month_bill_amount_inr);
+  if (currentMonth != null && currentMonth > 0) return currentMonth;
+
+  // `total_amount_payable_inr` often includes arrears/NFP carry-forwards, so use
+  // it only when no separate current-month line is present and arrears are absent.
+  const principalArrear = Number.parseFloat(String(bill.principal_arrear_inr ?? "").replace(/[^\d.-]/g, ""));
+  const hasArrear = Number.isFinite(principalArrear) && Math.abs(principalArrear) > 0.5;
+  if (bill.nfp_flag || hasArrear) return null;
+
+  return numericBillAmount(bill.total_amount_payable_inr);
+}
+
 function parseConnectionMonthIndex(raw: string | undefined): number | null {
   if (!raw) return null;
   const m = raw.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
@@ -1937,7 +1950,7 @@ function buildMonthlyBillActualsFromBills(
     if (!bill) continue;
     const key = monthKeyFromBillLabel(bill.bill_month);
     if (!key) continue;
-    const amount = numericBillAmount(bill.current_month_bill_amount_inr) ?? numericBillAmount(bill.total_amount_payable_inr);
+    const amount = pickActualMonthBillAmount(bill);
     if (amount != null && amount > 0) out[key] = amount;
   }
   return out;
