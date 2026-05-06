@@ -158,6 +158,42 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+const BILL_MONTH_MAP: Record<string, number> = {
+  jan: 0, january: 0,
+  feb: 1, february: 1,
+  mar: 2, march: 2,
+  apr: 3, april: 3,
+  may: 4,
+  jun: 5, june: 5,
+  jul: 6, july: 6,
+  aug: 7, august: 7,
+  sep: 8, sept: 8, september: 8,
+  oct: 9, october: 9,
+  nov: 10, november: 10,
+  dec: 11, december: 11
+};
+
+function parseBillMonthYear(raw: string | undefined): { year: number; monthIndex: number } | null {
+  const text = String(raw ?? "").trim().toLowerCase();
+  if (!text) return null;
+  const yearMatch = text.match(/(20\d{2}|\d{2})/);
+  if (!yearMatch) return null;
+  let year = Number.parseInt(yearMatch[1], 10);
+  if (!Number.isFinite(year)) return null;
+  if (year < 100) year += 2000;
+  const monthToken = text.match(/[a-z]+/)?.[0] ?? "";
+  const monthIndex = BILL_MONTH_MAP[monthToken];
+  if (!Number.isFinite(monthIndex) || monthIndex < 0 || monthIndex > 11) return null;
+  return { year, monthIndex };
+}
+
+function isNewTariffCycleBill(parsed: ParsedBillShape): boolean {
+  const parsedMonth = parseBillMonthYear(parsed.bill_month);
+  if (!parsedMonth) return false;
+  // Cutover: Apr 2026 onwards should not be judged by old FY 2025-26 mismatch logic.
+  return parsedMonth.year > 2026 || (parsedMonth.year === 2026 && parsedMonth.monthIndex >= 3);
+}
+
 function classifyLearningGuard(parsed: ParsedBillShape): {
   shouldSkipSelfLearning: boolean;
   reason: string | null;
@@ -282,8 +318,9 @@ async function queuePostScanTasks(input: {
   usedAiFallback: boolean;
   scannerMode: BillAiProvider | "fallback_manual" | "local_pdf";
   disableSelfLearning?: boolean;
+  suppressOldTariffMismatchAlerts?: boolean;
 }): Promise<void> {
-  const { parsed, usedAiFallback, scannerMode, disableSelfLearning } = input;
+  const { parsed, usedAiFallback, scannerMode, disableSelfLearning, suppressOldTariffMismatchAlerts } = input;
   if (usedAiFallback || scannerMode !== "anthropic") return;
   if (disableSelfLearning) {
     console.info("[analyze-bill] self-learning skipped for guarded bill pattern.");
@@ -297,7 +334,7 @@ async function queuePostScanTasks(input: {
   ]);
 
   const asyncOps: Array<Promise<unknown>> = [];
-  if (compareRes.checked && compareRes.mismatch) {
+  if (!suppressOldTariffMismatchAlerts && compareRes.checked && compareRes.mismatch) {
     asyncOps.push(
       saveRateChangeReport({
         installerName: "AI Auto Detector",
@@ -327,7 +364,7 @@ async function queuePostScanTasks(input: {
     );
   }
 
-  if (calibrationRes.checked && calibrationRes.shouldQueue) {
+  if (!suppressOldTariffMismatchAlerts && calibrationRes.checked && calibrationRes.shouldQueue) {
     asyncOps.push(
       saveRateChangeReport({
         installerName: "SOL.52 Calibration Bot",
@@ -494,6 +531,7 @@ export async function POST(req: NextRequest) {
       }
     };
     const learningGuard = classifyLearningGuard(parsed);
+    const newTariffCycleBill = isNewTariffCycleBill(parsed);
     let learningResetApplied = false;
     if (learningGuard.shouldSkipSelfLearning) {
       learningResetApplied = await resetLearnedProfileForGuardedBill(parsed);
@@ -505,7 +543,8 @@ export async function POST(req: NextRequest) {
         parsed,
         usedAiFallback,
         scannerMode,
-        disableSelfLearning: learningGuard.shouldSkipSelfLearning
+        disableSelfLearning: learningGuard.shouldSkipSelfLearning,
+        suppressOldTariffMismatchAlerts: newTariffCycleBill
       })
     );
 
@@ -548,6 +587,13 @@ export async function POST(req: NextRequest) {
               message: learningResetApplied
                 ? `${learningGuard.reason} Previous learned profile for this DISCOM has been reset to safe defaults.`
                 : learningGuard.reason
+            }
+          : undefined,
+        tariffCycleInfo: newTariffCycleBill
+          ? {
+              type: "info",
+              status: "new_tariff_cycle_detected",
+              message: "New tariff cycle bill detected (Apr 2026+). Old-tariff mismatch alerts are suppressed."
             }
           : undefined,
         aiFallbackAlert,

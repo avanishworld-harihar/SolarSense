@@ -722,6 +722,7 @@ export default function ProposalPage() {
       const aiModelTier = payload.aiModelTier as "haiku" | "sonnet" | "fallback" | undefined;
       const scanDurationMs = Number(payload.scanDurationMs ?? 0);
       const analysisMessages = [
+        payload.tariffCycleInfo?.message,
         payload.tariffAlert?.message,
         payload.discoveryAlert?.message,
         payload.parseQualityAlert?.message,
