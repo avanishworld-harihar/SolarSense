@@ -496,23 +496,60 @@ export async function POST(req: NextRequest) {
           meter_number: parsed.meter_number || local.meter_number || "",
           connection_date: parsed.connection_date || local.connection_date || "",
           state: parsed.state || local.state || "",
-          discom: parsed.discom || local.discom || codeForHint || ""
+          discom: parsed.discom || local.discom || codeForHint || "",
+          // Always keep the AI's bill_month and metered reading — the local PDF fallback
+          // can misread the "Bill Month" label that appears near the PREVIOUS billing
+          // period in the reading section (e.g. MAR-2026 near "Bill Month" column header
+          // in the reading table), causing it to overwrite the correct APR-2026 value.
+          bill_month: parsed.bill_month?.trim() ? parsed.bill_month : (local.bill_month ?? ""),
+          metered_unit_consumption: parsed.metered_unit_consumption ?? local.metered_unit_consumption ?? null
         };
       }
     }
 
-    // Safety net: current bill month's slot must always reflect metered_unit_consumption.
-    // This guards against AI confusion when the same calendar month appears in BOTH the
-    // current bill (e.g. APR-2026) AND the historical "Last Six Months" table (e.g. APR-2025).
-    // Without this, the AI may write the prior-year value (357) instead of the actual
-    // current reading (419) into months.apr.
-    const billMonthParsedForFix = parseBillMonthYear(parsed.bill_month);
+    // ── Safety net: force current bill month slot = metered_unit_consumption ──────
+    // Problem: MP DISCOM bills show the PREVIOUS billing period month (e.g. MAR-2026)
+    // near a "Bill Month" column header in the reading section. Claude sometimes picks
+    // that up as bill_month instead of the real APR-2026. If we rely solely on
+    // bill_month to pick the months key, we'd write 419 into months.mar (wrong) and
+    // leave months.apr = 357 (from APR-2025 in the Last Six Months history table).
+    //
+    // Robust two-step strategy:
+    //   1. Infer current month from consumption_history: most recent history month + 1.
+    //      (e.g. history has MAR-2026 as latest → current = APR-2026 → key = "apr")
+    //   2. Fall back to parsed bill_month if history is unavailable.
+    // ─────────────────────────────────────────────────────────────────────────────
     const meteredUnitsForFix = toNumber(parsed.metered_unit_consumption);
-    if (billMonthParsedForFix && meteredUnitsForFix != null && meteredUnitsForFix > 0) {
+    if (meteredUnitsForFix != null && meteredUnitsForFix > 0) {
       const MONTH_KEYS_ARR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
-      const monthKey = MONTH_KEYS_ARR[billMonthParsedForFix.monthIndex];
-      if (!parsed.months) parsed.months = {};
-      parsed.months[monthKey] = Math.round(meteredUnitsForFix);
+      let currentMonthKey: typeof MONTH_KEYS_ARR[number] | null = null;
+
+      // Strategy 1 — infer from consumption_history (most reliable)
+      const histTotals = (parsed.consumption_history ?? [])
+        .map((r) => {
+          const p = parseBillMonthYear(r.month);
+          return p ? p.year * 12 + p.monthIndex : -1;
+        })
+        .filter((v) => v > 0);
+      if (histTotals.length > 0) {
+        const maxHistTotal = Math.max(...histTotals);
+        const nextTotal = maxHistTotal + 1;
+        const nextMonthIdx = nextTotal % 12;
+        currentMonthKey = MONTH_KEYS_ARR[nextMonthIdx];
+      }
+
+      // Strategy 2 — fall back to bill_month if history gave nothing
+      if (!currentMonthKey) {
+        const billMonthParsed = parseBillMonthYear(parsed.bill_month);
+        if (billMonthParsed) {
+          currentMonthKey = MONTH_KEYS_ARR[billMonthParsed.monthIndex];
+        }
+      }
+
+      if (currentMonthKey) {
+        if (!parsed.months) parsed.months = {};
+        parsed.months[currentMonthKey] = Math.round(meteredUnitsForFix);
+      }
     }
 
     const discomForMemory = (parsed.discom ?? codeForHint).trim();
