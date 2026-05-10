@@ -364,7 +364,8 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
       billFixedChargeInr: input.billFixedChargeInr,
       billEnergyChargesInr: input.billEnergyChargesInr,
       billElectricityDutyInr: input.billElectricityDutyInr,
-      referenceBillUnits: input.referenceBillUnits
+      referenceBillUnits: input.referenceBillUnits,
+      referenceBillMonth: input.billMonth
     });
     const rows: AuditRow[] = built.rows.map((r, i) => ({
       label: labels[i],

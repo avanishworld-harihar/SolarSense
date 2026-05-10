@@ -18,12 +18,14 @@
 
 import { calculateMpBill } from "@/lib/mp-bill-engine";
 import {
+  MP_TARIFF_FY_2025_26,
   detectMpDiscomFromAddress,
   resolveMpDiscomFromHint,
   type MpAreaProfile,
   type MpDiscomCode,
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
+import { MP_TARIFF_FY_2026_27, isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
 import type { MonthlyUnits } from "@/lib/types";
 import { resolveMpSmartBilling, type MpSmartBillingResolution } from "@/lib/mp-smart-billing";
 
@@ -85,6 +87,8 @@ export type MpPptRowsInput = {
   billElectricityDutyInr?: number;
   /** Reference month metered units (for implied ₹/unit from bill). */
   referenceBillUnits?: number;
+  /** Bill month on the reference scan (e.g. APR-2026) — used to pick FY for ₹/block when inferring load from printed FC. */
+  referenceBillMonth?: string;
 };
 
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
@@ -106,6 +110,42 @@ function shouldUseDbAuditOverride(unitsFromInput: number, dbAudit: MpMonthlyAudi
   // Reject stale/misaligned audited rows (common when old bad scans were saved).
   // Example: current month units=280 but stale DB audit has 445.
   return !(diff >= 40 && pct >= 0.2);
+}
+
+/** LV1.2 domestic >150u: ₹/0.1kW block from the tariff year of the reference bill. */
+function lv12DomesticPerPointKw(area: MpAreaProfile, referenceBillMonth?: string | null): number {
+  const use2627 = isFY2026_27OrLater(referenceBillMonth ?? undefined);
+  const t = use2627 ? MP_TARIFF_FY_2026_27["LV1.2"] : MP_TARIFF_FY_2025_26["LV1.2"];
+  const f = t.domesticFixed;
+  if (!f) return 8.8;
+  return area === "rural" ? (f.above150PerPointKwRural ?? 8.2) : (f.above150PerPointKwUrban ?? 8.8);
+}
+
+/**
+ * Reverse domestic FC: printed FC = perPoint × min(ceil(units/15), ceil(load/0.1)).
+ * When sanctioned load OCR is too low, infer a floor kW that matches the bill's FC line.
+ */
+function inferMinSanctionedLoadKwFromDomesticBill(fcPrinted: number, units: number, perPoint: number): number | null {
+  if (!Number.isFinite(fcPrinted) || fcPrinted <= 0) return null;
+  if (!Number.isFinite(units) || units <= 150) return null;
+  if (!Number.isFinite(perPoint) || perPoint <= 0) return null;
+
+  const B = Math.ceil(units / 15);
+  let bestS = -1;
+  let bestDiff = Infinity;
+  const sMax = Math.max(B + 60, 120);
+  for (let S = 1; S <= sMax; S += 1) {
+    const fcModel = perPoint * Math.min(B, S);
+    const diff = Math.abs(fcModel - fcPrinted);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestS = S;
+    }
+  }
+  if (bestS < 1 || bestDiff > 22) return null;
+
+  if (bestS >= B) return Math.max(0.1, B * 0.1);
+  return Math.max(0.1, bestS * 0.1);
 }
 
 function detectMpDiscom(input: MpPptRowsInput): MpDiscomCode | null {
@@ -155,6 +195,25 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
   const erOv = smartBilling.energyRateOverridePerUnit;
   const fcOv = smartBilling.fixedChargeOverrideInr;
 
+  /** Sanctioned load (kW): prefer form/OCR, but bump from reference bill FC when domestic OCR load caps FC too low. */
+  let sanctionedLoadKwForEngine = (() => {
+    const raw = Number(input.connectedLoadKw);
+    return Number.isFinite(raw) && raw > 0 ? raw : 0;
+  })();
+
+  if (category === "LV1.2" && fcOv == null) {
+    const fcPrinted = Number(input.billFixedChargeInr);
+    const refU = Number(input.referenceBillUnits);
+    const refMonth = input.referenceBillMonth?.trim() || undefined;
+    const perPoint = lv12DomesticPerPointKw(area, refMonth);
+    if (Number.isFinite(fcPrinted) && fcPrinted > 0 && Number.isFinite(refU) && refU > 150 && perPoint > 0) {
+      const inferred = inferMinSanctionedLoadKwFromDomesticBill(fcPrinted, refU, perPoint);
+      if (inferred != null && inferred > 0) {
+        sanctionedLoadKwForEngine = Math.max(sanctionedLoadKwForEngine, inferred);
+      }
+    }
+  }
+
   const rows: PptAuditRow[] = MONTH_LABELS.map((label, i) => {
     const monthKey = MONTH_KEYS[i];
     const units = n(input.monthlyUnits[monthKey]);
@@ -190,7 +249,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       discomCode,
       category,
       units,
-      sanctionedLoadKw: input.connectedLoadKw,
+      sanctionedLoadKw: sanctionedLoadKwForEngine > 0 ? sanctionedLoadKwForEngine : undefined,
       contractDemandKva: input.contractDemandKva,
       area,
       billMonth: syntheticBillMonth,
