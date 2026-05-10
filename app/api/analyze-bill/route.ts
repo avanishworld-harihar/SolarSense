@@ -450,6 +450,7 @@ export async function POST(req: NextRequest) {
     let scannerMode: BillAiProvider | "fallback_manual" | "local_pdf" = "anthropic";
     let aiModelTier: BillAiModelTier | "fallback" = "haiku";
     let scanDurationMs = 0;
+    let localPdfParsed: ParsedBillShape | null = null;
     const scanStartMs = Date.now();
     try {
       const result = await analyzeBillWithProvider(base64Data, mimeType, {
@@ -469,6 +470,7 @@ export async function POST(req: NextRequest) {
       if (mimeType === "application/pdf") {
         const local = await safeParsePdfFallback(base64Data);
         if (local) {
+          localPdfParsed = local;
           parsed = { ...parsed, ...local, discom: parsed.discom || codeForHint || local.discom || "" };
           scannerMode = "local_pdf";
           aiFallbackAlert = undefined;
@@ -496,6 +498,7 @@ export async function POST(req: NextRequest) {
     if (!usedAiFallback && mimeType === "application/pdf" && hasSparseBillIdentity(parsed)) {
       const local = await safeParsePdfFallback(base64Data);
       if (local) {
+        localPdfParsed = local;
         parsed = {
           ...parsed,
           ...local,
@@ -513,6 +516,30 @@ export async function POST(req: NextRequest) {
           bill_month: parsed.bill_month?.trim() ? parsed.bill_month : (local.bill_month ?? ""),
           metered_unit_consumption: parsed.metered_unit_consumption ?? local.metered_unit_consumption ?? null
         };
+      }
+    }
+
+    if (!usedAiFallback && mimeType === "application/pdf" && !localPdfParsed) {
+      localPdfParsed = await safeParsePdfFallback(base64Data);
+    }
+
+    // PDF history stabilizer:
+    // AI may occasionally swap adjacent history months (e.g. MAY/JUN). Local PDF
+    // parser is deterministic for month-label rows, so we use its history table as
+    // authoritative when it has enough rows. Current bill month still comes from
+    // the metered-unit safety net below.
+    if (!usedAiFallback && mimeType === "application/pdf") {
+      const localHist = localPdfParsed?.consumption_history ?? [];
+      if (localHist.length >= 4) {
+        parsed.consumption_history = localHist;
+        if (!parsed.months) parsed.months = {};
+        for (const row of localHist) {
+          const p = parseBillMonthYear(row?.month);
+          const units = toNumber(row?.units);
+          if (!p || units == null || units <= 0) continue;
+          const monthKeys = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
+          parsed.months[monthKeys[p.monthIndex]] = Math.round(units);
+        }
       }
     }
 

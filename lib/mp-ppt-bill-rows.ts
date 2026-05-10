@@ -89,6 +89,25 @@ export type MpPptRowsInput = {
 
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
 
+function shouldUseDbAuditOverride(unitsFromInput: number, dbAudit: MpMonthlyAuditOverride | undefined): boolean {
+  if (!dbAudit) return false;
+  if (!Number.isFinite(dbAudit.netPayableInr) || dbAudit.netPayableInr <= 0) return false;
+  const dbUnitsRaw = Number(dbAudit.units ?? 0);
+  // If DB row has no units metadata, allow it (legacy rows).
+  if (!Number.isFinite(dbUnitsRaw) || dbUnitsRaw <= 0) return true;
+  // If current input has no units, DB can still be used.
+  if (!Number.isFinite(unitsFromInput) || unitsFromInput <= 0) return true;
+
+  const dbUnits = Math.round(dbUnitsRaw);
+  const inputUnits = Math.round(unitsFromInput);
+  const diff = Math.abs(dbUnits - inputUnits);
+  const pct = inputUnits > 0 ? diff / inputUnits : 0;
+
+  // Reject stale/misaligned audited rows (common when old bad scans were saved).
+  // Example: current month units=280 but stale DB audit has 445.
+  return !(diff >= 40 && pct >= 0.2);
+}
+
 function detectMpDiscom(input: MpPptRowsInput): MpDiscomCode | null {
   const fromHint = resolveMpDiscomFromHint(input.discom ?? "");
   if (fromHint) return fromHint.code;
@@ -141,7 +160,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     const units = n(input.monthlyUnits[monthKey]);
 
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];
-    if (dbAudit && Number.isFinite(dbAudit.netPayableInr) && dbAudit.netPayableInr > 0) {
+    if (shouldUseDbAuditOverride(units, dbAudit)) {
       return {
         label,
         units: n(dbAudit.units ?? units),
