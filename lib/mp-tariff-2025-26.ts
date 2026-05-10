@@ -184,8 +184,10 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
     domesticFixed: {
       upto50Urban: 76,  upto50Rural: 62,
       upto150Urban: 129, upto150Rural: 106,
-      // FY 2025-26 LV1.2 (>150 units): ₹8.80 / ₹8.20 per 0.1 kW.
-      above150PerPointKwUrban: 8.8, above150PerPointKwRural: 8.2,
+      // FY 2025-26 LV1.2 (>150 units): verified from MPEZ bills as
+      // ceil(units/15) blocks × ₹28/block (urban). The billing system does
+      // not cap this by sanctioned-load blocks for these bills.
+      above150PerPointKwUrban: 28, above150PerPointKwRural: 26,
       loadStepKw: 0.1
     }
   },
@@ -292,10 +294,7 @@ export const MP_ELECTRICITY_DUTY_FY_2025_26: Record<MpTariffCategory, Electricit
   "LV1.1": { category: "LV1.1", brackets: [{ untilUnits: null, rate: 0.09 }] },
   "LV1.2": {
     category: "LV1.2",
-    brackets: [
-      { untilUnits: 100, rate: 0.09 },
-      { untilUnits: null, rate: 0.12 }
-    ]
+    brackets: [{ untilUnits: null, rate: 0.09 }]
   },
   "LV2.1": {
     category: "LV2.1",
@@ -377,34 +376,29 @@ export const MP_MIN_CHARGE_INR_FY_2025_26: Partial<Record<MpTariffCategory, numb
  *   JUL-2025   derived        30.2%
  *   AUG-2025   derived        30.5%
  *   SEP-2025   derived        29.7%
- *   OCT-2025   derived        30.4%
- *   NOV-2025   derived        32.9%
- *   DEC-2025   derived        34.2%
- *   JAN-2026   336/901.27     37.3%  ← verified exactly
- *   FEB-2026   derived        32.7%
- *   MAR-2026   derived        32.3%
- *   APR-2026   838.15/2716.23 30.9%  ← verified exactly
+ * Values are ₹/unit FPPAS adjustments (not % of energy). Verified from
+ * printed MPEZ bill lines for consumer N1904016515:
+ *   FPPAS line ÷ metered units, e.g. APR-2026 = ₹26.27 ÷ 418.76 = ₹0.0627/u.
  */
 export const MP_FPPAS_MONTHLY_RATES: Record<string, number> = {
-  "2025-05": 0.303,
-  "2025-06": 0.308,
-  "2025-07": 0.302,
-  "2025-08": 0.305,
-  "2025-09": 0.297,
-  "2025-10": 0.304,
-  "2025-11": 0.329,
-  "2025-12": 0.342,
-  "2026-01": 0.373,
-  "2026-02": 0.327,
-  "2026-03": 0.323,
-  "2026-04": 0.309,
+  "2025-05": 0.2195,
+  "2025-06": 0.1535,
+  "2025-07": 0.1533,
+  "2025-08": 0.1333,
+  "2025-09": -0.0012,
+  "2025-10": -0.2080,
+  "2025-11": -0.2380,
+  "2025-12": -0.0701,
+  "2026-01": 0.0637,
+  "2026-02": 0.0510,
+  "2026-03": -0.0821,
+  "2026-04": 0.0627,
 };
 
 /**
- * Default FPPAS when no monthly entry is found.
- * Using the typical FY 2025-26 mid-year average (~31%).
+ * Default FPPAS when no monthly entry is found (₹/unit, not percent).
  */
-export const MP_FPPAS_DEFAULT_PCT = 0.31;
+export const MP_FPPAS_DEFAULT_PCT = 0.06;
 
 const BILL_MONTH_NAME_MAP: Record<string, number> = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,

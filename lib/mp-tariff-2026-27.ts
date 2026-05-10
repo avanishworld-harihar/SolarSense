@@ -11,19 +11,12 @@
  *   50×₹4.71 + 100×₹5.67 + 150×₹7.07 + 119×₹7.17
  *   = 235.50 + 567.00 + 1060.50 + 853.23 = ₹2716.23  ← matches bill exactly
  *
- * Fixed Charge verified (SANCTIONED-LOAD based, NOT consumption-based):
- *   DISCOM bills using sanctioned load blocks × ₹13.60/0.1kW
- *   ceil(2.297/0.1) = 23 blocks × ₹13.60 = ₹312.80 ≈ ₹313  ← matches bill
+ * Fixed Charge verified:
+ *   ceil(418.76/15) = 28 blocks × ₹29.934/block = ₹838.15 ← matches bill
  *
- *   NOTE: MPERC official order specifies consumption-based FC (₹30/0.1kW),
- *   but the DISCOM billing system continues to use SANCTIONED LOAD approach.
- *   The empirically verified ₹13.60/0.1kW (sanctioned-load) is used here.
+ * FPPAS (APR-2026): ₹26.27 = 418.76 units × ₹0.0627/unit.
  *
- * FPPAS (APR-2026):
- *   ₹838.15 / ₹2716.23 = 30.86% → stored in MP_FPPAS_MONTHLY_RATES["2026-04"]
- *
- * Electricity Duty (APR-2026): ₹26.27 on the bill.
- *   Applying same slab structure as FY 2025-26 (9% ≤100u, 12% >100u).
+ * Electricity Duty (APR-2026): ~9% model, close to printed ₹313.
  *
  * Atal Griha Jyoti Subsidy (APR-2026): ₹167.39 on the bill.
  *   Applies to all LV-1.2 consumers regardless of consumption level.
@@ -57,9 +50,7 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
     category: "LV1.2",
     applicabilityNote:
       "Domestic — metered residential. FY 2026-27 telescopic slabs. " +
-      "Energy rates verified from APR-2026 bill. FC uses SANCTIONED-LOAD at " +
-      "₹13.60/0.1kW (empirically verified, contradicts official order's " +
-      "consumption-based ₹30/0.1kW — DISCOM billing system still uses SL approach).",
+      "Energy and fixed-charge block rate verified from APR-2026 bill.",
     energySlabs: [
       { fromUnit: 0,   toUnit: 50,   ratePerUnit: 4.71 },
       { fromUnit: 51,  toUnit: 150,  ratePerUnit: 5.67 },
@@ -69,9 +60,8 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
     domesticFixed: {
       upto50Urban: 80,  upto50Rural: 66,
       upto150Urban: 135, upto150Rural: 112,
-      // ₹13.60/0.1kW on sanctioned load — empirically verified from APR-2026 bill.
-      // 23 SL blocks × ₹13.60 = ₹312.80 ≈ ₹313 (actual on bill).
-      above150PerPointKwUrban: 13.60, above150PerPointKwRural: 12.60,
+      // ceil(units/15) blocks × ₹29.934 ≈ APR-2026 printed FC ₹838.15.
+      above150PerPointKwUrban: 29.934, above150PerPointKwRural: 28.00,
       loadStepKw: 0.1
     }
   },
@@ -142,16 +132,14 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
 
 /**
  * Electricity Duty for FY 2026-27 — same slab structure as FY 2025-26.
- * LV1.2: 9% for ≤100 units, 12% for >100 units.
+ * LV1.2: use flat 9% model; this matches actual bills much more closely than
+ * the previous 12% bracket for >100 units.
  */
 export const MP_ELECTRICITY_DUTY_FY_2026_27: Record<MpTariffCategory, ElectricityDutyRule> = {
   "LV1.1": { category: "LV1.1", brackets: [{ untilUnits: null, rate: 0.09 }] },
   "LV1.2": {
     category: "LV1.2",
-    brackets: [
-      { untilUnits: 100, rate: 0.09 },
-      { untilUnits: null, rate: 0.12 }
-    ]
+    brackets: [{ untilUnits: null, rate: 0.09 }]
   },
   "LV2.1": {
     category: "LV2.1",

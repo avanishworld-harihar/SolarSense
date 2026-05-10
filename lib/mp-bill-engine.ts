@@ -10,10 +10,9 @@
  *   energyCharge   = Σ over slabs[]   ((min(units,toUnit) − fromUnit + 1) × ratePerUnit)
  *                                              clamped at 0 below the slab floor
  *   fixedCharge    = MPERC LV-* fixed-charge rule:
- *                      LV1.2 >150u: min(ceil(units/15), ceil(sanctionedLoad/0.1)) blocks
- *                                   × ₹8.80/block (FY 2025-26) or ₹13.60/block (FY 2026-27)
+ *                      LV1.2 >150u: ceil(units/15) blocks × verified ₹/block
  *                      ≤150u: fixed connection-based slab (₹76/₹129 urban)
- *   fppasCharge    = energyCharge × fppasPct   (always large and POSITIVE, ~30-37%)
+ *   fppasCharge    = units × monthly FPPAS ₹/unit adjustment
  *                    Auto-looked up from MP_FPPAS_MONTHLY_RATES if billMonth provided
  *   electricityDuty = (energyCharge + fixedCharge) × dutyRate   (rate from §ED rule)
  *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, NO consumption cap)
@@ -70,9 +69,9 @@ export type MpBillEngineInput = {
    */
   billMonth?: string;
   /**
-   * Explicit FPPAS override for this billing month (decimal, e.g. 0.309 = 30.9%).
+   * Explicit FPPAS override for this billing month (₹/unit, e.g. 0.0627).
    * If omitted AND billMonth is set, the monthly table is consulted automatically.
-   * FPPAS is always a large POSITIVE value (~0.297 to 0.373 for FY 2025-26).
+   * FPPAS may be positive or negative depending on the month.
    */
   fppasPct?: number;
   /** Atal Griha Jyoti subsidy claimed on the bill (engine still validates). */
@@ -182,17 +181,13 @@ function fixedDomestic(units: number, area: MpAreaProfile, loadKw: number, t: Ca
     return { amount: v, formula: `slab 51-150 ${area} ⇒ ₹${v}/connection` };
   }
   const perPoint = area === "rural" ? f.above150PerPointKwRural : f.above150PerPointKwUrban;
-  // Consumption-based blocks: every 15 units = 1 block of 0.1 kW
-  // Capped at sanctioned-load blocks so consumer can't exceed their contracted load.
-  // This matches both the MPERC tariff order (consumption-based formula) and
-  // the empirically verified APR-2026 behaviour (capped at SL for high consumption).
+  // Verified MPEZ domestic bills use consumption blocks: every 15 units = 1 block.
+  // The printed fixed charge is not capped by sanctioned-load blocks for this layout.
   const consumptionBlocks = Math.ceil(units / 15);
-  const sanctionedBlocks = Math.max(1, Math.ceil(loadKw / 0.1));
-  const points = Math.min(consumptionBlocks, sanctionedBlocks);
-  const amount = r2(perPoint * points);
+  const amount = r2(perPoint * consumptionBlocks);
   return {
     amount,
-    formula: `>150u: min(ceil(${units}/15)=${consumptionBlocks}, ceil(${loadKw}kW/0.1)=${sanctionedBlocks}) = ${points} blocks × ₹${perPoint} = ₹${amount}`
+    formula: `>150u: ceil(${units}/15)=${consumptionBlocks} blocks × ₹${perPoint} = ₹${amount}`
   };
 }
 
@@ -304,10 +299,10 @@ export function computeElectricityDuty(category: MpTariffCategory, units: number
 }
 
 /* ------------------------------------------------------------------ */
-/* 4. FPPAS — energy charge × monthly %                              */
+/* 4. FPPAS — units × monthly ₹/unit adjustment                      */
 /* ------------------------------------------------------------------ */
 
-export function computeFppas(energy: number, fppasPct?: number, billMonth?: string): { amount: number; rate: number; formula: string } {
+export function computeFppas(units: number, fppasPct?: number, billMonth?: string): { amount: number; rate: number; formula: string } {
   let rate: number;
   if (typeof fppasPct === "number" && Number.isFinite(fppasPct)) {
     rate = fppasPct;
@@ -316,8 +311,9 @@ export function computeFppas(energy: number, fppasPct?: number, billMonth?: stri
   } else {
     rate = MP_FPPAS_DEFAULT_PCT;
   }
-  const amt = r2(energy * rate);
-  return { amount: amt, rate, formula: `EC ₹${r2(energy)} × ${(rate * 100).toFixed(2)}% = ₹${amt}` };
+  const u = Math.max(0, Math.floor(units));
+  const amt = r2(u * rate);
+  return { amount: amt, rate, formula: `${u} units × ₹${rate}/unit = ₹${amt}` };
 }
 
 /* ------------------------------------------------------------------ */
@@ -437,7 +433,7 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   }
 
   // Auto-lookup FPPAS from monthly table if not explicitly overridden.
-  const fppas = computeFppas(ec.total, input.fppasPct, input.billMonth);
+  const fppas = computeFppas(input.units, input.fppasPct, input.billMonth);
   const ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth);
 
   const subsidy = input.agjyClaimed
