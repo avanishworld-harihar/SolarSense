@@ -786,13 +786,12 @@ export default function ProposalPage() {
       }
 
       const data = payload.data as ParsedBillShape;
-      const parsedUnits = {
-        // history fills first (lower priority), then data.months overrides — so the
-        // server-side safety-net value (metered_unit_consumption for current month)
-        // always wins over the "same month last year" row in the history table.
-        ...buildUnitsFromConsumptionHistory(data),
-        ...mergeParsedMonthsIntoUnits(emptyMonthlyUnits(), data.months)
-      };
+      // Merge strategy: history fills first (lower priority), data.months overrides.
+      // Use emptyMonthlyUnits() as base so keys are always in calendar order (jan→dec).
+      const histUnits = buildUnitsFromConsumptionHistory(data);
+      const histBase = emptyMonthlyUnits();
+      for (const k of MONTH_KEYS) { if (histUnits[k]) histBase[k] = histUnits[k] as number; }
+      const parsedUnits = mergeParsedMonthsIntoUnits(histBase, data.months);
       const parsedMonthCount = countFilledMonths(parsedUnits);
       const missingMonthHint =
         parsedMonthCount < 4
@@ -847,10 +846,11 @@ export default function ProposalPage() {
 
       setMonthlyUnits((prev) => {
         const base = slot === "latest" ? emptyMonthlyUnits() : prev;
-        // history fills first (lower priority), then data.months overrides — so the
-        // server-side safety-net value (metered_unit_consumption for current month)
-        // always wins over the "same month last year" row in the history table.
-        let merged = { ...buildUnitsFromConsumptionHistory(data), ...mergeParsedMonthsIntoUnits(base, data.months) };
+        // Merge strategy: history fills first (lower priority), data.months overrides.
+        // Use emptyMonthlyUnits()-derived base so keys stay in calendar order (jan→dec).
+        const histU = buildUnitsFromConsumptionHistory(data);
+        for (const k of MONTH_KEYS) { if (histU[k] && !base[k]) base[k] = histU[k] as number; }
+        let merged = mergeParsedMonthsIntoUnits(base, data.months);
         if (slot !== "latest") return merged;
         const hasUsableHistoryWindow = (data.consumption_history?.length ?? 0) >= 4;
         // If bill already has a proper month-history table, never synthesize seasonal
@@ -1390,7 +1390,7 @@ export default function ProposalPage() {
             Auto-filled from first bill upload for quick verification. You can edit any month manually.
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {(Object.keys(monthlyUnits) as (keyof MonthlyUnits)[]).map((m) => (
+            {MONTH_KEYS.map((m) => (
               <FloatingLabelInput
                 key={m}
                 label={m.toUpperCase()}
