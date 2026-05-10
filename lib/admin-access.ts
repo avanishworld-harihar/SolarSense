@@ -126,6 +126,27 @@ export async function isAdminRequestAllowed(req: NextRequest): Promise<boolean> 
   return Boolean(resolved);
 }
 
+/** Bill-learning approvals: Super Admin role or SUPER_ADMIN_USER_IDS env list. */
+export async function isSuperAdminRequestAllowed(req: NextRequest): Promise<boolean> {
+  const session = readAdminSession(req);
+  if (!session) return false;
+  const isPhoneLike = /^[+\d]{8,}$/.test(session.identifier);
+  const resolved = await resolveAdminIdentity({
+    userId: isPhoneLike ? undefined : session.identifier,
+    phone: isPhoneLike ? session.identifier : undefined
+  });
+  if (!resolved) return false;
+
+  const envIds = (process.env.SUPER_ADMIN_USER_IDS ?? "")
+    .split(",")
+    .map((v) => normalize(v))
+    .filter(Boolean);
+  if (envIds.includes(resolved.id)) return true;
+
+  const role = normalize(String(resolved.role ?? "")).toLowerCase();
+  return role === "super_admin" || role === "superadmin";
+}
+
 export function buildAdminCookieValue(payload: AdminSessionPayload): string {
   return JSON.stringify(payload);
 }

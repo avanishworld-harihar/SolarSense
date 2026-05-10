@@ -5,6 +5,7 @@ import { compareBillRatesWithDatabase } from "@/lib/tariff-self-learning";
 import { queueDiscoveryIfNeeded } from "@/lib/discom-discovery";
 import { saveRateChangeReport } from "@/lib/rate-change-reports";
 import { saveBillUploadRecord } from "@/lib/supabase-persistence";
+import { queueBillLearningReview } from "@/lib/bill-learning-reviews";
 import { mergeParsedMonthsIntoUnits, emptyMonthlyUnits } from "@/lib/bill-parse";
 import { evaluateBillModelCalibration } from "@/lib/bill-model-calibration";
 import { upsertDiscomBillProfile } from "@/lib/discom-bill-profile";
@@ -335,8 +336,11 @@ async function queuePostScanTasks(input: {
   scannerMode: BillAiProvider | "fallback_manual" | "local_pdf";
   disableSelfLearning?: boolean;
   suppressOldTariffMismatchAlerts?: boolean;
+  clientRef?: string | null;
+  leadId?: string | null;
 }): Promise<void> {
-  const { parsed, usedAiFallback, scannerMode, disableSelfLearning, suppressOldTariffMismatchAlerts } = input;
+  const { parsed, usedAiFallback, scannerMode, disableSelfLearning, suppressOldTariffMismatchAlerts, clientRef, leadId } =
+    input;
   if (usedAiFallback || scannerMode !== "anthropic") return;
   if (disableSelfLearning) {
     console.info("[analyze-bill] self-learning skipped for guarded bill pattern.");
@@ -403,13 +407,23 @@ async function queuePostScanTasks(input: {
   if (parsed.state?.trim() && parsed.discom?.trim() && historyWindow > 0 && historyWindow < 12) {
     const requiredBills = Math.max(1, Math.min(6, Math.ceil(12 / historyWindow)));
     asyncOps.push(
-      upsertDiscomBillProfile({
+      queueBillLearningReview({
         state: parsed.state,
         discom: parsed.discom,
         historyWindowMonths: historyWindow,
         requiredBills,
         confidence: 0.82,
-        source: "self_learning_ai_scan"
+        source: "self_learning_ai_scan",
+        metadata: {
+          consumer_id: parsed.consumer_id ?? null,
+          bill_month: parsed.bill_month ?? null,
+          clientRef: clientRef ?? null,
+          leadId: leadId ?? null
+        }
+      }).then((r) => {
+        if (!r.ok) {
+          console.warn("[analyze-bill] bill_learning_reviews queue skipped (Supabase or table missing).");
+        }
       })
     );
   }
@@ -639,7 +653,9 @@ export async function POST(req: NextRequest) {
         usedAiFallback,
         scannerMode,
         disableSelfLearning: learningGuard.shouldSkipSelfLearning,
-        suppressOldTariffMismatchAlerts: newTariffCycleBill
+        suppressOldTariffMismatchAlerts: newTariffCycleBill,
+        clientRef: clientRef ?? null,
+        leadId: leadId ?? null
       })
     );
 

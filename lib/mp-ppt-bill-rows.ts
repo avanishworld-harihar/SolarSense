@@ -26,6 +26,7 @@ import {
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
 import { MP_TARIFF_FY_2026_27, isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
+import { engineBillMonthIsoForRow, monthKeyFromBillMonthLabel } from "@/lib/mp-bill-month";
 import type { MonthlyUnits } from "@/lib/types";
 import { resolveMpSmartBilling, type MpSmartBillingResolution } from "@/lib/mp-smart-billing";
 
@@ -95,7 +96,7 @@ const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
 
 function shouldUseDbAuditOverride(unitsFromInput: number, dbAudit: MpMonthlyAuditOverride | undefined): boolean {
   if (!dbAudit) return false;
-  if (!Number.isFinite(dbAudit.netPayableInr) || dbAudit.netPayableInr <= 0) return false;
+  if (!Number.isFinite(dbAudit.netPayableInr) || dbAudit.netPayableInr === 0) return false;
   const dbUnitsRaw = Number(dbAudit.units ?? 0);
   // If DB row has no units metadata, allow it (legacy rows).
   if (!Number.isFinite(dbUnitsRaw) || dbUnitsRaw <= 0) return true;
@@ -130,7 +131,8 @@ function inferMinSanctionedLoadKwFromDomesticBill(fcPrinted: number, units: numb
   if (!Number.isFinite(units) || units <= 150) return null;
   if (!Number.isFinite(perPoint) || perPoint <= 0) return null;
 
-  const B = Math.ceil(units / 15);
+  const cents = Math.round(Math.max(0, units) * 100);
+  const B = Math.max(1, Math.floor((cents + 1500 - 1) / 1500));
   let bestS = -1;
   let bestDiff = Infinity;
   const sMax = Math.max(B + 60, 120);
@@ -238,13 +240,21 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0, source: "no_consumption" };
     }
 
-    // Build a bill-month label so the engine can select the right FY tariff.
-    // We use the calendar month index (i) without a year. For months APR–DEC (i>=3)
-    // this is ambiguous (could be FY 2025-26 or FY 2026-27). We pass a synthetic
-    // "2026-MM" for APR–DEC so the engine uses FY 2026-27 for those months, which
-    // is correct for the FY 2026-27 solar projection cycle.
-    // For JAN–MAR (i<3) we use 2026 as well (still FY 2025-26 since JAN/FEB/MAR 2026 < APR 2026).
-    const syntheticBillMonth = `2026-${String(i + 1).padStart(2, "0")}`;
+    // Bill month drives FY tariff + monthly FPPAS. Align each row to the real
+    // calendar year implied by `referenceBillMonth` (e.g. MAR-2026 → Jul row =
+    // 2025-07) so domestic FC blocks match printed MPEZ bills (was wrongly using
+    // FY 2026-27 for mid-2025 rows when ISO month parsing failed).
+    const rowBillMonthIso = engineBillMonthIsoForRow(i, input.referenceBillMonth);
+    const refMonthKey = monthKeyFromBillMonthLabel(input.referenceBillMonth);
+    const printedFc = Number(input.billFixedChargeInr);
+    const usePrintedFcThisRow =
+      category === "LV1.2" &&
+      refMonthKey === monthKey &&
+      Number.isFinite(printedFc) &&
+      printedFc > 0;
+    const rowFcOverride =
+      typeof fcOv === "number" && Number.isFinite(fcOv) ? Math.round(fcOv) : usePrintedFcThisRow ? Math.round(printedFc) : undefined;
+
     const breakdown = calculateMpBill({
       discomCode,
       category,
@@ -252,14 +262,18 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       sanctionedLoadKw: sanctionedLoadKwForEngine > 0 ? sanctionedLoadKwForEngine : undefined,
       contractDemandKva: input.contractDemandKva,
       area,
-      billMonth: syntheticBillMonth,
+      billMonth: rowBillMonthIso,
       // Explicit monthly FPPAS override takes precedence over auto-lookup.
       fppasPct: input.monthlyFppasPct?.[monthKey],
       // AGJY applies to all LV-1.2 consumers regardless of consumption level.
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
-      fixedChargeOverrideInr: fcOv
+      fixedChargeOverrideInr: rowFcOverride
     });
+
+    const engineSource: PptAuditRow["source"] = isFY2026_27OrLater(rowBillMonthIso)
+      ? "mp_engine_2026_27"
+      : "mp_engine_2025_26";
 
     if (actual > 0) {
       return {
@@ -282,7 +296,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       duty: n(breakdown.electricityDuty),
       fuel: n(breakdown.fppasCharge),
       total: n(breakdown.netPayable),
-      source: "mp_engine_2025_26"
+      source: engineSource
     };
   });
 

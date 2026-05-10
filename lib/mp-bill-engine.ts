@@ -18,7 +18,8 @@
  *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, NO consumption cap)
  *   onlineRebate   = − min(0.5% × grossPayable, ₹1000) when paid online
  *   advanceCredit  = − manually-supplied advance interest (1%/month)
- *   netPayable     = max(0, energy + fixed + fppas + duty + extras − rebates − subsidy)
+ *   netPayable     = energy + fixed + fppas + duty + extras − rebates − subsidy + CCB
+ *                    (may be < 0 for credit bills; NFP uses printed net when provided else 0)
  *
  * ─── TARIFF AUTO-SELECTION (May 2026) ────────────────────────────────────────
  * Engine auto-selects tariff based on billMonth:
@@ -87,6 +88,13 @@ export type MpBillEngineInput = {
   /** Optional: bill bears NFP (Not For Payment) flag. */
   nfp?: boolean;
   /**
+   * When `nfp` is true and this is set (e.g. printed Total Amount Payable), use it as net
+   * instead of forcing ₹0 — covers NFP credit balances (negative payable) on MPEZ bills.
+   */
+  nfpPrintedNetPayableInr?: number | null;
+  /** Signed CCB / similar adjustment from bill OCR (reduces or increases net payable). */
+  ccbAdjustmentInr?: number | null;
+  /**
    * Smart Billing: when printed Energy ÷ units proves the board applied a flat
    * ₹/kWh that diverges from our slab replica — pin that rate for projection.
    */
@@ -104,6 +112,7 @@ export type MpBillLineKind =
   | "online_rebate"
   | "advance_credit"
   | "arrear"
+  | "ccb_adjustment"
   | "minimum_charge_topup";
 
 export type MpBillLine = {
@@ -183,11 +192,13 @@ function fixedDomestic(units: number, area: MpAreaProfile, loadKw: number, t: Ca
   const perPoint = area === "rural" ? f.above150PerPointKwRural : f.above150PerPointKwUrban;
   // Verified MPEZ domestic bills use consumption blocks: every 15 units = 1 block.
   // The printed fixed charge is not capped by sanctioned-load blocks for this layout.
-  const consumptionBlocks = Math.ceil(units / 15);
+  // Integer-safe "ceil to 2dp metered units / 15": 660.12→45 blocks (₹1260 @ ₹28), 660→44 (₹1232).
+  const cents = Math.round(Math.max(0, units) * 100);
+  const consumptionBlocks = Math.max(1, Math.floor((cents + 1500 - 1) / 1500));
   const amount = r2(perPoint * consumptionBlocks);
   return {
     amount,
-    formula: `>150u: ceil(${units}/15)=${consumptionBlocks} blocks × ₹${perPoint} = ₹${amount}`
+    formula: `>150u: ceil(${(cents / 100).toFixed(2)}u÷15)=${consumptionBlocks} blocks × ₹${perPoint} = ₹${amount}`
   };
 }
 
@@ -447,9 +458,20 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   const onlineRebate = computeOnlineRebate(grossPayable, input.paidOnline);
   const advance = computeAdvanceCredit(input.advanceBalanceInr);
 
-  let netPayable = grossPayable + onlineRebate.amount + advance.amount;
-  if (input.nfp) netPayable = 0;
-  netPayable = Math.round(max0(netPayable));
+  const ccbRaw = input.ccbAdjustmentInr;
+  const ccbAmt = typeof ccbRaw === "number" && Number.isFinite(ccbRaw) ? ccbRaw : 0;
+
+  let netPayable = grossPayable + onlineRebate.amount + advance.amount + ccbAmt;
+  if (input.nfp) {
+    const pin = input.nfpPrintedNetPayableInr;
+    if (typeof pin === "number" && Number.isFinite(pin)) {
+      netPayable = Math.round(pin);
+    } else {
+      netPayable = 0;
+    }
+  } else {
+    netPayable = Math.round(netPayable);
+  }
 
   const notes: string[] = [];
   const fyLabel = useFY2627 ? "FY 2026-27" : "FY 2025-26";
@@ -462,7 +484,14 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   notes.push(`Atal Griha Jyoti: ${subsidy.reason}`);
   if (input.paidOnline) notes.push(onlineRebate.note);
   if (input.advanceBalanceInr && input.advanceBalanceInr > 0) notes.push(advance.note);
-  if (input.nfp) notes.push("NFP flag: net payable forced to 0 even if gross > 0.");
+  if (input.nfp) {
+    notes.push(
+      typeof input.nfpPrintedNetPayableInr === "number" && Number.isFinite(input.nfpPrintedNetPayableInr)
+        ? `NFP flag: net payable pinned to printed Total Amount Payable (₹${input.nfpPrintedNetPayableInr}).`
+        : "NFP flag: net payable forced to ₹0 (no printed net supplied)."
+    );
+  }
+  if (ccbAmt !== 0) notes.push(`CCB / bill adjustment applied: ₹${r2(ccbAmt)}.`);
   if (input.energyRateOverridePerUnit != null) {
     notes.push(`Smart Billing: energy rate pinned @ ₹${input.energyRateOverridePerUnit}/kWh (board cross-check).`);
   }
@@ -480,6 +509,9 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   if (arrear !== 0) lines.push({ kind: "arrear", label: "Principal Arrear", amountInr: r2(arrear) });
   if (onlineRebate.amount !== 0) lines.push({ kind: "online_rebate", label: "Online Payment Rebate", amountInr: r2(onlineRebate.amount) });
   if (advance.amount !== 0) lines.push({ kind: "advance_credit", label: "Advance Payment Credit", amountInr: r2(advance.amount) });
+  if (ccbAmt !== 0) {
+    lines.push({ kind: "ccb_adjustment", label: "CCB / Bill Adjustment", amountInr: r2(ccbAmt), detail: {} });
+  }
 
   const meta = MP_DISCOMS[input.discomCode];
 

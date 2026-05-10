@@ -183,12 +183,12 @@ function detectAreaProfile(parsed: ParsedBillShape): MpAreaProfile {
 }
 
 function pickReferenceAmount(parsed: ParsedBillShape): { ref: number; field: "current_month_bill" | "total_amount_payable" | "total_amount_till_due" } | null {
-  const cur = num(parsed.current_month_bill_amount_inr);
-  if (cur != null && cur > 0) return { ref: cur, field: "current_month_bill" };
-  const due = num(parsed.total_amount_till_due_inr);
-  if (due != null && due > 0) return { ref: due, field: "total_amount_till_due" };
   const pay = num(parsed.total_amount_payable_inr);
-  if (pay != null && pay > 0) return { ref: pay, field: "total_amount_payable" };
+  if (pay != null && Number.isFinite(pay)) return { ref: pay, field: "total_amount_payable" };
+  const due = num(parsed.total_amount_till_due_inr);
+  if (due != null && Number.isFinite(due)) return { ref: due, field: "total_amount_till_due" };
+  const cur = num(parsed.current_month_bill_amount_inr);
+  if (cur != null && Number.isFinite(cur)) return { ref: cur, field: "current_month_bill" };
   return null;
 }
 
@@ -269,7 +269,14 @@ function classifyVariance(args: {
     return { reason: "no_variance", explanations: ["Calculated bill matches printed amount within ₹5 tolerance."] };
   }
   if (parsed.nfp_flag) {
-    explanations.push("Bill is marked NFP (Not For Payment); printed amount may be 0 even if charges accrued.");
+    const pay = num(parsed.total_amount_payable_inr);
+    if (pay != null && pay < 0) {
+      explanations.push(
+        "Bill is NFP with a credit balance (negative Total Amount Payable). Model uses printed net for validation when available."
+      );
+    } else {
+      explanations.push("Bill is marked NFP (Not For Payment); printed amount may be 0 even if charges accrued.");
+    }
     return { reason: "nfp_flag", explanations };
   }
   const arrear = num(parsed.principal_arrear_inr);
@@ -387,6 +394,7 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
 
   if (sanctionedLoadKw == null && category === "LV1.2") sanctionedLoadKw = 1;
 
+  const printedPayable = num(parsed.total_amount_payable_inr);
   const engineInput: MpBillEngineInput = {
     discomCode,
     category,
@@ -405,6 +413,9 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     paidOnline: options?.paidOnline,
     principalArrearInr: num(parsed.principal_arrear_inr) ?? 0,
     nfp: Boolean(parsed.nfp_flag),
+    nfpPrintedNetPayableInr:
+      parsed.nfp_flag && printedPayable != null && Number.isFinite(printedPayable) ? printedPayable : undefined,
+    ccbAdjustmentInr: num(parsed.ccb_adjustment_inr) ?? undefined,
     energyRateOverridePerUnit: smartBilling.energyRateOverridePerUnit,
     fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr
   };
@@ -432,7 +443,8 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
   const calculatedInr = breakdown.netPayable;
   const deltaInr = r2(referenceInr - calculatedInr);
   const deltaAbs = Math.abs(deltaInr);
-  const deltaPct = referenceInr > 0 ? r2((deltaInr / referenceInr) * 100) : 0;
+  const deltaPct =
+    Math.abs(referenceInr) > TOLERANCE_INR ? r2((deltaInr / referenceInr) * 100) : 0;
 
   const status: MpAuditMatchStatus =
     deltaAbs <= TOLERANCE_INR ? "match" : deltaInr > 0 ? "mismatch_high" : "mismatch_low";

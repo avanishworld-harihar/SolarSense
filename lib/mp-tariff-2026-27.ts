@@ -163,17 +163,34 @@ export const MP_ELECTRICITY_DUTY_FY_2026_27: Record<MpTariffCategory, Electricit
 export function isFY2026_27OrLater(billMonth?: string | null): boolean {
   if (!billMonth) return false;
   const s = billMonth.trim().toLowerCase();
+
+  // ISO "YYYY-MM" / "YYYY-MM-DD" — month must not be dropped when the token is numeric.
+  const iso = s.match(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/);
+  if (iso) {
+    const year = Number.parseInt(iso[1], 10);
+    const monthNum = Number.parseInt(iso[2], 10);
+    if (Number.isFinite(year) && year >= 2000 && year <= 2099 && monthNum >= 1 && monthNum <= 12) {
+      return year > 2026 || (year === 2026 && monthNum >= 4);
+    }
+  }
+
   const MONTHS: Record<string, number> = {
     jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
     jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
   };
   const parts = s.split(/[\s\-\/]+/).filter(Boolean);
-  let monthNum = 0, year = 0;
+  let monthNum = 0;
+  let year = 0;
   for (const p of parts) {
     const n = parseInt(p, 10);
-    if (!isNaN(n) && n >= 2000 && n <= 2099) { year = n; continue; }
+    if (!isNaN(n) && n >= 2000 && n <= 2099) {
+      year = n;
+      continue;
+    }
     const mn = MONTHS[p.slice(0, 3)];
-    if (mn) { monthNum = mn; }
+    if (mn) {
+      monthNum = mn;
+    }
   }
   if (!year || !monthNum) return false;
   // APR-2026 = month 4, year 2026 → fy 2026-27 starts

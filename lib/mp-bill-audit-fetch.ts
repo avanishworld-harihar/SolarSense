@@ -120,7 +120,7 @@ export async function fetchMpAuditOverridesByRef(input: FetchAuditOverridesInput
     const key = pickMonthKey(row);
     if (!key || overrides[key]) continue;
     const net = num(row.net_payable_inr) ?? num(row.validation_calculated_inr);
-    if (net == null || net <= 0) continue;
+    if (net == null || !Number.isFinite(net) || net === 0) continue;
     overrides[key] = {
       netPayableInr: net,
       energyInr: num(row.energy_charge_inr) ?? undefined,
