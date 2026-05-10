@@ -161,14 +161,15 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
 
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];
     if (shouldUseDbAuditOverride(units, dbAudit)) {
+      const safeDbAudit = dbAudit as MpMonthlyAuditOverride;
       return {
         label,
-        units: n(dbAudit.units ?? units),
-        energy: n(dbAudit.energyInr ?? 0),
-        fixed: n(dbAudit.fixedInr ?? 0),
-        duty: n(dbAudit.electricityDutyInr ?? 0),
-        fuel: n(dbAudit.fppasInr ?? 0),
-        total: n(dbAudit.netPayableInr),
+        units: n(safeDbAudit.units ?? units),
+        energy: n(safeDbAudit.energyInr ?? 0),
+        fixed: n(safeDbAudit.fixedInr ?? 0),
+        duty: n(safeDbAudit.electricityDutyInr ?? 0),
+        fuel: n(safeDbAudit.fppasInr ?? 0),
+        total: n(safeDbAudit.netPayableInr),
         source: "mp_audit_db"
       };
     }
