@@ -786,12 +786,26 @@ export default function ProposalPage() {
       }
 
       const data = payload.data as ParsedBillShape;
-      // Merge strategy: history fills first (lower priority), data.months overrides.
-      // Use emptyMonthlyUnits() as base so keys are always in calendar order (jan→dec).
+      // Build parsedUnits with smart priority:
+      //   1. History fills histBase (from consumption_history — most reliable for past months).
+      //   2. data.months: only the CURRENT bill month overwrites; other months only fill empties.
       const histUnits = buildUnitsFromConsumptionHistory(data);
       const histBase = emptyMonthlyUnits();
       for (const k of MONTH_KEYS) { if (histUnits[k]) histBase[k] = histUnits[k] as number; }
-      const parsedUnits = mergeParsedMonthsIntoUnits(histBase, data.months);
+      const billCurrentKey = monthKeyFromBillLabel(data.bill_month); // e.g. "apr" for APR-2026
+      const parsedUnits = (() => {
+        const out = { ...histBase };
+        if (data.months) {
+          for (const k of MONTH_KEYS) {
+            const raw = data.months[k];
+            if (raw == null) continue;
+            const v = typeof raw === "number" ? raw : parseInt(String(raw).replace(/[^\d]/g, ""), 10);
+            if (!Number.isFinite(v) || v <= 0) continue;
+            if (k === billCurrentKey || !out[k]) out[k] = Math.round(v);
+          }
+        }
+        return out as typeof histBase;
+      })();
       const parsedMonthCount = countFilledMonths(parsedUnits);
       const missingMonthHint =
         parsedMonthCount < 4
@@ -846,11 +860,29 @@ export default function ProposalPage() {
 
       setMonthlyUnits((prev) => {
         const base = slot === "latest" ? emptyMonthlyUnits() : prev;
-        // Merge strategy: history fills first (lower priority), data.months overrides.
-        // Use emptyMonthlyUnits()-derived base so keys stay in calendar order (jan→dec).
+        // History fills first (lower priority) — only for empty slots.
         const histU = buildUnitsFromConsumptionHistory(data);
         for (const k of MONTH_KEYS) { if (histU[k] && !base[k]) base[k] = histU[k] as number; }
-        let merged = mergeParsedMonthsIntoUnits(base, data.months);
+
+        // Smart merge from data.months:
+        //   • Current bill month key → always trust the AI/safety-net metered value.
+        //   • All other months (history) → only fill if slot is STILL EMPTY.
+        //     This prevents the AI from overwriting a history-derived correct value
+        //     with a neighbouring-month value it confused (e.g., putting DEC's 194
+        //     into the NOV slot when processing the DEC-2025 bill).
+        const currentKey = parsedMonthKey; // e.g. "dec" for bill_month="DEC-2025"
+        const merged = { ...base };
+        if (data.months) {
+          for (const k of MONTH_KEYS) {
+            const raw = data.months[k];
+            if (raw == null) continue;
+            const v = typeof raw === "number" ? raw : parseInt(String(raw).replace(/[^\d]/g, ""), 10);
+            if (!Number.isFinite(v) || v <= 0) continue;
+            // For the current bill month: always override (metered reading is authoritative).
+            // For history months: only fill slots that are empty (history takes priority).
+            if (k === currentKey || !merged[k]) merged[k] = Math.round(v);
+          }
+        }
         if (slot !== "latest") return merged;
         const hasUsableHistoryWindow = (data.consumption_history?.length ?? 0) >= 4;
         // If bill already has a proper month-history table, never synthesize seasonal

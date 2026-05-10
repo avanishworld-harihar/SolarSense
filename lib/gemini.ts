@@ -84,8 +84,9 @@ Rules:
 7) consumption_history: include EVERY row from the history table as {"month":"MMM-YYYY","units":number} — including the "same month last year" row. Always include the year in month label (e.g. "APR-2025").
 8) CRITICAL — months object (year-disambiguation): months keys jan–dec have NO year field, so:
    a) Current bill month key → ALWAYS set from metered_unit_consumption (round to integer). Example: bill_month="APR-2026" → months.apr = round(metered_unit_consumption). NEVER use the history table for this key.
-   b) Previous months → use the 5 recent history months from the current billing year window (up to 11 months before bill_month).
-   c) "Same month last year" row → put in consumption_history ONLY. NEVER write to months. Example: APR-2025 goes to consumption_history only, not months.apr.
+   b) Previous months → use the 5 recent history months from the current billing year window. Map EACH row to its EXACT labelled month — DO NOT shift or swap month assignments. NOV-2025 row → months.nov. DEC-2025 row → months.dec. Never assign a value from one month's row to a different month key.
+   c) "Same month last year" row → put in consumption_history ONLY. NEVER write to months (not even to the same-month key). Example: DEC-2024 bold row in a DEC-2025 bill → consumption_history only, NOT months.dec.
+   d) CONFUSION GUARD example: DEC-2025 bill has metered=194 units (for DEC). History shows NOV-2025: 276. Set months.dec=194, months.nov=276. Do NOT put 194 into months.nov — that is DEC's value.
 9) format_memory: one short sentence on where monthly history appears; else "".
 10) tariff_slabs_detected: [] if slab table not visible.
 11) nfp_flag=true only if "NFP" or "Not For Payment" is explicitly printed.

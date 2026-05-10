@@ -75,8 +75,9 @@ Rules:
 9) consumption_history: include EVERY row from the history table as {"month":"MMM-YYYY","units":number} — including the "same month last year" comparison row. Always include the year in month label (e.g. "APR-2025", "NOV-2025").
 10) CRITICAL — months object (year-disambiguation): months keys jan–dec have NO year field, so follow these rules strictly:
     a) Current bill month key → ALWAYS set from metered_unit_consumption (round to integer). Example: bill_month="APR-2026" → months.apr = round(metered_unit_consumption). NEVER use the Last Six Months table for this key.
-    b) Previous months → use data from the Last Six Months table, but ONLY for months in the current billing year window (up to 11 months before bill_month). Example for APR-2026 bill: use NOV-2025, DEC-2025, JAN-2026, FEB-2026, MAR-2026 from the table.
-    c) "Same month last year" row in history table → put in consumption_history ONLY. NEVER write it to months. Example: APR-2025 row belongs only in consumption_history, not in months.apr.
+    b) Previous months → use data from the Last Six Months table, ONLY for months in the current billing year window (up to 11 months before bill_month). Example for APR-2026 bill: use NOV-2025, DEC-2025, JAN-2026, FEB-2026, MAR-2026 from the table. CRITICAL: map EACH row to its EXACT labelled month — DO NOT shift or swap month assignments. NOV-2025 row → months.nov. DEC-2025 row → months.dec. Never use the value from one month's row for a different month key.
+    c) "Same month last year" row in history table → put in consumption_history ONLY. NEVER write it to months. Example for DEC-2025 bill: DEC-2024 row (bold/marked LY) goes ONLY into consumption_history, not into months.dec or any other months key.
+    d) CONFUSION GUARD: In a DEC-2025 bill, the metered consumption is 194 units (for DEC). The history shows NOV-2025: 276. months.dec = 194 (current month), months.nov = 276 (from history). Do NOT accidentally assign 194 to months.nov — that is DEC's value, not NOV's.
 11) tariff_slabs_detected: [] if slab table not visible.
 12) Set nfp_flag=true only when "NFP" or "Not For Payment" text is explicitly present.
 Return ONLY the JSON object.`;
