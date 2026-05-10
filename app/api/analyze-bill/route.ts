@@ -550,6 +550,7 @@ export async function POST(req: NextRequest) {
         if (!parsed.months) parsed.months = {};
         parsed.months[currentMonthKey] = Math.round(meteredUnitsForFix);
       }
+      console.log("[fix-apr] months_after=", JSON.stringify(parsed.months));
     }
 
     const discomForMemory = (parsed.discom ?? codeForHint).trim();

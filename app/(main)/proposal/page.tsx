@@ -787,8 +787,11 @@ export default function ProposalPage() {
 
       const data = payload.data as ParsedBillShape;
       const parsedUnits = {
-        ...mergeParsedMonthsIntoUnits(emptyMonthlyUnits(), data.months),
-        ...buildUnitsFromConsumptionHistory(data)
+        // history fills first (lower priority), then data.months overrides — so the
+        // server-side safety-net value (metered_unit_consumption for current month)
+        // always wins over the "same month last year" row in the history table.
+        ...buildUnitsFromConsumptionHistory(data),
+        ...mergeParsedMonthsIntoUnits(emptyMonthlyUnits(), data.months)
       };
       const parsedMonthCount = countFilledMonths(parsedUnits);
       const missingMonthHint =
@@ -844,8 +847,10 @@ export default function ProposalPage() {
 
       setMonthlyUnits((prev) => {
         const base = slot === "latest" ? emptyMonthlyUnits() : prev;
-        let merged = mergeParsedMonthsIntoUnits(base, data.months);
-        merged = { ...merged, ...buildUnitsFromConsumptionHistory(data) };
+        // history fills first (lower priority), then data.months overrides — so the
+        // server-side safety-net value (metered_unit_consumption for current month)
+        // always wins over the "same month last year" row in the history table.
+        let merged = { ...buildUnitsFromConsumptionHistory(data), ...mergeParsedMonthsIntoUnits(base, data.months) };
         if (slot !== "latest") return merged;
         const hasUsableHistoryWindow = (data.consumption_history?.length ?? 0) >= 4;
         // If bill already has a proper month-history table, never synthesize seasonal
@@ -2079,18 +2084,35 @@ function buildUnitsFromConsumptionHistory(parsed: ParsedBillShape | null): Parti
   const out: Partial<MonthlyUnits> = {};
   if (!parsed) return out;
   const history = parsed.consumption_history ?? [];
+
+  // Track the highest year seen for each month key so that if the same calendar
+  // month appears multiple times (e.g. APR-2025 and APR-2026), only the most
+  // recent year's value is kept. This prevents the "same month last year" row
+  // in the MP DISCOM history table (APR-2025) from overwriting more recent data.
+  const yearForKey: Partial<Record<string, number>> = {};
+
   for (const row of history) {
     if (!row) continue;
     const units = Number(row.units ?? 0);
     if (!Number.isFinite(units) || units <= 0) continue;
-    const parts = String(row.month ?? "")
-      .split(/[\s/-]+/)
-      .map((part) => part.trim())
-      .filter(Boolean);
+    const rawMonth = String(row.month ?? "");
+    const parts = rawMonth.split(/[\s/-]+/).map((part) => part.trim()).filter(Boolean);
+
+    // Extract year from the month string (e.g. "APR-2025" → year 2025)
+    let rowYear = 0;
+    for (const part of parts) {
+      const n = Number(part);
+      if (Number.isFinite(n) && n >= 2000 && n <= 2100) { rowYear = n; break; }
+    }
+
     for (const part of parts) {
       const key = normalizeMonthToken(part);
       if (!key) continue;
-      out[key] = Math.max(0, Math.round(units));
+      const existing = yearForKey[key] ?? 0;
+      if (rowYear >= existing) {
+        out[key as keyof MonthlyUnits] = Math.max(0, Math.round(units));
+        yearForKey[key] = rowYear;
+      }
       break;
     }
   }
