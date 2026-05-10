@@ -108,8 +108,8 @@ function shouldUseDbAuditOverride(unitsFromInput: number, dbAudit: MpMonthlyAudi
   const pct = inputUnits > 0 ? diff / inputUnits : 0;
 
   // Reject stale/misaligned audited rows (common when old bad scans were saved).
-  // Example: current month units=280 but stale DB audit has 445.
-  return !(diff >= 40 && pct >= 0.2);
+  // Example: current month units=307 but stale DB audit has 347.
+  return !(diff >= 10 && pct >= 0.03);
 }
 
 /** LV1.2 domestic >150u: ₹/0.1kW block from the tariff year of the reference bill. */
