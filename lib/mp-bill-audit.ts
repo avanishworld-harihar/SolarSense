@@ -30,6 +30,7 @@ import {
   type MpPhase,
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
+import { isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
 
 const TOLERANCE_INR = 5;
 
@@ -54,7 +55,7 @@ export type MpBillAuditReport = {
   /** Hash-friendly id; can be used as audit_ref in Supabase. */
   auditRef: string;
   generatedAtIso: string;
-  schemaVersion: "mp.audit/2025-26.v1";
+  schemaVersion: "mp.audit/2025-26.v1" | "mp.audit/2026-27.v1";
 
   identification: {
     detectedState: "Madhya Pradesh" | string;
@@ -394,6 +395,10 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     contractDemandKva: contractDemandKvaResolved,
     phase: loadParsed.phase ?? undefined,
     area,
+    // Pass billMonth so engine auto-selects FY 2026-27 tariff for APR-2026+ bills
+    // and auto-looks up the correct monthly FPPAS rate from the lookup table.
+    billMonth: parsed.bill_month?.trim() || undefined,
+    // Explicit fppasPct override from caller takes precedence over auto-lookup.
     fppasPct: options?.fppasPct,
     agjyClaimed: num(parsed.mp_govt_subsidy_amount_inr) != null && (num(parsed.mp_govt_subsidy_amount_inr) ?? 0) !== 0,
     advanceBalanceInr: options?.advanceBalanceInr,
@@ -467,7 +472,9 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
   return {
     auditRef: makeAuditRef(parsed),
     generatedAtIso: new Date().toISOString(),
-    schemaVersion: "mp.audit/2025-26.v1",
+    schemaVersion: engineInput.billMonth && isFY2026_27OrLater(engineInput.billMonth)
+      ? "mp.audit/2026-27.v1"
+      : "mp.audit/2025-26.v1",
     identification: {
       detectedState: parsed.state?.trim() || "Madhya Pradesh",
       detectedDiscom: discomCode,
@@ -496,7 +503,9 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     },
     calculation: {
       breakdown,
-      fppasUsedPct: options?.fppasPct ?? null,
+      fppasUsedPct: breakdown.fppasCharge !== 0 && breakdown.energyCharge !== 0
+        ? Math.round((breakdown.fppasCharge / breakdown.energyCharge) * 10000) / 10000
+        : (options?.fppasPct ?? null),
       agjyApplied: breakdown.subsidyCredit !== 0
     },
     printed,

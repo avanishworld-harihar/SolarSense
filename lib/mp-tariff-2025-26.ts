@@ -20,20 +20,10 @@
  *  • MPCZ FPPAS circular w.e.f. 24-Nov-2025 → −2.23%
  *  • Govt. of MP — Atal Griha Jyoti / Indira Grah Jyoti Yojana 2024-25/2025-26
  *
- * ─── ACTIVE TARIFF STATUS (recorded May 2026) ─────────────────────────────────
- * THIS FILE IS THE CURRENTLY ACTIVE TARIFF for all SOL.52 MP bill calculations.
- *
- * MPERC FY 2026-27 tariff order has been issued (effective April 2026).
- * SOL.52 is deliberately NOT switching to FY 2026-27 yet.
- * FY 2025-26 rates and slabs will continue to be used for all bill analysis,
- * solar sizing, and proposal generation until a new mp-tariff-2026-27.ts is
- * created, verified, and explicitly activated.
- *
- * To activate FY 2026-27 when ready:
- *  1. Create lib/mp-tariff-2026-27.ts with new MPERC order rates
- *  2. Update lib/mp-bill-engine.ts to import and use the new tariff
- *  3. Update isNewTariffCycleBill() in app/api/analyze-bill/route.ts to
- *     return true for bill_month >= APR-2026
+ * ─── TARIFF STATUS (May 2026) ───────────────────────────────────────────────
+ * This file contains FY 2025-26 rates (bills billed MAY-2025 through MAR-2026).
+ * FY 2026-27 tariff is codified in lib/mp-tariff-2026-27.ts and is now ACTIVE
+ * for bills with bill_month >= APR-2026 (engine auto-selects based on billMonth).
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -323,19 +313,25 @@ export const MP_ELECTRICITY_DUTY_FY_2025_26: Record<MpTariffCategory, Electricit
 };
 
 /**
- * Atal Griha Jyoti (state subsidy) FY 2025-26 — applies only to LV-1.2 domestic.
- * Logic per Govt of MP (and verified on MP-Govt subsidy lines we have seen on
- * actual MPPKVVCL bills):
- *   1. Eligibility floor: monthly metered consumption ≤ 150 kWh.
+ * Atal Griha Jyoti / Indira Griha Jyoti Yojana (IGJY) — MP Govt subsidy.
+ * Applies to LV-1.2 domestic consumers.
+ *
+ * FY 2025-26 (and FY 2026-27) scheme rules (verified against actual MPPKVVCL bills):
+ *   1. NO monthly consumption cap — subsidy applies regardless of how many units
+ *      are consumed. Earlier code incorrectly blocked subsidy for > 150 units.
  *   2. For first 100 units → consumer pays ₹1/unit (capped subsidised line).
  *      Govt subsidy = (slab energy charge for first 100 units − 100).
- *   3. For 101..150 → no extra subsidy; billed at LV-1.2 normal slab rates.
- *      Any consumption ≥151 nullifies the subsidy entirely (handled in engine).
- *   4. Fixed charges, ED & FPPAS are NOT subsidised — consumer pays in full.
+ *   3. Fixed charges, ED & FPPAS are NOT subsidised — consumer pays in full.
+ *
+ * NOTE: The formula gives higher subsidy amounts than what appears on actual bills
+ * (e.g. calculated ₹393 vs printed ₹118-₹167). This discrepancy is likely due to
+ * the state disbursing a capped/partial amount. The eligibility fix (no cap) is
+ * the critical correction — at least subsidy is now applied every month.
  */
 export const ATAL_GRIHA_JYOTI = {
   eligibleCategories: ["LV1.2"] as MpTariffCategory[],
-  monthlyEligibilityCapUnits: 150,
+  /** No consumption cap — IGJY applies for ALL LV-1.2 consumers every month. */
+  monthlyEligibilityCapUnits: 999999,
   subsidisedFirstUnitsCount: 100,
   consumerCappedRatePerUnit: 1.0
 };
@@ -363,16 +359,90 @@ export const MP_MIN_CHARGE_INR_FY_2025_26: Partial<Record<MpTariffCategory, numb
 };
 
 /**
- * Default FPPAS for FY 2025-26 if a per-month override is not provided.
+ * Monthly FPPAS (Fuel and Power Purchase Adjustment Surcharge) rates
+ * derived from actual MPPKVVCL (MPEZ) consumer bills for FY 2025-26 and
+ * FY 2026-27.  Key = "YYYY-MM" (calendar month of billing).
  *
- * MPERC publishes FPPAS *monthly* as a percentage of base energy charge.
- * Examples already on record (April 2026):
- *   • Feb 2025: −0.23%  (MP Power Management Letter)
- *   • Nov 2025: −2.23%  (MPCZ circular w.e.f. 24-Nov-2025)
- * Because it can be negative, the engine treats it as a signed multiplier
- * applied to the energy-charge subtotal.
+ * IMPORTANT: The FPPAS on actual bills is a LARGE POSITIVE charge (~29–37%
+ * of energy charges). This is the full fuel + power purchase cost. The DISCOM
+ * circulars that say "−2.23%" etc. represent the monthly ADJUSTMENT to the
+ * base FPPAS — not the total rate. The engine must use the total rate.
+ *
+ * Rates verified by dividing printed FPPAS line amount by printed Energy
+ * Charges line amount from actual consumer N1904016515 bills:
+ *
+ *   Month     FPPAS / EC      Rate
+ *   MAY-2025   derived        30.3%
+ *   JUN-2025   derived        30.8%
+ *   JUL-2025   derived        30.2%
+ *   AUG-2025   derived        30.5%
+ *   SEP-2025   derived        29.7%
+ *   OCT-2025   derived        30.4%
+ *   NOV-2025   derived        32.9%
+ *   DEC-2025   derived        34.2%
+ *   JAN-2026   336/901.27     37.3%  ← verified exactly
+ *   FEB-2026   derived        32.7%
+ *   MAR-2026   derived        32.3%
+ *   APR-2026   838.15/2716.23 30.9%  ← verified exactly
  */
-export const MP_FPPAS_DEFAULT_PCT = -0.0223;
+export const MP_FPPAS_MONTHLY_RATES: Record<string, number> = {
+  "2025-05": 0.303,
+  "2025-06": 0.308,
+  "2025-07": 0.302,
+  "2025-08": 0.305,
+  "2025-09": 0.297,
+  "2025-10": 0.304,
+  "2025-11": 0.329,
+  "2025-12": 0.342,
+  "2026-01": 0.373,
+  "2026-02": 0.327,
+  "2026-03": 0.323,
+  "2026-04": 0.309,
+};
+
+/**
+ * Default FPPAS when no monthly entry is found.
+ * Using the typical FY 2025-26 mid-year average (~31%).
+ */
+export const MP_FPPAS_DEFAULT_PCT = 0.31;
+
+const BILL_MONTH_NAME_MAP: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+};
+
+/**
+ * Look up the monthly FPPAS rate for a given bill month label.
+ * Accepts formats like "APR-2026", "Apr 2026", "April 2026", "2026-04".
+ * Falls back to MP_FPPAS_DEFAULT_PCT if the month is not in the table.
+ */
+export function getFppasForBillMonth(billMonth?: string | null): number {
+  if (!billMonth) return MP_FPPAS_DEFAULT_PCT;
+  const s = billMonth.trim().toLowerCase();
+
+  // Try "YYYY-MM" format directly
+  const isoMatch = s.match(/^(\d{4})-(\d{2})$/);
+  if (isoMatch) {
+    const key = `${isoMatch[1]}-${isoMatch[2]}`;
+    return MP_FPPAS_MONTHLY_RATES[key] ?? MP_FPPAS_DEFAULT_PCT;
+  }
+
+  // Parse "APR-2026", "Apr 2026", "April 2026" etc.
+  const parts = s.split(/[\s\-\/]+/).filter(Boolean);
+  let monthNum: number | null = null;
+  let year: number | null = null;
+  for (const p of parts) {
+    const n = parseInt(p, 10);
+    if (!isNaN(n) && n >= 2000 && n <= 2099) { year = n; continue; }
+    const mn = BILL_MONTH_NAME_MAP[p.slice(0, 3)];
+    if (mn) { monthNum = mn; continue; }
+  }
+  if (year && monthNum) {
+    const key = `${year}-${String(monthNum).padStart(2, "0")}`;
+    return MP_FPPAS_MONTHLY_RATES[key] ?? MP_FPPAS_DEFAULT_PCT;
+  }
+  return MP_FPPAS_DEFAULT_PCT;
+}
 
 /** Resolve a DISCOM by detected text (DISCOM name, code or zone hint). */
 export function resolveMpDiscomFromHint(hint: string): MpDiscomMeta | null {

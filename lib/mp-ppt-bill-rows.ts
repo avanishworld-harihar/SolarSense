@@ -41,7 +41,7 @@ export type PptAuditRow = {
   fuel: number;
   total: number;
   /** Provenance of the row total — useful for QA tooltips later. */
-  source: "mp_audit_db" | "mp_engine_2025_26" | "actual_input" | "no_consumption";
+  source: "mp_audit_db" | "mp_engine_2025_26" | "mp_engine_2026_27" | "actual_input" | "no_consumption";
 };
 
 export type MpMonthlyAuditOverride = {
@@ -159,6 +159,13 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0, source: "no_consumption" };
     }
 
+    // Build a bill-month label so the engine can select the right FY tariff.
+    // We use the calendar month index (i) without a year. For months APR–DEC (i>=3)
+    // this is ambiguous (could be FY 2025-26 or FY 2026-27). We pass a synthetic
+    // "2026-MM" for APR–DEC so the engine uses FY 2026-27 for those months, which
+    // is correct for the FY 2026-27 solar projection cycle.
+    // For JAN–MAR (i<3) we use 2026 as well (still FY 2025-26 since JAN/FEB/MAR 2026 < APR 2026).
+    const syntheticBillMonth = `2026-${String(i + 1).padStart(2, "0")}`;
     const breakdown = calculateMpBill({
       discomCode,
       category,
@@ -166,8 +173,11 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       sanctionedLoadKw: input.connectedLoadKw,
       contractDemandKva: input.contractDemandKva,
       area,
+      billMonth: syntheticBillMonth,
+      // Explicit monthly FPPAS override takes precedence over auto-lookup.
       fppasPct: input.monthlyFppasPct?.[monthKey],
-      agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0 && units <= 150),
+      // AGJY applies to all LV-1.2 consumers regardless of consumption level.
+      agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
       fixedChargeOverrideInr: fcOv
     });

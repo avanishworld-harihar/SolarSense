@@ -188,17 +188,26 @@ function parseBillMonthYear(raw: string | undefined): { year: number; monthIndex
 }
 
 function isNewTariffCycleBill(parsed: ParsedBillShape): boolean {
-  void parsed;
-  // ─── TARIFF FREEZE DECISION (recorded May 2026) ──────────────────────────────
-  // MPERC FY 2026-27 tariff order has been issued (effective April 2026).
-  // DELIBERATE DECISION: SOL.52 will continue using FY 2025-26 tariff for all
-  // bill analysis and solar sizing calculations until explicitly unlocked.
-  // Reason: FY 2026-27 tariff rates and slabs are not yet codified in the engine.
-  // Action required before enabling: add mp-tariff-2026-27.ts, update
-  // mp-bill-engine.ts imports, then change this function to return true for
-  // bills with bill_month >= APR-2026.
-  // ─────────────────────────────────────────────────────────────────────────────
-  return false;
+  // FY 2026-27 tariff is now ACTIVE in SOL.52 (effective APR-2026).
+  // lib/mp-tariff-2026-27.ts is codified with verified rates.
+  // The engine in lib/mp-bill-engine.ts auto-selects the correct tariff
+  // based on billMonth, so this flag is used only to suppress old-tariff
+  // mismatch alerts for APR-2026+ bills.
+  const billMonth = (parsed.bill_month ?? "").trim().toLowerCase();
+  const MONTHS: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+  };
+  const parts = billMonth.split(/[\s\-\/]+/).filter(Boolean);
+  let monthNum = 0, year = 0;
+  for (const p of parts) {
+    const n = parseInt(p, 10);
+    if (!isNaN(n) && n >= 2000 && n <= 2099) { year = n; continue; }
+    const mn = MONTHS[p.slice(0, 3)];
+    if (mn) { monthNum = mn; }
+  }
+  if (!year || !monthNum) return false;
+  return year > 2026 || (year === 2026 && monthNum >= 4);
 }
 
 function classifyLearningGuard(parsed: ParsedBillShape): {

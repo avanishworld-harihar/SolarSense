@@ -1,5 +1,5 @@
 /**
- * Sol.52 — Madhya Pradesh Bill Calculation Engine (FY 2025-26)
+ * Sol.52 — Madhya Pradesh Bill Calculation Engine (dual-FY: 2025-26 & 2026-27)
  *
  * Pure-functional, deterministic, fully unit-testable.
  * All public functions return their *components* so the audit layer can
@@ -9,19 +9,22 @@
  *
  *   energyCharge   = Σ over slabs[]   ((min(units,toUnit) − fromUnit + 1) × ratePerUnit)
  *                                              clamped at 0 below the slab floor
- *   fixedCharge    = MPERC LV-* fixed-charge rule (FC may be slab- or kW-driven)
- *   fppasCharge    = energyCharge × fppasPct   (signed; negative reduces bill)
+ *   fixedCharge    = MPERC LV-* fixed-charge rule:
+ *                      LV1.2 >150u: min(ceil(units/15), ceil(sanctionedLoad/0.1)) blocks
+ *                                   × ₹8.80/block (FY 2025-26) or ₹13.60/block (FY 2026-27)
+ *                      ≤150u: fixed connection-based slab (₹76/₹129 urban)
+ *   fppasCharge    = energyCharge × fppasPct   (always large and POSITIVE, ~30-37%)
+ *                    Auto-looked up from MP_FPPAS_MONTHLY_RATES if billMonth provided
  *   electricityDuty = (energyCharge + fixedCharge) × dutyRate   (rate from §ED rule)
- *   subsidy        = − Atal Griha Jyoti credit (only when LV-1.2 + units ≤ 150)
+ *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, NO consumption cap)
  *   onlineRebate   = − min(0.5% × grossPayable, ₹1000) when paid online
  *   advanceCredit  = − manually-supplied advance interest (1%/month)
  *   netPayable     = max(0, energy + fixed + fppas + duty + extras − rebates − subsidy)
  *
- * ─── ACTIVE TARIFF: FY 2025-26 (recorded May 2026) ───────────────────────────
- * This engine uses MP_TARIFF_FY_2025_26 from lib/mp-tariff-2025-26.ts.
- * MPERC FY 2026-27 tariff is effective from April 2026 but is deliberately
- * NOT activated in SOL.52 yet. This engine will continue using FY 2025-26
- * rates until mp-tariff-2026-27.ts is created and this engine is updated.
+ * ─── TARIFF AUTO-SELECTION (May 2026) ────────────────────────────────────────
+ * Engine auto-selects tariff based on billMonth:
+ *   • billMonth >= APR-2026 → FY 2026-27 rates (lib/mp-tariff-2026-27.ts)
+ *   • otherwise             → FY 2025-26 rates (lib/mp-tariff-2025-26.ts)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -32,6 +35,7 @@ import {
   MP_FPPAS_DEFAULT_PCT,
   MP_REBATES_FY_2025_26,
   MP_TARIFF_FY_2025_26,
+  getFppasForBillMonth,
   type CategoryTariff,
   type EnergySlab,
   type MpAreaProfile,
@@ -40,6 +44,11 @@ import {
   type MpPhase,
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
+import {
+  MP_ELECTRICITY_DUTY_FY_2026_27,
+  MP_TARIFF_FY_2026_27,
+  isFY2026_27OrLater
+} from "@/lib/mp-tariff-2026-27";
 
 const r2 = (n: number): number => Math.round(n * 100) / 100;
 const max0 = (n: number): number => (n < 0 ? 0 : n);
@@ -54,7 +63,17 @@ export type MpBillEngineInput = {
   contractDemandKva?: number;
   phase?: MpPhase;
   area?: MpAreaProfile;
-  /** Override FPPAS for this billing month (decimal, e.g. -0.0223). */
+  /**
+   * Billing month label (e.g. "APR-2026", "Apr 2026").
+   * Used to auto-select tariff year (FY 2026-27 for APR-2026+) and to
+   * look up the monthly FPPAS rate from the MP_FPPAS_MONTHLY_RATES table.
+   */
+  billMonth?: string;
+  /**
+   * Explicit FPPAS override for this billing month (decimal, e.g. 0.309 = 30.9%).
+   * If omitted AND billMonth is set, the monthly table is consulted automatically.
+   * FPPAS is always a large POSITIVE value (~0.297 to 0.373 for FY 2025-26).
+   */
   fppasPct?: number;
   /** Atal Griha Jyoti subsidy claimed on the bill (engine still validates). */
   agjyClaimed?: boolean;
@@ -163,9 +182,18 @@ function fixedDomestic(units: number, area: MpAreaProfile, loadKw: number, t: Ca
     return { amount: v, formula: `slab 51-150 ${area} ⇒ ₹${v}/connection` };
   }
   const perPoint = area === "rural" ? f.above150PerPointKwRural : f.above150PerPointKwUrban;
-  const points = Math.max(1, Math.ceil(loadKw / 0.1)); // 0.1 kW step
-  const amount = perPoint * points;
-  return { amount, formula: `>150 units: ${points} × 0.1kW × ₹${perPoint} = ₹${amount}` };
+  // Consumption-based blocks: every 15 units = 1 block of 0.1 kW
+  // Capped at sanctioned-load blocks so consumer can't exceed their contracted load.
+  // This matches both the MPERC tariff order (consumption-based formula) and
+  // the empirically verified APR-2026 behaviour (capped at SL for high consumption).
+  const consumptionBlocks = Math.ceil(units / 15);
+  const sanctionedBlocks = Math.max(1, Math.ceil(loadKw / 0.1));
+  const points = Math.min(consumptionBlocks, sanctionedBlocks);
+  const amount = r2(perPoint * points);
+  return {
+    amount,
+    formula: `>150u: min(ceil(${units}/15)=${consumptionBlocks}, ceil(${loadKw}kW/0.1)=${sanctionedBlocks}) = ${points} blocks × ₹${perPoint} = ₹${amount}`
+  };
 }
 
 /**
@@ -242,7 +270,8 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
 }
 
 export function computeFixedCharge(input: MpBillEngineInput): { amount: number; formula: string } {
-  const t = MP_TARIFF_FY_2025_26[input.category];
+  const useFY2627 = isFY2026_27OrLater(input.billMonth);
+  const t = useFY2627 ? MP_TARIFF_FY_2026_27[input.category] : MP_TARIFF_FY_2025_26[input.category];
   if (input.category === "LV1.1" || input.category === "LV1.2") {
     return fixedDomestic(input.units, input.area ?? "urban", input.sanctionedLoadKw ?? 1, t);
   }
@@ -253,12 +282,14 @@ export function computeFixedCharge(input: MpBillEngineInput): { amount: number; 
 /* 3. Electricity Duty (% of energy + fixed, by slab bracket).        */
 /* ------------------------------------------------------------------ */
 
-export function computeElectricityDuty(category: MpTariffCategory, units: number, energy: number, fixed: number): {
+export function computeElectricityDuty(category: MpTariffCategory, units: number, energy: number, fixed: number, billMonth?: string): {
   amount: number;
   rate: number;
   formula: string;
 } {
-  const rule = MP_ELECTRICITY_DUTY_FY_2025_26[category];
+  const useFY2627 = isFY2026_27OrLater(billMonth);
+  const dutyTable = useFY2627 ? MP_ELECTRICITY_DUTY_FY_2026_27 : MP_ELECTRICITY_DUTY_FY_2025_26;
+  const rule = dutyTable[category];
   let rate = 0;
   for (const b of rule.brackets) {
     if (b.untilUnits == null || units <= b.untilUnits) { rate = b.rate; break; }
@@ -276,8 +307,15 @@ export function computeElectricityDuty(category: MpTariffCategory, units: number
 /* 4. FPPAS — energy charge × monthly %                              */
 /* ------------------------------------------------------------------ */
 
-export function computeFppas(energy: number, fppasPct?: number): { amount: number; rate: number; formula: string } {
-  const rate = typeof fppasPct === "number" && Number.isFinite(fppasPct) ? fppasPct : MP_FPPAS_DEFAULT_PCT;
+export function computeFppas(energy: number, fppasPct?: number, billMonth?: string): { amount: number; rate: number; formula: string } {
+  let rate: number;
+  if (typeof fppasPct === "number" && Number.isFinite(fppasPct)) {
+    rate = fppasPct;
+  } else if (billMonth) {
+    rate = getFppasForBillMonth(billMonth);
+  } else {
+    rate = MP_FPPAS_DEFAULT_PCT;
+  }
   const amt = r2(energy * rate);
   return { amount: amt, rate, formula: `EC ₹${r2(energy)} × ${(rate * 100).toFixed(2)}% = ₹${amt}` };
 }
@@ -286,7 +324,7 @@ export function computeFppas(energy: number, fppasPct?: number): { amount: numbe
 /* 5. Atal Griha Jyoti — only LV-1.2, ≤150 units.                    */
 /* ------------------------------------------------------------------ */
 
-export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: number, energy: number): {
+export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: number, energy: number, billMonth?: string): {
   applied: boolean;
   amount: number; // negative
   reason: string;
@@ -294,18 +332,22 @@ export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: 
   if (!ATAL_GRIHA_JYOTI.eligibleCategories.includes(category)) {
     return { applied: false, amount: 0, reason: `Category ${category} is not AGJY-eligible.` };
   }
-  if (units > ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) {
-    return { applied: false, amount: 0, reason: `Consumption ${units} u > 150 u cap — AGJY forfeited this month.` };
-  }
-  // First 100 units at ₹1/unit, the state pays the difference at slab rates.
+  // No consumption cap — IGJY applies for ALL LV-1.2 consumers every month.
+  if (units <= 0) return { applied: false, amount: 0, reason: "Zero units — AGJY not applicable." };
+
+  // First 100 units at ₹1/unit, state pays the difference at slab energy rates.
   const subsidisedUnits = Math.min(units, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
   if (subsidisedUnits <= 0) return { applied: false, amount: 0, reason: "Zero qualifying units." };
 
-  // Energy charge attributable to first 100 units (telescopic).
-  const slabs = MP_TARIFF_FY_2025_26[category].energySlabs;
+  // Use correct tariff year's energy slabs for the subsidy calculation.
+  const useFY2627 = isFY2026_27OrLater(billMonth);
+  const tariffSlabs = useFY2627
+    ? MP_TARIFF_FY_2026_27[category].energySlabs
+    : MP_TARIFF_FY_2025_26[category].energySlabs;
+
   let energyOnFirst100 = 0;
   let remaining = subsidisedUnits;
-  for (const s of slabs) {
+  for (const s of tariffSlabs) {
     const segLow = s.fromUnit;
     const segHigh = s.toUnit ?? Infinity;
     if (remaining <= 0) break;
@@ -316,12 +358,12 @@ export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: 
   }
   const consumerPays = subsidisedUnits * ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit;
   const subsidy = r2(energyOnFirst100 - consumerPays);
+  const fyLabel = useFY2627 ? "FY 2026-27" : "FY 2025-26";
   const reason =
-    `AGJY applies on first ${subsidisedUnits} u. Slab energy charge = ₹${r2(energyOnFirst100)}; ` +
-    `consumer cap @ ₹${ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit}/u = ₹${r2(consumerPays)}; ` +
+    `AGJY (${fyLabel}) applies on first ${subsidisedUnits} u (no cap). ` +
+    `Slab energy = ₹${r2(energyOnFirst100)}; consumer cap @ ₹${ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit}/u = ₹${r2(consumerPays)}; ` +
     `state subsidy credit = ₹${subsidy}.`;
 
-  // Avoid double-credit warning if `energy` arg is missing — just return computed.
   void energy;
   return { applied: true, amount: -subsidy, reason };
 }
@@ -350,7 +392,11 @@ export function computeAdvanceCredit(advanceBalanceInr?: number): { amount: numb
 /* ------------------------------------------------------------------ */
 
 export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
-  const t = MP_TARIFF_FY_2025_26[input.category];
+  // Auto-select tariff year based on billMonth.
+  const useFY2627 = isFY2026_27OrLater(input.billMonth);
+  const t = useFY2627
+    ? MP_TARIFF_FY_2026_27[input.category]
+    : MP_TARIFF_FY_2025_26[input.category];
   if (!t) throw new Error(`Unknown MP tariff category: ${input.category}`);
 
   /**
@@ -358,8 +404,6 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
    *   • consumption ≤ 50 units → ALL units billed at ₹6.50/unit
    *   • consumption > 50 units → ALL units billed at ₹8.00/unit
    * (Verified against all actual MPEZ bills — every month = units × flat rate exactly.)
-   * This is different from a telescopic calculation where only units above the slab
-   * boundary get the higher rate.
    */
   const lv22SL = input.category === "LV2.2" && t.loadFixed
     ? isLV22SanctionedLoad(input, t.loadFixed)
@@ -370,7 +414,6 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     const splitUnits = t.loadFixed.consumptionSplitUnits ?? 50;
     const rateHigh = t.loadFixed.energyRatePerUnitHigh ?? 8.00;
     const rateLow  = t.loadFixed.energyRatePerUnitLow  ?? 6.50;
-    // Override to a single flat slab matching the active regime:
     energySlabs = [{ fromUnit: 0, toUnit: null, ratePerUnit: input.units > splitUnits ? rateHigh : rateLow }];
   }
 
@@ -393,11 +436,12 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     };
   }
 
-  const fppas = computeFppas(ec.total, input.fppasPct);
-  const ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount);
+  // Auto-lookup FPPAS from monthly table if not explicitly overridden.
+  const fppas = computeFppas(ec.total, input.fppasPct, input.billMonth);
+  const ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth);
 
   const subsidy = input.agjyClaimed
-    ? computeAtalGrihaJyotiSubsidy(input.category, input.units, ec.total)
+    ? computeAtalGrihaJyotiSubsidy(input.category, input.units, ec.total, input.billMonth)
     : { applied: false, amount: 0, reason: "AGJY not claimed." };
 
   const arrear = max0(input.principalArrearInr ?? 0);
@@ -412,8 +456,9 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   netPayable = Math.round(max0(netPayable));
 
   const notes: string[] = [];
+  const fyLabel = useFY2627 ? "FY 2026-27" : "FY 2025-26";
   const subTypeNote = lv22SL ? " [Sub-type A: Sanctioned-Load-Based ≤10kW, non-telescopic]" : "";
-  notes.push(`Category ${t.category}${subTypeNote}: ${t.applicabilityNote}`);
+  notes.push(`[${fyLabel}] Category ${t.category}${subTypeNote}: ${t.applicabilityNote}`);
   notes.push(`EC slabs: ${ec.perSlab.map((p) => `${p.from}-${p.to ?? "∞"}@${p.rate}=₹${p.subtotal}`).join("; ")}`);
   notes.push(`FC: ${fc.formula}`);
   notes.push(`FPPAS: ${fppas.formula}`);
