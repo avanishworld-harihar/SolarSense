@@ -16,6 +16,13 @@
  *   onlineRebate   = − min(0.5% × grossPayable, ₹1000) when paid online
  *   advanceCredit  = − manually-supplied advance interest (1%/month)
  *   netPayable     = max(0, energy + fixed + fppas + duty + extras − rebates − subsidy)
+ *
+ * ─── ACTIVE TARIFF: FY 2025-26 (recorded May 2026) ───────────────────────────
+ * This engine uses MP_TARIFF_FY_2025_26 from lib/mp-tariff-2025-26.ts.
+ * MPERC FY 2026-27 tariff is effective from April 2026 but is deliberately
+ * NOT activated in SOL.52 yet. This engine will continue using FY 2025-26
+ * rates until mp-tariff-2026-27.ts is created and this engine is updated.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import {

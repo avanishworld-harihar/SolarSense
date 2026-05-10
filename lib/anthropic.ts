@@ -57,6 +57,11 @@ export async function analyzeBillWithAnthropic(
 Return ONLY valid JSON (no markdown), exactly this shape:
 {"name":"","address":"","consumer_id":"","meter_number":"","connection_date":"","sanctioned_load":"","phase":"Single or Three","connection_type":"purpose as printed e.g. Shops/Showrooms or Domestic","purpose_of_supply":"","tariff_category":"exact tariff code e.g. LV2 [LV2.2]","contract_demand_kva":null,"discom":"","state":"","district":"","country":"India","bill_month":"","registered_mobile":"","fixed_charges_inr":null,"energy_charges_inr":null,"electricity_duty_inr":null,"regulatory_surcharges_inr":null,"total_amount_payable_inr":null,"read_type":"","bill_type_label":"","metered_unit_consumption":null,"total_amount_till_due_inr":null,"total_amount_after_due_inr":null,"current_month_bill_amount_inr":null,"principal_arrear_inr":null,"amount_received_against_bill_inr":null,"mp_govt_subsidy_amount_inr":null,"fppas_inr":null,"rebate_incentive_inr":null,"ccb_adjustment_inr":null,"nfp_flag":false,"strict_audit_mode":"strict_v1","strict_audit_notes":[],"months":{"jan":null,"feb":null,"mar":null,"apr":null,"may":null,"jun":null,"jul":null,"aug":null,"sep":null,"oct":null,"nov":null,"dec":null},"consumption_history":[],"format_memory":"","tariff_slabs_detected":[]}
 ${hintBlock}
+INDIAN ELECTRICITY BILL STRUCTURE (read carefully before extracting):
+• CURRENT MONTH section (top/header area): Bill Month, Billing Date, Metered Unit Consumption (= actual units consumed this month), Current Reading, Previous Reading, Read Type, Bill Type. All charge lines (Fixed Charge, Energy Charges, FPPAS, Electricity Duty, Subsidy, Rebate, Arrear, CCB) also belong to current month.
+• LAST SIX MONTHS CONSUMPTION table (lower section): Shows consumption history. It contains 5 recent previous months PLUS one "same month last year" entry (often shown in bold or listed first) as a year-on-year comparison reference. Example: if bill_month=APR-2026, this table shows APR-2025 (same month last year), NOV-2025, DEC-2025, JAN-2026, FEB-2026, MAR-2026. The APR-2025 row is historical context only.
+• BILLING DETAILS / CHARGE BREAKDOWN: separate section with all INR line items.
+
 Rules:
 1) STRICT AUDIT: use only values explicitly printed on bill; no assumptions.
 2) Unknown text="", unknown numbers=null; if uncertain/blurred add short note to strict_audit_notes.
@@ -66,9 +71,13 @@ Rules:
 6) purpose_of_supply AND connection_type: copy the printed PURPOSE/use line into BOTH (e.g. Shops/Showrooms, School, Domestic, Hospital).
 7) Separate charge lines exactly: fixed_charges_inr, energy_charges_inr, electricity_duty_inr, fppas_inr, regulatory_surcharges_inr. Do NOT mix Time-of-Day (ToD) energy into flat energy lines — note in strict_audit_notes if ToD is present.
 8) contract_demand_kva: numeric kVA only if "Contract Demand" is printed separately.
-9) Include consumption_history rows as {"month":"...","units":number}.
-10) tariff_slabs_detected: [] if slab table not visible.
-11) Set nfp_flag=true only when "NFP" or "Not For Payment" text is explicitly present.
+9) consumption_history: include EVERY row from the history table as {"month":"MMM-YYYY","units":number} — including the "same month last year" comparison row. Always include the year in month label (e.g. "APR-2025", "NOV-2025").
+10) CRITICAL — months object (year-disambiguation): months keys jan–dec have NO year field, so follow these rules strictly:
+    a) Current bill month key → ALWAYS set from metered_unit_consumption (round to integer). Example: bill_month="APR-2026" → months.apr = round(metered_unit_consumption). NEVER use the Last Six Months table for this key.
+    b) Previous months → use data from the Last Six Months table, but ONLY for months in the current billing year window (up to 11 months before bill_month). Example for APR-2026 bill: use NOV-2025, DEC-2025, JAN-2026, FEB-2026, MAR-2026 from the table.
+    c) "Same month last year" row in history table → put in consumption_history ONLY. NEVER write it to months. Example: APR-2025 row belongs only in consumption_history, not in months.apr.
+11) tariff_slabs_detected: [] if slab table not visible.
+12) Set nfp_flag=true only when "NFP" or "Not For Payment" text is explicitly present.
 Return ONLY the JSON object.`;
 
   const content: AnthropicPart[] = [

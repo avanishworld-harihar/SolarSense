@@ -189,8 +189,15 @@ function parseBillMonthYear(raw: string | undefined): { year: number; monthIndex
 
 function isNewTariffCycleBill(parsed: ParsedBillShape): boolean {
   void parsed;
-  // Current rollout decision: keep old FY 2025-26 behavior for all months.
-  // New tariff-cycle split will be enabled in a dedicated release.
+  // ─── TARIFF FREEZE DECISION (recorded May 2026) ──────────────────────────────
+  // MPERC FY 2026-27 tariff order has been issued (effective April 2026).
+  // DELIBERATE DECISION: SOL.52 will continue using FY 2025-26 tariff for all
+  // bill analysis and solar sizing calculations until explicitly unlocked.
+  // Reason: FY 2026-27 tariff rates and slabs are not yet codified in the engine.
+  // Action required before enabling: add mp-tariff-2026-27.ts, update
+  // mp-bill-engine.ts imports, then change this function to return true for
+  // bills with bill_month >= APR-2026.
+  // ─────────────────────────────────────────────────────────────────────────────
   return false;
 }
 
@@ -492,6 +499,20 @@ export async function POST(req: NextRequest) {
           discom: parsed.discom || local.discom || codeForHint || ""
         };
       }
+    }
+
+    // Safety net: current bill month's slot must always reflect metered_unit_consumption.
+    // This guards against AI confusion when the same calendar month appears in BOTH the
+    // current bill (e.g. APR-2026) AND the historical "Last Six Months" table (e.g. APR-2025).
+    // Without this, the AI may write the prior-year value (357) instead of the actual
+    // current reading (419) into months.apr.
+    const billMonthParsedForFix = parseBillMonthYear(parsed.bill_month);
+    const meteredUnitsForFix = toNumber(parsed.metered_unit_consumption);
+    if (billMonthParsedForFix && meteredUnitsForFix != null && meteredUnitsForFix > 0) {
+      const MONTH_KEYS_ARR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
+      const monthKey = MONTH_KEYS_ARR[billMonthParsedForFix.monthIndex];
+      if (!parsed.months) parsed.months = {};
+      parsed.months[monthKey] = Math.round(meteredUnitsForFix);
     }
 
     const discomForMemory = (parsed.discom ?? codeForHint).trim();

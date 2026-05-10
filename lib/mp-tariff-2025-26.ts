@@ -19,6 +19,22 @@
  *  • MPERC — Final_State_DISCOMs_ARR_and_Retail_Supply_Tariff_Order_FY_2025-26
  *  • MPCZ FPPAS circular w.e.f. 24-Nov-2025 → −2.23%
  *  • Govt. of MP — Atal Griha Jyoti / Indira Grah Jyoti Yojana 2024-25/2025-26
+ *
+ * ─── ACTIVE TARIFF STATUS (recorded May 2026) ─────────────────────────────────
+ * THIS FILE IS THE CURRENTLY ACTIVE TARIFF for all SOL.52 MP bill calculations.
+ *
+ * MPERC FY 2026-27 tariff order has been issued (effective April 2026).
+ * SOL.52 is deliberately NOT switching to FY 2026-27 yet.
+ * FY 2025-26 rates and slabs will continue to be used for all bill analysis,
+ * solar sizing, and proposal generation until a new mp-tariff-2026-27.ts is
+ * created, verified, and explicitly activated.
+ *
+ * To activate FY 2026-27 when ready:
+ *  1. Create lib/mp-tariff-2026-27.ts with new MPERC order rates
+ *  2. Update lib/mp-bill-engine.ts to import and use the new tariff
+ *  3. Update isNewTariffCycleBill() in app/api/analyze-bill/route.ts to
+ *     return true for bill_month >= APR-2026
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 
 export type MpDiscomCode = "MPPaKVVCL" | "MPMKVVCL" | "MPPKVVCL";
