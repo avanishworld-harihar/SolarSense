@@ -285,13 +285,14 @@ function buildLegacyAuditRows(input: PremiumProposalPptInput, labels: string[]):
   rows: AuditRow[]; totals: AuditRow; summerPct: number; fixedAnnual: number;
 } {
   const units = MONTH_KEYS.map((k) => n(input.monthlyUnits[k]));
-  const baseCtx = getFallbackTariffContext(input.state || "Madhya Pradesh", input.discom || "MPPKVVCL");
+  const baseCtx = getFallbackTariffContext(input.state || "Madhya Pradesh", input.discom || "MPPKVVCL", input.billMonth);
   const effectiveCtx = applyTariffCategoryOverride(baseCtx, {
     state: input.state || "Madhya Pradesh",
     discom: input.discom || "MPPKVVCL",
     tariffCategory: input.tariffCategory || input.connectionType || "",
     connectedLoadKw: input.connectedLoadKw,
-    areaProfile: input.areaProfile
+    areaProfile: input.areaProfile,
+    billMonth: input.billMonth
   });
   const isMpDomestic = /madhya/i.test(input.state || "") && /domestic|lv1\.2|light and fan/i.test(`${input.connectionType || ""} ${input.tariffCategory || ""}`);
   const rows: AuditRow[] = labels.map((label, i) => {
@@ -341,7 +342,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
   totals: AuditRow;
   summerPct: number;
   fixedAnnual: number;
-  mode: "mp_2025_26" | "legacy";
+  mode: "mp_dual_fy" | "legacy";
   smartBilling?: import("@/lib/mp-smart-billing").MpSmartBillingResolution;
 } {
   if (isMpProposalContext({ state: input.state, discom: input.discom })) {
@@ -393,7 +394,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
       totals,
       summerPct: built.summerPct,
       fixedAnnual: built.fixedAnnual,
-      mode: "mp_2025_26",
+      mode: "mp_dual_fy",
       smartBilling: built.smartBilling
     };
   }

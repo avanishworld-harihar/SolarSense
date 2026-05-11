@@ -2,24 +2,7 @@
  * MPERC FY 2026-27 — Madhya Pradesh Retail Supply Tariff (LT)
  *
  * Codified from the MPERC Tariff Order effective April 2026.
- * Rates for LV1.2 (Domestic) are empirically VERIFIED against actual
- * MPPKVVCL (MPEZ) bills for consumer N1904016515 (APR-2026 bill).
- *
- * ─── VERIFICATION (APR-2026 bill, 419 units, 2.297 kW sanctioned load) ─────
- *
- * Energy Charges verified:
- *   50×₹4.71 + 100×₹5.67 + 150×₹7.07 + 119×₹7.17
- *   = 235.50 + 567.00 + 1060.50 + 853.23 = ₹2716.23  ← matches bill exactly
- *
- * Fixed Charge verified:
- *   ceil(418.76/15) = 28 blocks × ₹29.934/block = ₹838.15 ← matches bill
- *
- * FPPAS (APR-2026): ₹26.27 = 418.76 units × ₹0.0627/unit.
- *
- * Electricity Duty (APR-2026): ~9% model, close to printed ₹313.
- *
- * Atal Griha Jyoti Subsidy (APR-2026): ₹167.39 on the bill.
- *   Applies to all LV-1.2 consumers regardless of consumption level.
+ * Codified from MPERC Petition No. 140/2025 tariff schedule.
  *
  * LV2.2 (Non-Domestic) official MPERC FY 2026-27 schedule:
  *   Sanctioned-load based, connected load ≤10 kW:
@@ -39,10 +22,10 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
   "LV1.1": {
     category: "LV1.1",
     applicabilityNote: "BPL / unmetered domestic — legacy lifeline tariff.",
-    energySlabs: [{ fromUnit: 0, toUnit: 30, ratePerUnit: 3.33 }],
+    energySlabs: [{ fromUnit: 0, toUnit: 30, ratePerUnit: 3.72 }],
     domesticFixed: {
-      upto50Urban: 32, upto50Rural: 27,
-      upto150Urban: 32, upto150Rural: 27,
+      upto50Urban: 0, upto50Rural: 0,
+      upto150Urban: 0, upto150Rural: 0,
       above150PerPointKwUrban: 0, above150PerPointKwRural: 0,
       loadStepKw: 0.1
     }
@@ -50,35 +33,33 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
   "LV1.2": {
     category: "LV1.2",
     applicabilityNote:
-      "Domestic — metered residential. FY 2026-27 telescopic slabs. " +
-      "Energy and fixed-charge block rate verified from APR-2026 bill.",
+      "Domestic — metered residential. FY 2026-27 telescopic slabs.",
     energySlabs: [
       { fromUnit: 0,   toUnit: 50,   ratePerUnit: 4.71 },
       { fromUnit: 51,  toUnit: 150,  ratePerUnit: 5.67 },
-      { fromUnit: 151, toUnit: 300,  ratePerUnit: 7.07 },
-      { fromUnit: 301, toUnit: null, ratePerUnit: 7.17 }
+      { fromUnit: 151, toUnit: 300,  ratePerUnit: 7.05 },
+      { fromUnit: 301, toUnit: null, ratePerUnit: 7.24 }
     ],
     domesticFixed: {
-      upto50Urban: 80,  upto50Rural: 66,
-      upto150Urban: 135, upto150Rural: 112,
-      // ceil(units/15) blocks × ₹29.934 ≈ APR-2026 printed FC ₹838.15.
-      above150PerPointKwUrban: 29.934, above150PerPointKwRural: 28.00,
+      upto50Urban: 81,  upto50Rural: 67,
+      upto150Urban: 134, upto150Rural: 111,
+      above150PerPointKwUrban: 30, above150PerPointKwRural: 28,
       loadStepKw: 0.1
     }
   },
   "LV2.1": {
     category: "LV2.1",
-    applicabilityNote: "Non-Domestic — Schools, educational institutions. (FY 2026-27 rates pending verification; using FY 2025-26 rates.)",
-    energySlabs: [
-      { fromUnit: 0,  toUnit: 50,   ratePerUnit: 6.90 },
-      { fromUnit: 51, toUnit: null, ratePerUnit: 8.50 }
-    ],
+    applicabilityNote:
+      "Non-Domestic — Schools, educational institutions. " +
+      "Sanctioned-load tariff (≤10 kW): ₹7.00/u + ₹172/kW urban. " +
+      "Demand-based tariff (>10 kW mandatory / ≤10 kW optional): ₹7.20/u + ₹291/kW.",
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.20 }],
     loadFixed: {
-      consumptionSplitUnits: 50,
-      perKwUrbanLow: 94,  perKwRuralLow: 78,
-      perKwUrbanHigh: 153, perKwRuralHigh: 131,
-      energyRatePerUnitLow: 6.90,
-      energyRatePerUnitHigh: 8.50
+      sanctionedLoadLimitKw: 10,
+      perKwUrbanLow: 172,  perKwRuralLow: 141,
+      energyRatePerUnitLow: 7.00,
+      perKwUrban: 291, perKwRural: 251,
+      perKvaUrban: 233, perKvaRural: 201
     }
   },
   "LV2.2": {
@@ -102,36 +83,45 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
   },
   "LV3": {
     category: "LV3",
-    applicabilityNote: "Public Water Works & Street Light. (FY 2026-27 rates pending verification.)",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.50 }],
-    loadFixed: { perKwUrban: 101, perKwRural: 83 }
+    applicabilityNote: "Public Water Works & Street Light.",
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.38 }],
+    ruralEnergySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.10 }],
+    loadFixed: { perKwUrban: 389, perKwRural: 208 }
   },
   "LV4": {
     category: "LV4",
-    applicabilityNote: "LT Industrial. (FY 2026-27 rates pending verification.)",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 8.80 }],
+    applicabilityNote: "LT Industrial.",
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.05 }],
     loadFixed: {
-      perKwUrban: 516, perKwRural: 516,
-      perKvaUrban: 413, perKvaRural: 413
+      perKwUrban: 336, perKwRural: 221,
+      perKvaUrban: 269, perKvaRural: 177
     }
   },
   "LV5.1": {
     category: "LV5.1",
-    applicabilityNote: "Agriculture — metered. (FY 2026-27 rates pending verification.)",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.10 }],
-    loadFixed: { perKwUrban: 53, perKwRural: 27 }
+    applicabilityNote: "Agriculture — metered. Energy slab + HP-based fixed charge.",
+    energySlabs: [
+      { fromUnit: 0, toUnit: 300, ratePerUnit: 5.33 },
+      { fromUnit: 301, toUnit: 750, ratePerUnit: 6.36 },
+      { fromUnit: 751, toUnit: null, ratePerUnit: 6.64 }
+    ],
+    loadFixed: {
+      perKwUrbanLow: 77,
+      perKwUrbanHigh: 93,
+      perKwUrban: 101
+    }
   },
   "LV5.2": {
     category: "LV5.2",
-    applicabilityNote: "Agriculture — unmetered (HP based). (FY 2026-27 rates pending verification.)",
+    applicabilityNote: "Agriculture — unmetered / flat-rate HP billing placeholder.",
     energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 0 }],
     loadFixed: { perKwUrban: 880, perKwRural: 880 }
   },
   "LV6": {
     category: "LV6",
-    applicabilityNote: "EV / Battery Charging Stations. (FY 2026-27 rates pending verification.)",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.20 }],
-    loadFixed: { perKwUrban: 64, perKwRural: 64 }
+    applicabilityNote: "EV / Battery Charging Stations.",
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.44 }],
+    loadFixed: { perKwUrban: 0, perKwRural: 0 }
   }
 };
 

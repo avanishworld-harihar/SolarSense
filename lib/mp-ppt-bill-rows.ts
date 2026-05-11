@@ -9,7 +9,8 @@
  *   1. `monthlyAuditOverrides` — values pulled from `mp_bill_audits` table
  *      (real audited bills already validated against printed amounts).
  *   2. `monthlyBillActuals` — actuals provided directly by the proposal flow.
- *   3. Engine output from `calculateMpBill` using FY 2025-26 tariff data.
+ *   3. Engine output from `calculateMpBill`, which auto-selects FY 2025-26
+ *      before APR-2026 and FY 2026-27 from APR-2026 onward.
  *
  * Net effect: any month for which we have a saved audit row in Supabase is
  * shown EXACTLY as the audit calculated it. Other months are recomputed
@@ -168,7 +169,7 @@ export function isMpProposalContext(input: { state?: string; discom?: string }):
 }
 
 /**
- * Build 12 monthly audit rows using the new FY 2025-26 MP tariff engine,
+ * Build 12 monthly audit rows using the MP dual-FY tariff engine,
  * preferring already-audited Supabase rows for months that have them.
  */
 export function buildMpAuditRows(input: MpPptRowsInput): {

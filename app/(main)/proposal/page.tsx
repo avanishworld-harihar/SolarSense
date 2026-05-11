@@ -477,7 +477,8 @@ export default function ProposalPage() {
         discom: discomQuery,
         tariffCategory: manual.tariffCategory || latestBill?.tariff_category || additionalBills[0]?.tariff_category || "",
         connectedLoadKw: connectedLoadKw ?? undefined,
-        areaProfile
+        areaProfile,
+        billMonth: latestBill?.bill_month || additionalBills[0]?.bill_month || undefined
       }),
     [tariffContext, stateQuery, discomQuery, manual.tariffCategory, latestBill, additionalBills, connectedLoadKw, areaProfile]
   );
@@ -555,10 +556,12 @@ export default function ProposalPage() {
     () =>
       calculateSolar(monthlyUnits, effectiveTariffContext, {
         stateForSizing,
+        discom: discomQuery,
         connectedLoadKw: connectedLoadKw ?? undefined,
-        areaProfile
+        areaProfile,
+        billMonth: latestBill?.bill_month || additionalBills[0]?.bill_month || undefined
       }),
-    [monthlyUnits, effectiveTariffContext, stateForSizing, connectedLoadKw, areaProfile]
+    [monthlyUnits, effectiveTariffContext, stateForSizing, discomQuery, connectedLoadKw, areaProfile, latestBill?.bill_month, additionalBills]
   );
   const effectiveResult = useMemo(() => {
     const kwRaw = parseFloat(overrideSolarKw);

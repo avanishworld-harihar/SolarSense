@@ -6,7 +6,8 @@
  *
  *   1. IDENTIFIES   → DISCOM zone, LV category, sanctioned load, billing period.
  *   2. EXTRACTS     → Reconciles printed metered units vs consumption history.
- *   3. CALCULATES   → Re-runs the FY 2025-26 MPERC math through `mp-bill-engine`.
+ *   3. CALCULATES   → Re-runs MPERC math through `mp-bill-engine`
+ *                     (FY 2025-26 before APR-2026, FY 2026-27 from APR-2026).
  *   4. VALIDATES    → Compares against the bill's `Net Amount`.
  *                     If |Δ| > ₹5 → produces a typed reason
  *                     (Arrears / Adjustment / Surcharge mismatch / etc.)

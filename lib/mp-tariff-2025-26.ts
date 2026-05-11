@@ -110,6 +110,8 @@ export type CategoryTariff = {
   category: MpTariffCategory;
   applicabilityNote: string;
   energySlabs: EnergySlab[];
+  /** Optional alternate energy slab set for rural/Gram Panchayat tariffs. */
+  ruralEnergySlabs?: EnergySlab[];
   /** Domestic-style FC. */
   domesticFixed?: DomesticFixedRule;
   /**
@@ -163,10 +165,10 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
   "LV1.1": {
     category: "LV1.1",
     applicabilityNote: "BPL / unmetered domestic — legacy lifeline tariff (rare in retail bills).",
-    energySlabs: [{ fromUnit: 0, toUnit: 30, ratePerUnit: 3.13 }],
+    energySlabs: [{ fromUnit: 0, toUnit: 30, ratePerUnit: 3.50 }],
     domesticFixed: {
-      upto50Urban: 30, upto50Rural: 25,
-      upto150Urban: 30, upto150Rural: 25,
+      upto50Urban: 0, upto50Rural: 0,
+      upto150Urban: 0, upto150Rural: 0,
       above150PerPointKwUrban: 0, above150PerPointKwRural: 0,
       loadStepKw: 0.1
     }
@@ -195,17 +197,17 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
     category: "LV2.1",
     applicabilityNote:
       "Non-Domestic — Schools, educational institutions (workshops/labs), " +
-      "hostels for students / working-women / sports persons. (MPERC LV-2.1 specific list.)",
-    energySlabs: [
-      { fromUnit: 0,  toUnit: 50,   ratePerUnit: 6.50 },
-      { fromUnit: 51, toUnit: null, ratePerUnit: 8.00 }
-    ],
+      "hostels for students / working-women / sports persons. " +
+      "Sanctioned-load tariff (≤10 kW): ₹6.70/u + ₹162/kW urban. " +
+      "Demand-based tariff (>10 kW mandatory / ≤10 kW optional): ₹6.90/u + ₹281/kW.",
+    // Demand-based energy slabs. Engine overrides to sanctioned-load flat rate for ≤10 kW without CD.
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.90 }],
     loadFixed: {
-      consumptionSplitUnits: 50,
-      perKwUrbanLow: 88,  perKwRuralLow: 73,
-      perKwUrbanHigh: 144, perKwRuralHigh: 123,
-      energyRatePerUnitLow: 6.50,
-      energyRatePerUnitHigh: 8.00
+      sanctionedLoadLimitKw: 10,
+      perKwUrbanLow: 162,  perKwRuralLow: 131,
+      energyRatePerUnitLow: 6.70,
+      perKwUrban: 281, perKwRural: 241,
+      perKvaUrban: 225, perKvaRural: 193
     }
   },
   "LV2.2": {
@@ -234,26 +236,33 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
   "LV3": {
     category: "LV3",
     applicabilityNote: "Public Water Works & Street Light — single block tariff.",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.10 }],
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.03 }],
+    ruralEnergySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 5.75 }],
     loadFixed: {
-      perKwUrban: 95, perKwRural: 78
+      perKwUrban: 372, perKwRural: 184
     }
   },
   "LV4": {
     category: "LV4",
     applicabilityNote: "LT Industrial — manufacturing & workshops. Demand-based mandatory.",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 8.30 }],
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 6.76 }],
     loadFixed: {
-      perKwUrban: 484, perKwRural: 484,
-      perKvaUrban: 387, perKvaRural: 387
+      perKwUrban: 326, perKwRural: 211,
+      perKvaUrban: 261, perKvaRural: 169
     }
   },
   "LV5.1": {
     category: "LV5.1",
-    applicabilityNote: "Agriculture — metered pumps & allied. Heavily subsidised retail.",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 5.74 }],
+    applicabilityNote: "Agriculture — metered pumps & allied. Energy slab + HP-based fixed charge.",
+    energySlabs: [
+      { fromUnit: 0, toUnit: 300, ratePerUnit: 5.07 },
+      { fromUnit: 301, toUnit: 750, ratePerUnit: 6.10 },
+      { fromUnit: 751, toUnit: null, ratePerUnit: 6.38 }
+    ],
     loadFixed: {
-      perKwUrban: 50, perKwRural: 25
+      perKwUrbanLow: 67,
+      perKwUrbanHigh: 83,
+      perKwUrban: 91
     }
   },
   "LV5.2": {
@@ -268,9 +277,9 @@ export const MP_TARIFF_FY_2025_26: Record<MpTariffCategory, CategoryTariff> = {
   "LV6": {
     category: "LV6",
     applicabilityNote: "EV / Battery Charging / Swap Stations — single block + ToD rebate.",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 5.85 }],
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.14 }],
     loadFixed: {
-      perKwUrban: 60, perKwRural: 60
+      perKwUrban: 0, perKwRural: 0
     }
   }
 };

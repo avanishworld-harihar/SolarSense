@@ -1,4 +1,5 @@
 import type { TariffContext } from "@/lib/tariff-types";
+import { isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
 
 function fixedFromDbTiers(units: number, tiers: NonNullable<TariffContext["fixedTiers"]>): number {
   const u = Math.max(0, units);
@@ -14,26 +15,32 @@ function fixedFromDbTiers(units: number, tiers: NonNullable<TariffContext["fixed
   return sorted[sorted.length - 1]?.inr ?? 0;
 }
 
-function mpFixedCharge(units: number, area: "urban" | "rural", connectedLoadKw?: number): number {
+function mpFixedCharge(units: number, area: "urban" | "rural", connectedLoadKw?: number, billMonth?: string): number {
   /**
-   * MPERC FY 2025-26 domestic fixed charges vary by slab and urban/rural.
-   * Placeholder profile assumes urban LT domestic, ~1 kW connected load for >150 units.
+   * MPERC domestic fixed charges vary by slab and urban/rural.
+   * Legacy context path uses billMonth to choose FY 2026-27 from APR-2026.
    */
-  if (units <= 50) return area === "rural" ? 62 : 76;
-  if (units <= 150) return area === "rural" ? 106 : 129;
-  const perPoint = area === "rural" ? 26 : 28;
-  const loadKw = Math.max(0.1, connectedLoadKw ?? 1);
-  const points = Math.ceil(loadKw * 10); // 0.1 kW block
-  return points * perPoint;
+  const fy2627 = isFY2026_27OrLater(billMonth);
+  if (units <= 50) return area === "rural" ? (fy2627 ? 67 : 62) : (fy2627 ? 81 : 76);
+  if (units <= 150) return area === "rural" ? (fy2627 ? 111 : 106) : (fy2627 ? 134 : 129);
+  const perPoint = area === "rural" ? (fy2627 ? 28 : 26) : (fy2627 ? 30 : 28);
+  const cents = Math.round(Math.max(0, units) * 100);
+  const consumptionBlocks = Math.max(1, Math.floor((cents + 1500 - 1) / 1500));
+  return consumptionBlocks * perPoint;
 }
 
-/** §7 MPPKVVCL verified slab energy ₹ */
-export function energyChargeMpSlabs(units: number): number {
+/** §7 MPPKVVCL domestic slab energy ₹ */
+export function energyChargeMpSlabs(units: number, billMonth?: string): number {
   const u = Math.max(0, units);
-  if (u <= 50) return u * 4.45;
-  if (u <= 150) return 50 * 4.45 + (u - 50) * 5.41;
-  if (u <= 300) return 50 * 4.45 + 100 * 5.41 + (u - 150) * 6.79;
-  return 50 * 4.45 + 100 * 5.41 + 150 * 6.79 + (u - 300) * 6.98;
+  const fy2627 = isFY2026_27OrLater(billMonth);
+  const r1 = fy2627 ? 4.71 : 4.45;
+  const r2 = fy2627 ? 5.67 : 5.41;
+  const r3 = fy2627 ? 7.05 : 6.79;
+  const r4 = fy2627 ? 7.24 : 6.98;
+  if (u <= 50) return u * r1;
+  if (u <= 150) return 50 * r1 + (u - 50) * r2;
+  if (u <= 300) return 50 * r1 + 100 * r2 + (u - 150) * r3;
+  return 50 * r1 + 100 * r2 + 150 * r3 + (u - 300) * r4;
 }
 
 /** Generic walker for ordered slabs with cumulative max kWh. */
@@ -59,7 +66,7 @@ export function fixedChargeForContext(ctx: TariffContext, units: number, energyS
     case "flat":
       return ctx.fixedFlatInr ?? 0;
     case "mp_tiered":
-      return mpFixedCharge(units, ctx.areaProfile ?? "urban", ctx.connectedLoadKw);
+      return mpFixedCharge(units, ctx.areaProfile ?? "urban", ctx.connectedLoadKw, ctx.billMonth);
     case "db_tiered":
       return ctx.fixedTiers?.length ? fixedFromDbTiers(units, ctx.fixedTiers) : 0;
     case "percent_of_subtotal":
@@ -157,19 +164,20 @@ function isMpDiscomContext(stateRaw: string, discomRaw: string): boolean {
 }
 
 /** §7 + §8 defaults when Supabase has no row (still DISCOM-specific, not one generic formula). */
-export function getFallbackTariffContext(stateRaw: string, discomRaw: string): TariffContext {
+export function getFallbackTariffContext(stateRaw: string, discomRaw: string, billMonth?: string): TariffContext {
   const state = norm(stateRaw);
   const d = norm(discomRaw);
 
   if (isMpDiscomContext(stateRaw, discomRaw)) {
+    const fy2627 = isFY2026_27OrLater(billMonth);
     return {
       source: "fallback",
-      discomLabel: "MP DISCOM (FY 2025-26 seed)",
+      discomLabel: fy2627 ? "MP DISCOM (FY 2026-27 seed)" : "MP DISCOM (FY 2025-26 seed)",
       energySlabs: [
-        { max: 50, rate: 4.45 },
-        { max: 150, rate: 5.41 },
-        { max: 300, rate: 6.79 },
-        { max: null, rate: 6.98 }
+        { max: 50, rate: fy2627 ? 4.71 : 4.45 },
+        { max: 150, rate: fy2627 ? 5.67 : 5.41 },
+        { max: 300, rate: fy2627 ? 7.05 : 6.79 },
+        { max: null, rate: fy2627 ? 7.24 : 6.98 }
       ],
       fixedMode: "mp_tiered",
       dutyRate: 0.09,
@@ -179,8 +187,11 @@ export function getFallbackTariffContext(stateRaw: string, discomRaw: string): T
       minBillInr: 75,
       areaProfile: "urban",
       connectedLoadKw: 1,
+      billMonth,
       notes:
-        "MPERC 2025-26 seed (LV-1.2): slabs 4.45/5.41/6.79/6.98; fixed uses urban/rural + connected-load model."
+        fy2627
+          ? "MPERC 2026-27 seed (LV-1.2): slabs 4.71/5.67/7.05/7.24; fixed uses urban/rural + consumption-block model."
+          : "MPERC 2025-26 seed (LV-1.2): slabs 4.45/5.41/6.79/6.98; fixed uses urban/rural + consumption-block model."
     };
   }
 
@@ -232,7 +243,7 @@ export function getFallbackTariffContext(stateRaw: string, discomRaw: string): T
     };
   }
 
-  return getFallbackTariffContext("Madhya Pradesh", "MPPKVVCL");
+  return getFallbackTariffContext("Madhya Pradesh", "MPPKVVCL", billMonth);
 }
 
 /**
@@ -241,7 +252,7 @@ export function getFallbackTariffContext(stateRaw: string, discomRaw: string): T
  */
 export function applyTariffCategoryOverride(
   base: TariffContext,
-  params: { state: string; discom: string; tariffCategory?: string; connectedLoadKw?: number; areaProfile?: "urban" | "rural" }
+  params: { state: string; discom: string; tariffCategory?: string; connectedLoadKw?: number; areaProfile?: "urban" | "rural"; billMonth?: string }
 ): TariffContext {
   const cat = (params.tariffCategory ?? "").toLowerCase();
   if (!isMpDiscomContext(params.state, params.discom)) return base;
@@ -250,13 +261,15 @@ export function applyTariffCategoryOverride(
   }
 
   const loadKw = Math.max(1, params.connectedLoadKw ?? 5);
-  const fixedPerKw = 144; // empirically calibrated from provided LV2.2 bills (customer-specific placeholder)
+  const fy2627 = isFY2026_27OrLater(params.billMonth ?? base.billMonth);
+  const highRate = fy2627 ? 8.30 : 8.00;
+  const fixedPerKw = params.areaProfile === "rural" ? (fy2627 ? 133 : 123) : (fy2627 ? 154 : 144);
 
   return {
     ...base,
     source: "fallback",
-    discomLabel: "MP LV2.2 (SOL.52 calibrated seed)",
-    energySlabs: [{ max: null, rate: 8.0 }],
+    discomLabel: fy2627 ? "MP LV2.2 (FY 2026-27 seed)" : "MP LV2.2 (FY 2025-26 seed)",
+    energySlabs: [{ max: null, rate: highRate }],
     fixedMode: "flat",
     fixedFlatInr: Math.round(loadKw * fixedPerKw),
     dutyRate: 0.124,
@@ -265,8 +278,9 @@ export function applyTariffCategoryOverride(
     fuelPerKwh: 0.065,
     areaProfile: params.areaProfile ?? base.areaProfile ?? "urban",
     connectedLoadKw: loadKw,
+    billMonth: params.billMonth ?? base.billMonth,
     notes:
-      "Calibrated from 12-bill LV2.2 sample: ₹8/unit energy, ~12.4% duty, ~₹0.065/kWh adjustment. PF/welding penalties remain separate."
+      `MPERC LV2.2 sanctioned-load high-use seed: ₹${highRate}/unit energy, ₹${fixedPerKw}/kW fixed, ~₹0.065/kWh adjustment. PF/welding penalties remain separate.`
   };
 }
 

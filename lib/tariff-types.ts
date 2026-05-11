@@ -43,5 +43,7 @@ export type TariffContext = {
   areaProfile?: "urban" | "rural";
   /** Connected/sanctioned load in kW used where fixed charge is load-linked. */
   connectedLoadKw?: number;
+  /** Billing month used for tariff-year selection when a legacy context path is used. */
+  billMonth?: string;
   notes?: string;
 };

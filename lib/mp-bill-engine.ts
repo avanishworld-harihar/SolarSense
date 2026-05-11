@@ -157,12 +157,13 @@ export function computeEnergyChargeTelescopic(units: number, slabs: EnergySlab[]
   let total = 0;
   const perSlab: Array<{ from: number; to: number | null; rate: number; unitsInSlab: number; subtotal: number }> = [];
   for (const slab of slabs) {
-    if (u < slab.fromUnit) {
+    const slabStart = slab.fromUnit <= 0 ? 1 : slab.fromUnit;
+    if (u < slabStart) {
       perSlab.push({ from: slab.fromUnit, to: slab.toUnit, rate: slab.ratePerUnit, unitsInSlab: 0, subtotal: 0 });
       continue;
     }
     const ceil = slab.toUnit == null ? u : Math.min(u, slab.toUnit);
-    const unitsInSlab = max0(ceil - slab.fromUnit + 1);
+    const unitsInSlab = max0(ceil - slabStart + 1);
     const subtotal = r2(unitsInSlab * slab.ratePerUnit);
     total += subtotal;
     perSlab.push({ from: slab.fromUnit, to: slab.toUnit, rate: slab.ratePerUnit, unitsInSlab, subtotal });
@@ -214,6 +215,13 @@ function isLV22SanctionedLoad(input: MpBillEngineInput, lf: NonNullable<Category
   return loadKw > 0 && loadKw <= lf.sanctionedLoadLimitKw;
 }
 
+function isSanctionedLoadTariff(input: MpBillEngineInput, lf: NonNullable<CategoryTariff["loadFixed"]>): boolean {
+  if (lf.sanctionedLoadLimitKw == null) return false;
+  if (input.contractDemandKva && input.contractDemandKva > 0) return false; // opted demand-based
+  const loadKw = input.sanctionedLoadKw ?? 0;
+  return loadKw > 0 && loadKw <= lf.sanctionedLoadLimitKw;
+}
+
 function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: number; formula: string } {
   const lf = t.loadFixed;
   if (!lf) return { amount: 0, formula: "no FC rule" };
@@ -221,17 +229,14 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
   const area = input.area ?? "urban";
   const isRural = area === "rural";
 
-  // LV-2.1 (educational/hostels — consumption-split sanctioned-load model)
-  if (t.category === "LV2.1" && lf.consumptionSplitUnits != null) {
+  // LV-2.1 (educational/hostels) — sanctioned-load flat tariff for ≤10 kW.
+  if (t.category === "LV2.1" && isSanctionedLoadTariff(input, lf)) {
     const loadKw = Math.max(1, input.sanctionedLoadKw ?? 1);
-    const isHigh = (input.units ?? 0) > lf.consumptionSplitUnits;
-    const perKw = isHigh
-      ? (isRural ? lf.perKwRuralHigh ?? 0 : lf.perKwUrbanHigh ?? 0)
-      : (isRural ? lf.perKwRuralLow ?? 0 : lf.perKwUrbanLow ?? 0);
+    const perKw = isRural ? lf.perKwRuralLow ?? 0 : lf.perKwUrbanLow ?? 0;
     const amt = Math.round(loadKw * perKw);
     return {
       amount: amt,
-      formula: `LV2.1 ${isHigh ? ">50u" : "≤50u"} ${area}: ${loadKw} kW × ₹${perKw} = ₹${amt}`
+      formula: `LV2.1-SL ${area}: ${loadKw} kW × ₹${perKw} = ₹${amt}`
     };
   }
 
@@ -255,6 +260,18 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
     const perHp = lf.perKwUrban ?? 0;
     const amt = Math.round(hp * perHp);
     return { amount: amt, formula: `LV5.2 unmetered: ${hp} HP × ₹${perHp}/HP = ₹${amt}` };
+  }
+
+  // LV5.1 — metered agriculture fixed charge is published per HP and varies by unit slab.
+  if (t.category === "LV5.1") {
+    const hp = Math.max(1, input.unmeteredHorsepower ?? (input.sanctionedLoadKw ? input.sanctionedLoadKw / 0.746 : 1));
+    const perHp = input.units <= 300
+      ? lf.perKwUrbanLow ?? 0
+      : input.units <= 750
+        ? lf.perKwUrbanHigh ?? 0
+        : lf.perKwUrban ?? 0;
+    const amt = Math.round(hp * perHp);
+    return { amount: amt, formula: `LV5.1 metered agriculture: ${r2(hp)} HP × ₹${perHp}/HP = ₹${amt}` };
   }
 
   // LV-2.2 Sub-type B (Demand-Based) / LV4 / LV3 / LV6 — demand/kW-based.
@@ -352,7 +369,7 @@ export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: 
   let energyOnFirst100 = 0;
   let remaining = subsidisedUnits;
   for (const s of tariffSlabs) {
-    const segLow = s.fromUnit;
+    const segLow = s.fromUnit <= 0 ? 1 : s.fromUnit;
     const segHigh = s.toUnit ?? Infinity;
     if (remaining <= 0) break;
     if (subsidisedUnits < segLow) break;
@@ -411,12 +428,15 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     ? isLV22SanctionedLoad(input, t.loadFixed)
     : false;
 
-  let energySlabs = t.energySlabs;
+  let energySlabs = input.area === "rural" && t.ruralEnergySlabs ? t.ruralEnergySlabs : t.energySlabs;
   if (lv22SL && t.loadFixed) {
     const splitUnits = t.loadFixed.consumptionSplitUnits ?? 50;
     const rateHigh = t.loadFixed.energyRatePerUnitHigh ?? 8.00;
     const rateLow  = t.loadFixed.energyRatePerUnitLow  ?? 6.50;
     energySlabs = [{ fromUnit: 0, toUnit: null, ratePerUnit: input.units > splitUnits ? rateHigh : rateLow }];
+  } else if (input.category === "LV2.1" && t.loadFixed && isSanctionedLoadTariff(input, t.loadFixed)) {
+    const rate = t.loadFixed.energyRatePerUnitLow ?? energySlabs[0]?.ratePerUnit ?? 0;
+    energySlabs = [{ fromUnit: 0, toUnit: null, ratePerUnit: rate }];
   }
 
   let ec = computeEnergyChargeTelescopic(input.units, energySlabs);

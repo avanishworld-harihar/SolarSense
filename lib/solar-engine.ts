@@ -35,10 +35,14 @@ function calcBillFromUnits(units: number, ctx: TariffContext): number {
 export type CalculateSolarOptions = {
   /** Installer / customer state for §8 sizing factor */
   stateForSizing?: string;
+  /** Optional DISCOM hint used to rebuild MP fallback rates by bill month. */
+  discom?: string;
   /** Optional connected/sanctioned load for DISCOM fixed-charge math. */
   connectedLoadKw?: number;
   /** Optional area profile for DISCOM fixed-charge math. */
   areaProfile?: "urban" | "rural";
+  /** Optional billing month for tariff-year selection in legacy tariff contexts. */
+  billMonth?: string;
 };
 
 /**
@@ -59,14 +63,19 @@ export function calculateSolar(
   ctx: TariffContext = DEFAULT_TARIFF_CONTEXT,
   options?: CalculateSolarOptions
 ): SolarResult {
-  const runtimeCtx: TariffContext =
-    options?.connectedLoadKw != null || options?.areaProfile
-      ? {
-          ...ctx,
-          connectedLoadKw: options.connectedLoadKw ?? ctx.connectedLoadKw,
-          areaProfile: options.areaProfile ?? ctx.areaProfile
-        }
+  const monthAwareCtx =
+    options?.billMonth && /mp discom|mppk|mpez|mpcz|mpwz|madhya/i.test(`${ctx.discomLabel} ${options.discom ?? ""}`)
+      ? getFallbackTariffContext(options.stateForSizing ?? "Madhya Pradesh", options.discom ?? ctx.discomLabel, options.billMonth)
       : ctx;
+  const runtimeCtx: TariffContext =
+    options?.connectedLoadKw != null || options?.areaProfile || options?.billMonth
+      ? {
+          ...monthAwareCtx,
+          connectedLoadKw: options.connectedLoadKw ?? monthAwareCtx.connectedLoadKw,
+          areaProfile: options.areaProfile ?? monthAwareCtx.areaProfile,
+          billMonth: options.billMonth ?? monthAwareCtx.billMonth
+        }
+      : monthAwareCtx;
   const annualUnits = months.reduce((sum, key) => sum + (monthlyUnits[key] || 0), 0);
   const avgMonthlyUnits = annualUnits / 12;
   const monthlyBill = calcBillFromUnits(avgMonthlyUnits, runtimeCtx);

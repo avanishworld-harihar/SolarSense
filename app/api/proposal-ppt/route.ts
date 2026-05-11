@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "Content-Disposition": `attachment; filename="${fileName}"`,
         "Cache-Control": "no-store",
-        "X-Sol52-Engine": looksLikeMp(payload.state, payload.discom) ? "mp_2025_26" : "legacy",
+        "X-Sol52-Engine": looksLikeMp(payload.state, payload.discom) ? "mp_dual_fy" : "legacy",
         "X-Sol52-Audited-Months": String(auditedMonths)
       }
     });
