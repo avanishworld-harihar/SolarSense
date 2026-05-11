@@ -187,6 +187,27 @@ function inferMinSanctionedLoadKwFromDomesticBill(fcPrinted: number, units: numb
   return Math.max(0.1, bestS * 0.1);
 }
 
+function inferLv22SanctionedLoadKwFromFixedCharge(
+  fcPrinted: number,
+  units: number,
+  area: MpAreaProfile,
+  billMonth?: string | null
+): number | null {
+  if (!Number.isFinite(fcPrinted) || fcPrinted <= 0) return null;
+  if (!Number.isFinite(units) || units <= 0) return null;
+  const use2627 = isFY2026_27OrLater(billMonth ?? undefined);
+  const t = use2627 ? MP_TARIFF_FY_2026_27["LV2.2"] : MP_TARIFF_FY_2025_26["LV2.2"];
+  const lf = t.loadFixed;
+  if (!lf) return null;
+  const highUse = units > (lf.consumptionSplitUnits ?? 50);
+  const perKw = highUse
+    ? area === "rural" ? lf.perKwRuralHigh ?? 0 : lf.perKwUrbanHigh ?? 0
+    : area === "rural" ? lf.perKwRuralLow ?? 0 : lf.perKwUrbanLow ?? 0;
+  if (!Number.isFinite(perKw) || perKw <= 0) return null;
+  const inferred = fcPrinted / perKw;
+  return inferred > 0 && inferred <= 10.5 ? Math.round(inferred * 100) / 100 : null;
+}
+
 function detectMpDiscom(input: MpPptRowsInput): MpDiscomCode | null {
   const fromHint = resolveMpDiscomFromHint(input.discom ?? "");
   if (fromHint) return fromHint.code;
@@ -253,6 +274,15 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       }
     }
   }
+  if (category === "LV2.2" && sanctionedLoadKwForEngine <= 0) {
+    const fcPrinted = Number(input.billFixedChargeInr);
+    const refU = Number(input.referenceBillUnits);
+    const refMonth = input.referenceBillMonth?.trim() || undefined;
+    const inferred = inferLv22SanctionedLoadKwFromFixedCharge(fcPrinted, refU, area, refMonth);
+    if (inferred != null && inferred > 0) {
+      sanctionedLoadKwForEngine = inferred;
+    }
+  }
 
   const rows: PptAuditRow[] = MONTH_LABELS.map((label, i) => {
     const monthKey = MONTH_KEYS[i];
@@ -293,7 +323,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       fppasPct: input.monthlyFppasPct?.[monthKey],
       // AGJY applies to all LV-1.2 consumers regardless of consumption level.
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
-      energyRateOverridePerUnit: erOv,
+      energyRateOverridePerUnit: category === "LV2.2" ? undefined : erOv,
       fixedChargeOverrideInr: rowFcOverride,
       printedElectricityDutyInr:
         usePrintedBillLinesThisRow && Number.isFinite(printedDuty) ? printedDuty : undefined,
