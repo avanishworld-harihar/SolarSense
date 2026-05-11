@@ -142,6 +142,14 @@ type ProposalViewProps = {
 };
 
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
+/** Net bill cell: optional `(−₹… AGJY)` when state subsidy credit applies (subsidy < 0 in data). */
+const auditNetCell = (total: number, subsidy?: number) => {
+  const base = inr(total);
+  const s = Math.round(subsidy ?? 0);
+  if (s >= 0) return base;
+  const a = Math.abs(s).toLocaleString("en-IN");
+  return `${base} (−₹${a} AGJY)`;
+};
 const inrK = (v: number) => {
   const x = Math.max(0, Math.round(v));
   if (x >= 100000) return `₹${(x / 100000).toFixed(1)}L`;
@@ -628,7 +636,9 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
                   <td className="px-3 py-2 text-right text-slate-700">{inr(r.energy)}</td>
                   <td className="px-3 py-2 text-right text-slate-700">{inr(r.fixed)}</td>
                   <td className="px-3 py-2 text-right text-slate-700">{inr(r.duty + r.fuel)}</td>
-                  <td className={`px-3 py-2 text-right font-bold ${isPeak ? "text-rose-700" : "text-slate-900"}`}>{inr(r.total)}</td>
+                  <td className={`px-3 py-2 text-right text-[11px] font-bold leading-snug sm:text-sm ${isPeak ? "text-rose-700" : "text-slate-900"}`}>
+                    {auditNetCell(r.total, r.subsidy)}
+                  </td>
                 </tr>
               );
             })}
@@ -638,7 +648,7 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
               <td className="px-3 py-2 text-right">{inr(summary.auditTotals.energy)}</td>
               <td className="px-3 py-2 text-right">{inr(summary.auditTotals.fixed)}</td>
               <td className="px-3 py-2 text-right">{inr(summary.auditTotals.duty + summary.auditTotals.fuel)}</td>
-              <td className="px-3 py-2 text-right">{inr(summary.auditTotals.total)}</td>
+              <td className="px-3 py-2 text-right text-[11px] leading-snug sm:text-sm">{auditNetCell(summary.auditTotals.total, summary.auditTotals.subsidy)}</td>
             </tr>
           </tbody>
         </table>

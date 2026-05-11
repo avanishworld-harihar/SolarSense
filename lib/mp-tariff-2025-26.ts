@@ -321,25 +321,25 @@ export const MP_ELECTRICITY_DUTY_FY_2025_26: Record<MpTariffCategory, Electricit
 };
 
 /**
- * Atal Griha Jyoti / Indira Griha Jyoti Yojana (IGJY) — MP Govt subsidy.
- * Applies to LV-1.2 domestic consumers.
+ * Atal Griha Jyoti / Indira Griha Jyoti Yojana (IGJY) — MP Govt subsidy on LV-1.2 domestic bills.
  *
- * FY 2025-26 (and FY 2026-27) scheme rules (verified against actual MPPKVVCL bills):
- *   1. NO monthly consumption cap — subsidy applies regardless of how many units
- *      are consumed. Earlier code incorrectly blocked subsidy for > 150 units.
- *   2. For first 100 units → consumer pays ₹1/unit (capped subsidised line).
- *      Govt subsidy = (slab energy charge for first 100 units − 100).
- *   3. Fixed charges, ED & FPPAS are NOT subsidised — consumer pays in full.
+ * Cross-checked (May 2026) against multiple public descriptions of the scheme
+ * (not a substitute for gazette text): consumer effective **₹1/unit on the first
+ * 100 units**; **monthly consumption must stay within ~150 units** to remain in
+ * the subsidised domestic slab for that billing cycle (widely cited in MP press
+ * and district portals — e.g. Free Press Journal on ₹1/unit benefit; Patrika on
+ * FY subsidy envelope; Dhar NIC scheme pages).
  *
- * NOTE: The formula gives higher subsidy amounts than what appears on actual bills
- * (e.g. calculated ₹393 vs printed ₹118-₹167). This discrepancy is likely due to
- * the state disbursing a capped/partial amount. The eligibility fix (no cap) is
- * the critical correction — at least subsidy is now applied every month.
+ * Engine model (aligned with printed “AGJY” line structure on MPCZ/MPEZ bills):
+ *   • If `units > monthlyEligibilityCapUnits` → **no AGJY subsidy** for that month.
+ *   • Else: first `min(units, 100)` units are valued at tariff slabs; consumer pays
+ *     ₹1/unit on that slice; subsidy credit = slab energy − ₹1×slice (shown negative on bill).
+ *   • Fixed charge, electricity duty & FPPAS are **not** part of AGJY — full tariff applies.
  */
 export const ATAL_GRIHA_JYOTI = {
   eligibleCategories: ["LV1.2"] as MpTariffCategory[],
-  /** No consumption cap — IGJY applies for ALL LV-1.2 consumers every month. */
-  monthlyEligibilityCapUnits: 999999,
+  /** Monthly metered units above this → AGJY not applied (public scheme descriptions). */
+  monthlyEligibilityCapUnits: 150,
   subsidisedFirstUnitsCount: 100,
   consumerCappedRatePerUnit: 1.0
 };

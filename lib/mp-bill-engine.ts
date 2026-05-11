@@ -379,7 +379,7 @@ export function computeFppas(units: number, fppasPct?: number, billMonth?: strin
 }
 
 /* ------------------------------------------------------------------ */
-/* 5. Atal Griha Jyoti — only LV-1.2, ≤150 units.                    */
+/* 5. Atal Griha Jyoti — LV-1.2 domestic, ≤150 u/month eligible.       */
 /* ------------------------------------------------------------------ */
 
 export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: number, energy: number, billMonth?: string): {
@@ -390,8 +390,16 @@ export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: 
   if (!ATAL_GRIHA_JYOTI.eligibleCategories.includes(category)) {
     return { applied: false, amount: 0, reason: `Category ${category} is not AGJY-eligible.` };
   }
-  // No consumption cap — IGJY applies for ALL LV-1.2 consumers every month.
   if (units <= 0) return { applied: false, amount: 0, reason: "Zero units — AGJY not applicable." };
+
+  const cap = ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits;
+  if (units > cap) {
+    return {
+      applied: false,
+      amount: 0,
+      reason: `AGJY: monthly consumption ${units} u exceeds eligibility cap (${cap} u) — no subsidy this month.`
+    };
+  }
 
   // First 100 units at ₹1/unit, state pays the difference at slab energy rates.
   const subsidisedUnits = Math.min(units, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
@@ -418,8 +426,8 @@ export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: 
   const subsidy = r2(energyOnFirst100 - consumerPays);
   const fyLabel = useFY2627 ? "FY 2026-27" : "FY 2025-26";
   const reason =
-    `AGJY (${fyLabel}) applies on first ${subsidisedUnits} u (no cap). ` +
-    `Slab energy = ₹${r2(energyOnFirst100)}; consumer cap @ ₹${ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit}/u = ₹${r2(consumerPays)}; ` +
+    `AGJY (${fyLabel}) on first ${subsidisedUnits} u (month ≤${cap} u). ` +
+    `Slab energy = ₹${r2(energyOnFirst100)}; consumer @ ₹${ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit}/u = ₹${r2(consumerPays)}; ` +
     `state subsidy credit = ₹${subsidy}.`;
 
   void energy;

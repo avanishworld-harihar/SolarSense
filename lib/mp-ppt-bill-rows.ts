@@ -51,6 +51,11 @@ export type PptAuditRow = {
    * Always 0 for engine-calculated months.
    */
   other: number;
+  /**
+   * Atal Griha Jyoti / state subsidy credit (₹, negative when applied). LV-1.2 only.
+   * Shown separately so Energy+Fixed+Duty+Fuel+Subsidy = Net Bill.
+   */
+  subsidy: number;
   total: number;
   /** Provenance of the row total — useful for QA tooltips later. */
   source: "mp_audit_db" | "mp_engine_2025_26" | "mp_engine_2026_27" | "actual_input" | "no_consumption";
@@ -304,7 +309,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
 
     const actual = n(Number(input.monthlyBillActuals?.[monthKey]) || 0);
     if (units <= 0 && actual <= 0) {
-      return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, total: 0, source: "no_consumption" };
+      return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, subsidy: 0, total: 0, source: "no_consumption" };
     }
 
     // Bill month drives FY tariff + monthly FPPAS. Align each row to the real
@@ -334,7 +339,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       billMonth: rowBillMonthIso,
       // Explicit monthly FPPAS override takes precedence over auto-lookup.
       fppasPct: input.monthlyFppasPct?.[monthKey],
-      // AGJY applies to all LV-1.2 consumers regardless of consumption level.
+      // AGJY: LV-1.2 only; engine applies subsidy only when month ≤150 u (see ATAL_GRIHA_JYOTI).
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
       fixedChargeOverrideInr: rowFcOverride
@@ -365,6 +370,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         duty,
         fuel,
         other,
+        subsidy: 0,
         // Use base charges sum as total (excludes PF/metering penalties).
         // For typical 2-bill uploads (APR+MAR), other=0 so total=netFromBill exactly.
         total: other > 0 ? compSum : netFromBill,
@@ -377,6 +383,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       : "mp_engine_2025_26";
 
     if (actual > 0) {
+      const subsidy = r(breakdown.subsidyCredit);
       return {
         label,
         units,
@@ -385,7 +392,10 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         duty: r(breakdown.electricityDuty),
         fuel: r(breakdown.fppasCharge),
         other: 0,
-        total: actual,
+        subsidy,
+        // Net must match tariff engine (includes AGJY); do not pin to uploaded
+        // gross lines alone or the row no longer reconciles with components.
+        total: n(breakdown.netPayable),
         source: "actual_input"
       };
     }
@@ -398,6 +408,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       duty: r(breakdown.electricityDuty),
       fuel: r(breakdown.fppasCharge),
       other: 0,
+      subsidy: r(breakdown.subsidyCredit),
       total: n(breakdown.netPayable),
       source: engineSource
     };
@@ -412,10 +423,11 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       duty: acc.duty + r.duty,
       fuel: acc.fuel + r.fuel,
       other: acc.other + r.other,
+      subsidy: acc.subsidy + r.subsidy,
       total: acc.total + r.total,
       source: "mp_engine_2025_26"
     }),
-    { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, total: 0, source: "mp_engine_2025_26" }
+    { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, subsidy: 0, total: 0, source: "mp_engine_2025_26" }
   );
 
   const summer = rows.slice(3, 7).reduce((sum, r) => sum + r.total, 0);

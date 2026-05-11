@@ -193,6 +193,8 @@ type AuditRow = {
   fuel: number;
   /** Other charges (PF/Welding surcharge, metering, etc.) — 0 for engine rows. */
   other?: number;
+  /** Atal Griha Jyoti / state subsidy (negative ₹), LV-1.2 — 0 if none. */
+  subsidy?: number;
   total: number;
 };
 
@@ -200,6 +202,14 @@ type TotalCalibration = { intercept: number; slopePerUnit: number };
 
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
 const inr = (v: number) => `₹${n(v).toLocaleString("en-IN")}`;
+/** Net bill column: optional `(−₹… AGJY)` when state subsidy credit applies. */
+const auditNetCell = (total: number, subsidy?: number) => {
+  const base = inr(total);
+  const s = Math.round(subsidy ?? 0);
+  if (s >= 0) return base;
+  const a = Math.abs(s).toLocaleString("en-IN");
+  return `${base} (−₹${a} AGJY)`;
+};
 const inrK = (v: number) => {
   const x = n(v);
   if (x >= 100000) return `₹${(x / 100000).toFixed(1)}L`;
@@ -301,7 +311,7 @@ function buildLegacyAuditRows(input: PremiumProposalPptInput, labels: string[]):
     const model = estimateMonthlyBillBreakdownWithContext(units[i], effectiveCtx);
     const subsidy = isMpDomestic && units[i] <= 150 ? n(units[i] * 1.0) : 0;
     const total = Math.max(0, n(model.total - subsidy));
-    return { label, units: units[i], energy: n(model.energy), fixed: n(model.fixed), duty: n(model.duty), fuel: n(model.fuel), other: 0, total };
+    return { label, units: units[i], energy: n(model.energy), fixed: n(model.fixed), duty: n(model.duty), fuel: n(model.fuel), other: 0, subsidy: 0, total };
   });
   for (let i = 0; i < rows.length; i += 1) if (!Number.isFinite(rows[i].units) || rows[i].units <= 0) rows[i].total = 0;
   const calibration = computeTotalCalibration(rows, input.monthlyBillActuals ?? {});
@@ -333,8 +343,10 @@ function buildLegacyAuditRows(input: PremiumProposalPptInput, labels: string[]):
   const totals = rows.reduce((acc, r) => ({
     label: "Total", units: acc.units + r.units, energy: acc.energy + r.energy,
     fixed: acc.fixed + r.fixed, duty: acc.duty + r.duty, fuel: acc.fuel + r.fuel,
-    other: (acc.other ?? 0) + (r.other ?? 0), total: acc.total + r.total
-  }), { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, total: 0 });
+    other: (acc.other ?? 0) + (r.other ?? 0),
+    subsidy: (acc.subsidy ?? 0) + (r.subsidy ?? 0),
+    total: acc.total + r.total
+  }), { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, subsidy: 0, total: 0 });
   const summer = rows.slice(3, 7).reduce((sum, r) => sum + r.total, 0);
   const summerPct = totals.total > 0 ? n((summer / totals.total) * 100) : 0;
   return { rows, totals, summerPct, fixedAnnual: totals.fixed };
@@ -382,6 +394,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
       duty: r.duty,
       fuel: r.fuel,
       other: r.other,
+      subsidy: r.subsidy,
       total: r.total
     }));
     const totals: AuditRow = {
@@ -392,6 +405,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
       duty: built.totals.duty,
       fuel: built.totals.fuel,
       other: built.totals.other,
+      subsidy: built.totals.subsidy,
       total: built.totals.total
     };
     return {
@@ -776,15 +790,16 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
   // Two sub-tables × sum(colWs) + 0.2" gap, with tableLeft margin ≈ 0.4".
   const tableTop = 2.05;
   const tableLeft = 0.4;
-  const colWs = [0.55, 0.6, 0.9, 0.78, 0.92, 0.8]; // 4.55 wide × 2 + 0.2 gap = 9.3 ≤ 9.2
+  const colWs = [0.55, 0.6, 0.9, 0.78, 0.92, 0.8];
   const rowH = 0.27;
+  const tableW = colWs.reduce((s, w) => s + w, 0);
 
   function drawAuditTable(left: number, startIdx: number, endIdx: number) {
     s2.addShape(pptx.ShapeType.rect, {
-      x: left, y: tableTop, w: colWs.reduce((s, w) => s + w, 0), h: rowH,
+      x: left, y: tableTop, w: tableW, h: rowH,
       fill: { color: T.ink }, line: { color: T.ink, width: 0 }
     });
-    const headers = [D["audit.month"], D["audit.units"], D["audit.energy"], D["audit.fixed"], D["audit.dutyFuel"], D["audit.total"]];
+    const headers = [D["audit.month"], D["audit.units"], D["audit.energy"], D["audit.fixed"], D["audit.dutyFuel"], D["audit.netBill"]];
     let cx = left;
     headers.forEach((h, i) => {
       s2.addText(h, {
@@ -798,12 +813,12 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
       const yRow = tableTop + rowH * (i - startIdx + 1);
       const isPeak = i >= 3 && i <= 6;
       s2.addShape(pptx.ShapeType.rect, {
-        x: left, y: yRow, w: colWs.reduce((s, w) => s + w, 0), h: rowH,
+        x: left, y: yRow, w: tableW, h: rowH,
         fill: { color: isPeak ? T.bgRose : (i % 2 === 0 ? T.white : T.bgSoft) },
         line: { color: T.border, width: 0.3 }
       });
       cx = left;
-      const cells = [r.label, String(r.units), inr(r.energy), inr(r.fixed), inr(r.duty + r.fuel), inr(r.total)];
+      const cells = [r.label, String(r.units), inr(r.energy), inr(r.fixed), inr(r.duty + r.fuel), auditNetCell(r.total, r.subsidy)];
       cells.forEach((c, j) => {
         s2.addText(c, {
           x: cx + 0.05, y: yRow, w: colWs[j] - 0.1, h: rowH,
@@ -817,10 +832,10 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
   }
 
   drawAuditTable(tableLeft, 0, 6);
-  drawAuditTable(tableLeft + colWs.reduce((s, w) => s + w, 0) + 0.2, 6, 12);
+  drawAuditTable(tableLeft + tableW + 0.2, 6, 12);
 
   // Totals row at bottom.
-  const totalsW = colWs.reduce((s, w) => s + w, 0) * 2 + 0.2;
+  const totalsW = tableW * 2 + 0.2;
   const totalsY = tableTop + rowH * 7 + 0.05;
   s2.addShape(pptx.ShapeType.rect, {
     x: tableLeft, y: totalsY, w: totalsW, h: rowH + 0.05,
@@ -832,17 +847,18 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
     { l: "", v: inr(summary.auditTotals.energy) },
     { l: "", v: inr(summary.auditTotals.fixed) },
     { l: "", v: inr(summary.auditTotals.duty + summary.auditTotals.fuel) },
-    { l: "", v: inr(summary.auditTotals.total) }
+    { l: "", v: auditNetCell(summary.auditTotals.total, summary.auditTotals.subsidy) }
   ];
   let tcx = tableLeft;
   totalsCells.forEach((c, i) => {
+    const extra = i === 5 ? 0.2 : 0;
     s2.addText(c.l || c.v, {
-      x: tcx + 0.05, y: totalsY, w: colWs[i] * 2 - 0.1 + (i === 5 ? 0.2 : 0), h: rowH + 0.05,
+      x: tcx + 0.05, y: totalsY, w: colWs[i] * 2 - 0.1 + extra, h: rowH + 0.05,
       fontSize: 9, bold: true, color: T.blueDeep, fontFace: FONT, valign: "middle",
       align: i === 0 ? "left" : "right",
       autoFit: true, shrinkText: true
     });
-    tcx += colWs[i] * 2 + (i === 5 ? 0.2 : 0);
+    tcx += colWs[i] * 2 + extra;
   });
 
   // Bar chart strip (Summer Trap) below table.
