@@ -2057,6 +2057,7 @@ function buildMonthlyAuditOverridesFromBills(
   fppasInr?: number;
   electricityDutyInr?: number;
   units?: number;
+  pfSurchargeInr?: number;
 }>> {
   const out: Partial<Record<keyof MonthlyUnits, {
     netPayableInr: number;
@@ -2065,6 +2066,7 @@ function buildMonthlyAuditOverridesFromBills(
     fppasInr?: number;
     electricityDutyInr?: number;
     units?: number;
+    pfSurchargeInr?: number;
   }>> = {};
 
   for (const bill of bills) {
@@ -2073,13 +2075,37 @@ function buildMonthlyAuditOverridesFromBills(
     if (!key) continue;
     const net = pickActualMonthBillAmount(bill);
     if (net == null || net <= 0) continue;
+
+    const energyInr = billInrFromParsed(bill.energy_charges_inr) ?? undefined;
+    const fixedInr = billInrFromParsed(bill.fixed_charges_inr) ?? undefined;
+    const fppasInr = billInrFromParsed(bill.fppas_inr) ?? undefined;
+    const electricityDutyInr = billInrFromParsed(bill.electricity_duty_inr) ?? undefined;
+    const unitsVal = billInrFromParsed(bill.metered_unit_consumption) ?? undefined;
+
+    // Welding/PF Surcharge: prefer explicit OCR field; fall back to computing
+    // the gap between the printed net and standard components so that
+    // energy + fixed + duty + fuel + pfSurcharge === total in all cases.
+    let pfSurchargeInr: number | undefined;
+    const explicitPf = billInrFromParsed(bill.pf_welding_surcharge_inr);
+    if (explicitPf != null && explicitPf > 0) {
+      pfSurchargeInr = explicitPf;
+    } else if (
+      energyInr != null && fixedInr != null &&
+      fppasInr != null && electricityDutyInr != null
+    ) {
+      const compSum = energyInr + fixedInr + fppasInr + electricityDutyInr;
+      const gap = net - compSum;
+      if (gap > 50) pfSurchargeInr = Math.round(gap);
+    }
+
     out[key] = {
       netPayableInr: net,
-      ...(billInrFromParsed(bill.energy_charges_inr) != null ? { energyInr: billInrFromParsed(bill.energy_charges_inr) } : {}),
-      ...(billInrFromParsed(bill.fixed_charges_inr) != null ? { fixedInr: billInrFromParsed(bill.fixed_charges_inr) } : {}),
-      ...(billInrFromParsed(bill.fppas_inr) != null ? { fppasInr: billInrFromParsed(bill.fppas_inr) } : {}),
-      ...(billInrFromParsed(bill.electricity_duty_inr) != null ? { electricityDutyInr: billInrFromParsed(bill.electricity_duty_inr) } : {}),
-      ...(billInrFromParsed(bill.metered_unit_consumption) != null ? { units: billInrFromParsed(bill.metered_unit_consumption) } : {})
+      ...(energyInr != null ? { energyInr } : {}),
+      ...(fixedInr != null ? { fixedInr } : {}),
+      ...(fppasInr != null ? { fppasInr } : {}),
+      ...(electricityDutyInr != null ? { electricityDutyInr } : {}),
+      ...(unitsVal != null ? { units: unitsVal } : {}),
+      ...(pfSurchargeInr != null ? { pfSurchargeInr } : {})
     };
   }
 

@@ -191,6 +191,8 @@ type AuditRow = {
   fixed: number;
   duty: number;
   fuel: number;
+  /** Other charges (PF/Welding surcharge, metering, etc.) — 0 for engine rows. */
+  other?: number;
   total: number;
 };
 
@@ -299,7 +301,7 @@ function buildLegacyAuditRows(input: PremiumProposalPptInput, labels: string[]):
     const model = estimateMonthlyBillBreakdownWithContext(units[i], effectiveCtx);
     const subsidy = isMpDomestic && units[i] <= 150 ? n(units[i] * 1.0) : 0;
     const total = Math.max(0, n(model.total - subsidy));
-    return { label, units: units[i], energy: n(model.energy), fixed: n(model.fixed), duty: n(model.duty), fuel: n(model.fuel), total };
+    return { label, units: units[i], energy: n(model.energy), fixed: n(model.fixed), duty: n(model.duty), fuel: n(model.fuel), other: 0, total };
   });
   for (let i = 0; i < rows.length; i += 1) if (!Number.isFinite(rows[i].units) || rows[i].units <= 0) rows[i].total = 0;
   const calibration = computeTotalCalibration(rows, input.monthlyBillActuals ?? {});
@@ -330,8 +332,9 @@ function buildLegacyAuditRows(input: PremiumProposalPptInput, labels: string[]):
   }
   const totals = rows.reduce((acc, r) => ({
     label: "Total", units: acc.units + r.units, energy: acc.energy + r.energy,
-    fixed: acc.fixed + r.fixed, duty: acc.duty + r.duty, fuel: acc.fuel + r.fuel, total: acc.total + r.total
-  }), { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0 });
+    fixed: acc.fixed + r.fixed, duty: acc.duty + r.duty, fuel: acc.fuel + r.fuel,
+    other: (acc.other ?? 0) + (r.other ?? 0), total: acc.total + r.total
+  }), { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, total: 0 });
   const summer = rows.slice(3, 7).reduce((sum, r) => sum + r.total, 0);
   const summerPct = totals.total > 0 ? n((summer / totals.total) * 100) : 0;
   return { rows, totals, summerPct, fixedAnnual: totals.fixed };
@@ -378,6 +381,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
       fixed: r.fixed,
       duty: r.duty,
       fuel: r.fuel,
+      other: r.other,
       total: r.total
     }));
     const totals: AuditRow = {
@@ -387,6 +391,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
       fixed: built.totals.fixed,
       duty: built.totals.duty,
       fuel: built.totals.fuel,
+      other: built.totals.other,
       total: built.totals.total
     };
     return {

@@ -367,41 +367,42 @@ export const MP_MIN_CHARGE_INR_FY_2025_26: Partial<Record<MpTariffCategory, numb
 };
 
 /**
- * Monthly FPPAS (Fuel and Power Purchase Adjustment Surcharge) rates
- * derived from actual MPPKVVCL (MPEZ) consumer bills for FY 2025-26 and
- * FY 2026-27.  Key = "YYYY-MM" (calendar month of billing).
+ * Monthly FPPAS (Fuel and Power Purchase Adjustment Surcharge) rates for
+ * MPPKVVCL (MPEZ) — ₹/unit (not % of energy).  Key = "YYYY-MM".
  *
- * IMPORTANT: The FPPAS on actual bills is a LARGE POSITIVE charge (~29–37%
- * of energy charges). This is the full fuel + power purchase cost. The DISCOM
- * circulars that say "−2.23%" etc. represent the monthly ADJUSTMENT to the
- * base FPPAS — not the total rate. The engine must use the total rate.
+ * FPPAS is published per billing window (meter-read cycle), so two consumers
+ * with different read dates use different approved rates even in the same
+ * calendar month.  The rates below are derived from 12 actual MPEZ bills of
+ * LV2.2 commercial consumer N1905018349 (Satna, meter read ≈ 6–10th of each
+ * month) by computing:  FPPAS_line_₹ ÷ metered_units.
  *
- * Rates verified by dividing printed FPPAS line amount by printed Energy
- * Charges line amount from actual consumer N1904016515 bills:
- *
- *   Month     FPPAS / EC      Rate
- *   MAY-2025   derived        30.3%
- *   JUN-2025   derived        30.8%
- *   JUL-2025   derived        30.2%
- *   AUG-2025   derived        30.5%
- *   SEP-2025   derived        29.7%
- * Values are ₹/unit FPPAS adjustments (not % of energy). Verified from
- * printed MPEZ bill lines for consumer N1904016515:
- *   FPPAS line ÷ metered units, e.g. APR-2026 = ₹26.27 ÷ 418.76 = ₹0.0627/u.
+ *   Month   FPPAS ÷ Units   Rate (₹/unit)
+ *   MAY-25  ₹316.67 ÷ 1215   0.2607
+ *   JUN-25  ₹175.97 ÷  911   0.1932
+ *   JUL-25  ₹  66.65 ÷  346   0.1926
+ *   AUG-25  ₹  45.89 ÷  327   0.1403
+ *   SEP-25  −₹  20.56 ÷  347  −0.0593
+ *   OCT-25  −₹116.12 ÷  398  −0.2918
+ *   NOV-25  −₹123.35 ÷  447  −0.2759
+ *   DEC-25  −₹  12.61 ÷  301  −0.0419
+ *   JAN-26  ₹  17.00 ÷  171   0.0994
+ *   FEB-26  ₹  10.43 ÷  463   0.0225
+ *   MAR-26  −₹  59.59 ÷  445  −0.1339
+ *   APR-26  ₹143.53 ÷ 1325   0.1083
  */
 export const MP_FPPAS_MONTHLY_RATES: Record<string, number> = {
-  "2025-05": 0.2195,
-  "2025-06": 0.1535,
-  "2025-07": 0.1533,
-  "2025-08": 0.1333,
-  "2025-09": -0.0012,
-  "2025-10": -0.2080,
-  "2025-11": -0.2380,
-  "2025-12": -0.0701,
-  "2026-01": 0.0637,
-  "2026-02": 0.0510,
-  "2026-03": -0.0821,
-  "2026-04": 0.0627,
+  "2025-05":  0.2607,
+  "2025-06":  0.1932,
+  "2025-07":  0.1926,
+  "2025-08":  0.1403,
+  "2025-09": -0.0593,
+  "2025-10": -0.2918,
+  "2025-11": -0.2759,
+  "2025-12": -0.0419,
+  "2026-01":  0.0994,
+  "2026-02":  0.0225,
+  "2026-03": -0.1339,
+  "2026-04":  0.1083,
 };
 
 /**

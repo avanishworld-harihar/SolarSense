@@ -14,7 +14,8 @@
  *                      ≤150u: fixed connection-based slab (₹76/₹129 urban)
  *   fppasCharge    = units × monthly FPPAS ₹/unit adjustment
  *                    Auto-looked up from MP_FPPAS_MONTHLY_RATES if billMonth provided
- *   electricityDuty = (energyCharge + fixedCharge) × dutyRate   (rate from §ED rule)
+ *   electricityDuty = (energyCharge + fppas − 160) × dutyRate   for LV2.2 (₹160 exemption, verified from 12 MPEZ bills)
+ *                  = (energyCharge + fixedCharge) × dutyRate   for all other categories
  *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, NO consumption cap)
  *   onlineRebate   = − min(0.5% × grossPayable, ₹1000) when paid online
  *   advanceCredit  = − manually-supplied advance interest (1%/month)
@@ -301,10 +302,26 @@ export function computeFixedCharge(input: MpBillEngineInput): { amount: number; 
 }
 
 /* ------------------------------------------------------------------ */
-/* 3. Electricity Duty (% of energy + fixed, by slab bracket).        */
+/* 3. Electricity Duty (% of energy+FPPAS−160 for LV2.2;             */
+/*    % of energy+fixed for all other categories).                    */
 /* ------------------------------------------------------------------ */
 
-export function computeElectricityDuty(category: MpTariffCategory, units: number, energy: number, fixed: number, billMonth?: string): {
+/**
+ * LV2.2 electricity duty base deduction (₹/month).
+ * Empirically verified against 12 actual MPEZ LV2.2 bills (N1905018349):
+ *   ED = 15% × (energy + FPPAS − 160) gives ≤₹2 error every month.
+ * For all other categories the duty base remains (energy + fixed).
+ */
+const LV22_DUTY_BASE_DEDUCTION_INR = 160;
+
+export function computeElectricityDuty(
+  category: MpTariffCategory,
+  units: number,
+  energy: number,
+  fixed: number,
+  billMonth?: string,
+  fppasAmount?: number
+): {
   amount: number;
   rate: number;
   formula: string;
@@ -314,12 +331,21 @@ export function computeElectricityDuty(category: MpTariffCategory, units: number
   for (const b of rule.brackets) {
     if (b.untilUnits == null || units <= b.untilUnits) { rate = b.rate; break; }
   }
-  const base = energy + fixed;
+
+  // LV2.2: duty base = energy + FPPAS − ₹160 (verified against 12 MPEZ bills)
+  const isLv22WithFppas = category === "LV2.2" && typeof fppasAmount === "number";
+  const base = isLv22WithFppas
+    ? energy + fppasAmount! - LV22_DUTY_BASE_DEDUCTION_INR
+    : energy + fixed;
+
   const amt = r2(base * rate);
+  const formulaBase = isLv22WithFppas
+    ? `(EC ₹${r2(energy)} + FPPAS ₹${r2(fppasAmount!)} − ₹${LV22_DUTY_BASE_DEDUCTION_INR})`
+    : `(EC ₹${r2(energy)} + FC ₹${r2(fixed)})`;
   return {
     amount: amt,
     rate,
-    formula: `(EC ₹${r2(energy)} + FC ₹${r2(fixed)}) × ${(rate * 100).toFixed(1)}% = ₹${amt}`
+    formula: `${formulaBase} × ${(rate * 100).toFixed(1)}% = ₹${amt}`
   };
 }
 
@@ -467,7 +493,8 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
       formula: `Printed FPPAS line override: ₹${r2(input.printedFppasInr)}`
     };
   }
-  let ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth);
+  // Pass fppas.amount so LV2.2 duty base = energy + FPPAS − ₹160 (verified formula).
+  let ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth, fppas.amount);
   if (typeof input.printedElectricityDutyInr === "number" && Number.isFinite(input.printedElectricityDutyInr)) {
     ed = {
       amount: r2(input.printedElectricityDutyInr),

@@ -43,19 +43,33 @@ export type PptAuditRow = {
   fixed: number;
   duty: number;
   fuel: number;
+  /**
+   * Other charges not captured in energy/fixed/duty/fuel:
+   * e.g. Welding/PF Surcharge, Metering Charges, Penal Charges.
+   * Auto-computed as max(0, netPayableInr − (energy+fixed+duty+fuel))
+   * when an uploaded bill's components don't sum to the printed total.
+   * Always 0 for engine-calculated months.
+   */
+  other: number;
   total: number;
   /** Provenance of the row total — useful for QA tooltips later. */
   source: "mp_audit_db" | "mp_engine_2025_26" | "mp_engine_2026_27" | "actual_input" | "no_consumption";
 };
 
 export type MpMonthlyAuditOverride = {
-  /** ₹ printed/audited net payable for this month. */
+  /** ₹ printed/audited net payable for this month (= Current Month Bill). */
   netPayableInr: number;
   energyInr?: number;
   fixedInr?: number;
   fppasInr?: number;
   electricityDutyInr?: number;
   units?: number;
+  /**
+   * Welding/PF Surcharge or any other penalty/metering charge extracted
+   * from the uploaded bill (₹). When absent, auto-computed as the gap
+   * between netPayableInr and (energy+fixed+duty+fuel).
+   */
+  pfSurchargeInr?: number;
 };
 
 export type MpPptRowsInput = {
@@ -290,7 +304,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
 
     const actual = n(Number(input.monthlyBillActuals?.[monthKey]) || 0);
     if (units <= 0 && actual <= 0) {
-      return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0, source: "no_consumption" };
+      return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, total: 0, source: "no_consumption" };
     }
 
     // Bill month drives FY tariff + monthly FPPAS. Align each row to the real
@@ -307,9 +321,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       printedFc > 0;
     const rowFcOverride =
       typeof fcOv === "number" && Number.isFinite(fcOv) ? Math.round(fcOv) : usePrintedFcThisRow ? Math.round(printedFc) : undefined;
-    const usePrintedBillLinesThisRow = refMonthKey === monthKey;
-    const printedDuty = Number(input.billElectricityDutyInr);
-    const printedFppas = Number(input.billFppasInr);
+    // Proposal flow should remain rule-first even with only 1-2 uploaded bills.
+    // We do not pin monthly duty/FPPAS to one scanned bill line here.
 
     const breakdown = calculateMpBill({
       discomCode,
@@ -324,24 +337,37 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       // AGJY applies to all LV-1.2 consumers regardless of consumption level.
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
-      fixedChargeOverrideInr: rowFcOverride,
-      printedElectricityDutyInr:
-        usePrintedBillLinesThisRow && Number.isFinite(printedDuty) ? printedDuty : undefined,
-      printedFppasInr:
-        usePrintedBillLinesThisRow && Number.isFinite(printedFppas) ? printedFppas : undefined
+      fixedChargeOverrideInr: rowFcOverride
     });
 
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];
     if (shouldUseAuditOverride(units, dbAudit, breakdown, category)) {
       const safeDbAudit = dbAudit as MpMonthlyAuditOverride;
+      const energy = n(safeDbAudit.energyInr ?? 0);
+      const fixed  = n(safeDbAudit.fixedInr ?? 0);
+      const duty   = r(safeDbAudit.electricityDutyInr);
+      const fuel   = r(safeDbAudit.fppasInr);
+      const netFromBill = n(safeDbAudit.netPayableInr);
+      // Standard component sum (no penalty charges).
+      const compSum = energy + fixed + duty + fuel;
+      // "other" tracks PF/Welding surcharge or metering charges — for internal
+      // reference only. It is EXCLUDED from the proposal total so that the
+      // proposal always shows base tariff charges only (solar savings are
+      // calculated on these base charges; penalties can reduce post-solar).
+      const other = typeof safeDbAudit.pfSurchargeInr === "number"
+        ? Math.max(0, safeDbAudit.pfSurchargeInr)
+        : Math.max(0, netFromBill - compSum);
       return {
         label,
         units: n(safeDbAudit.units ?? units),
-        energy: n(safeDbAudit.energyInr ?? 0),
-        fixed: n(safeDbAudit.fixedInr ?? 0),
-        duty: r(safeDbAudit.electricityDutyInr),
-        fuel: r(safeDbAudit.fppasInr),
-        total: n(safeDbAudit.netPayableInr),
+        energy,
+        fixed,
+        duty,
+        fuel,
+        other,
+        // Use base charges sum as total (excludes PF/metering penalties).
+        // For typical 2-bill uploads (APR+MAR), other=0 so total=netFromBill exactly.
+        total: other > 0 ? compSum : netFromBill,
         source: "mp_audit_db"
       };
     }
@@ -358,6 +384,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         fixed: n(breakdown.fixedCharge),
         duty: r(breakdown.electricityDuty),
         fuel: r(breakdown.fppasCharge),
+        other: 0,
         total: actual,
         source: "actual_input"
       };
@@ -370,6 +397,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       fixed: n(breakdown.fixedCharge),
       duty: r(breakdown.electricityDuty),
       fuel: r(breakdown.fppasCharge),
+      other: 0,
       total: n(breakdown.netPayable),
       source: engineSource
     };
@@ -383,10 +411,11 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       fixed: acc.fixed + r.fixed,
       duty: acc.duty + r.duty,
       fuel: acc.fuel + r.fuel,
+      other: acc.other + r.other,
       total: acc.total + r.total,
       source: "mp_engine_2025_26"
     }),
-    { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0, source: "mp_engine_2025_26" }
+    { label: "Total", units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, other: 0, total: 0, source: "mp_engine_2025_26" }
   );
 
   const summer = rows.slice(3, 7).reduce((sum, r) => sum + r.total, 0);

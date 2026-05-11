@@ -69,6 +69,13 @@ export interface ParsedBillShape {
   amount_received_against_bill_inr?: number | string | null;
   mp_govt_subsidy_amount_inr?: number | string | null;
   fppas_inr?: number | string | null;
+  /**
+   * Welding / Power Factor (PF) Surcharge printed on the bill (₹).
+   * Applicable to LV2.2 consumers when a welding machine is in use or
+   * the power factor drops below the critical threshold (e.g. 0.02).
+   * Zero for most months; extracted separately from the "Amount Details" section.
+   */
+  pf_welding_surcharge_inr?: number | string | null;
   rebate_incentive_inr?: number | string | null;
   ccb_adjustment_inr?: number | string | null;
   nfp_flag?: boolean;
