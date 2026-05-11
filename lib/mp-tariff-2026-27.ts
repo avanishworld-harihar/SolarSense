@@ -7,7 +7,7 @@
  * LV2.2 (Non-Domestic) official MPERC FY 2026-27 schedule:
  *   Sanctioned-load based, connected load ≤10 kW:
  *     ≤50 u → ₹6.80/u + ₹98/kW urban
- *     >50 u → ₹8.30/u + ₹154/kW urban
+ *     >50 u → ₹8.2823/u + ₹153.41/kW urban (MPEZ bill APR-2026 N1905018349; order text often rounds to 8.30/154)
  *   Demand-based:
  *     ₹7.40/u + ₹312/kW or ₹250/kVA urban
  */
@@ -67,16 +67,18 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
     applicabilityNote:
       "Non-Domestic — Shops, offices, hospitals etc. FY 2026-27. " +
       "SUB-TYPE A (Sanctioned-Load-Based, ≤10 kW): non-telescopic — " +
-      "≤50 u → ₹6.80/u + ₹98/kW; >50 u → ₹8.30/u + ₹154/kW. " +
+      "≤50 u → ₹6.80/u + ₹98/kW; >50 u → ₹8.2823/u + ₹153.41/kW. " +
       "SUB-TYPE B (Demand-Based): ₹7.40/u + ₹312/kW.",
     energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.40 }],
     loadFixed: {
       sanctionedLoadLimitKw: 10,
       consumptionSplitUnits: 50,
       perKwUrbanLow: 98,   perKwRuralLow: 83,
-      perKwUrbanHigh: 154, perKwRuralHigh: 133,
+      /** Urban >50 u: ₹767.05 ÷ 5 kW on verified MPEZ APR-2026 bill (order summary rounds to ₹154). */
+      perKwUrbanHigh: 153.41, perKwRuralHigh: 133,
       energyRatePerUnitLow: 6.80,
-      energyRatePerUnitHigh: 8.30,
+      /** ₹10,974.05 ÷ 1,325 u on same bill (tariff order line is often shown as ₹8.30). */
+      energyRatePerUnitHigh: 8.2823,
       perKwUrban: 312, perKwRural: 230,
       perKvaUrban: 250, perKvaRural: 184
     }

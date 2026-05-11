@@ -388,7 +388,7 @@ export const MP_MIN_CHARGE_INR_FY_2025_26: Partial<Record<MpTariffCategory, numb
  *   JAN-26  ₹  17.00 ÷  171   0.0994
  *   FEB-26  ₹  10.43 ÷  463   0.0225
  *   MAR-26  −₹  59.59 ÷  445  −0.1339
- *   APR-26  ₹143.53 ÷ 1325   0.1083
+ *   APR-26  ₹143.53 ÷ 1325   0.1083245…
  */
 export const MP_FPPAS_MONTHLY_RATES: Record<string, number> = {
   "2025-05":  0.2607,
@@ -402,7 +402,7 @@ export const MP_FPPAS_MONTHLY_RATES: Record<string, number> = {
   "2026-01":  0.0994,
   "2026-02":  0.0225,
   "2026-03": -0.1339,
-  "2026-04":  0.1083,
+  "2026-04":  0.1083245283018868,
 };
 
 /**

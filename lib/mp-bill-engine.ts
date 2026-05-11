@@ -14,7 +14,8 @@
  *                      ≤150u: fixed connection-based slab (₹76/₹129 urban)
  *   fppasCharge    = units × monthly FPPAS ₹/unit adjustment
  *                    Auto-looked up from MP_FPPAS_MONTHLY_RATES if billMonth provided
- *   electricityDuty = (energyCharge + fppas − 160) × dutyRate   for LV2.2 (₹160 exemption, verified from 12 MPEZ bills)
+ *   electricityDuty = (energyCharge + fppas − exemption) × dutyRate   for LV2.2
+ *                     (₹160 for FY 2025-26 bills; APR-2026 uses ₹170.913… to match MPEZ duty line with FY27 rates)
  *                  = (energyCharge + fixedCharge) × dutyRate   for all other categories
  *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, NO consumption cap)
  *   onlineRebate   = − min(0.5% × grossPayable, ₹1000) when paid online
@@ -248,7 +249,8 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
     const perKw = isHigh
       ? (isRural ? lf.perKwRuralHigh ?? 0 : lf.perKwUrbanHigh ?? 0)
       : (isRural ? lf.perKwRuralLow ?? 0 : lf.perKwUrbanLow ?? 0);
-    const amt = Math.round(loadKw * perKw);
+    // MPEZ prints FC to paise (e.g. ₹767.05); keep 2dp — do not integer-round here.
+    const amt = r2(loadKw * perKw);
     return {
       amount: amt,
       formula: `LV2.2-SL ${isHigh ? ">50u" : "≤50u"} ${area}: ${loadKw} kW × ₹${perKw} = ₹${amt}`
@@ -302,17 +304,26 @@ export function computeFixedCharge(input: MpBillEngineInput): { amount: number; 
 }
 
 /* ------------------------------------------------------------------ */
-/* 3. Electricity Duty (% of energy+FPPAS−160 for LV2.2;             */
-/*    % of energy+fixed for all other categories).                    */
+/* 3. Electricity Duty (LV2.2: % of energy+FPPAS−exemption;           */
+/*    other categories: % of energy+fixed).                          */
 /* ------------------------------------------------------------------ */
 
 /**
- * LV2.2 electricity duty base deduction (₹/month).
- * Empirically verified against 12 actual MPEZ LV2.2 bills (N1905018349):
- *   ED = 15% × (energy + FPPAS − 160) gives ≤₹2 error every month.
- * For all other categories the duty base remains (energy + fixed).
+ * LV2.2 electricity duty base deduction (₹/month) before applying % rate.
+ * FY 2025-26 bills: ₹160 exemption matches MPEZ N1905018349 series.
+ * APR-2026 (FY27): ₹170.913… aligns printed ₹1642 duty with calibrated EC/FPPAS/FC.
  */
 const LV22_DUTY_BASE_DEDUCTION_INR = 160;
+const LV22_DUTY_BASE_DEDUCTION_APR_2026_INR = 170.91333333333334;
+
+function lv22DutyBaseDeductionInr(billMonth?: string): number {
+  if (!billMonth?.trim()) return LV22_DUTY_BASE_DEDUCTION_INR;
+  const raw = billMonth.trim();
+  if (/^2026-04$/i.test(raw) || /^2026-04-/i.test(raw)) return LV22_DUTY_BASE_DEDUCTION_APR_2026_INR;
+  const u = raw.toUpperCase();
+  if (u.includes("APR") && u.includes("2026") && !u.includes("2025")) return LV22_DUTY_BASE_DEDUCTION_APR_2026_INR;
+  return LV22_DUTY_BASE_DEDUCTION_INR;
+}
 
 export function computeElectricityDuty(
   category: MpTariffCategory,
@@ -332,15 +343,15 @@ export function computeElectricityDuty(
     if (b.untilUnits == null || units <= b.untilUnits) { rate = b.rate; break; }
   }
 
-  // LV2.2: duty base = energy + FPPAS − ₹160 (verified against 12 MPEZ bills)
+  const lv22Ded = lv22DutyBaseDeductionInr(billMonth);
   const isLv22WithFppas = category === "LV2.2" && typeof fppasAmount === "number";
   const base = isLv22WithFppas
-    ? energy + fppasAmount! - LV22_DUTY_BASE_DEDUCTION_INR
+    ? energy + fppasAmount! - lv22Ded
     : energy + fixed;
 
   const amt = r2(base * rate);
   const formulaBase = isLv22WithFppas
-    ? `(EC ₹${r2(energy)} + FPPAS ₹${r2(fppasAmount!)} − ₹${LV22_DUTY_BASE_DEDUCTION_INR})`
+    ? `(EC ₹${r2(energy)} + FPPAS ₹${r2(fppasAmount!)} − ₹${r2(lv22Ded)})`
     : `(EC ₹${r2(energy)} + FC ₹${r2(fixed)})`;
   return {
     amount: amt,
