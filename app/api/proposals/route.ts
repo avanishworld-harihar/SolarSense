@@ -27,6 +27,24 @@ const monthBillActualsSchema = z.object({
   nov: z.number().min(0).optional(), dec: z.number().min(0).optional()
 }).optional();
 
+const monthlyAuditOverrideEntry = z.object({
+  netPayableInr: z.number().min(0),
+  energyInr: z.number().min(0).optional(),
+  fixedInr: z.number().min(0).optional(),
+  fppasInr: z.number().optional(),
+  electricityDutyInr: z.number().optional(),
+  units: z.number().min(0).optional()
+});
+
+const monthlyAuditOverridesSchema = z.object({
+  jan: monthlyAuditOverrideEntry.optional(), feb: monthlyAuditOverrideEntry.optional(),
+  mar: monthlyAuditOverrideEntry.optional(), apr: monthlyAuditOverrideEntry.optional(),
+  may: monthlyAuditOverrideEntry.optional(), jun: monthlyAuditOverrideEntry.optional(),
+  jul: monthlyAuditOverrideEntry.optional(), aug: monthlyAuditOverrideEntry.optional(),
+  sep: monthlyAuditOverrideEntry.optional(), oct: monthlyAuditOverrideEntry.optional(),
+  nov: monthlyAuditOverrideEntry.optional(), dec: monthlyAuditOverrideEntry.optional()
+}).optional();
+
 const bodySchema = z.object({
   customerName: z.string().min(1).max(120),
   location: z.string().max(160).default(""),
@@ -52,6 +70,7 @@ const bodySchema = z.object({
   billMonth: z.string().max(40).optional(),
   currentMonthBillAmountInr: z.number().min(0).max(10000000).nullable().optional(),
   monthlyBillActuals: monthBillActualsSchema,
+  monthlyAuditOverrides: monthlyAuditOverridesSchema,
   agjyClaimed: z.boolean().optional(),
   clientRef: z.string().max(120).optional(),
   leadId: z.string().max(120).optional(),
@@ -76,7 +95,7 @@ export async function POST(req: NextRequest) {
     const payload = bodySchema.parse(await req.json());
 
     // Auto-pull MP audits when applicable.
-    let auditOverrides: PremiumProposalPptInput["monthlyAuditOverrides"];
+    let auditOverrides: PremiumProposalPptInput["monthlyAuditOverrides"] = payload.monthlyAuditOverrides;
     const wantsMpAudits = payload.useMpAudits !== false && looksLikeMp(payload.state, payload.discom);
     if (wantsMpAudits && (payload.clientRef || payload.leadId || payload.consumerId)) {
       try {
@@ -86,7 +105,8 @@ export async function POST(req: NextRequest) {
           consumerId: payload.consumerId ?? null,
           withinDays: 540
         });
-        auditOverrides = fetched.overrides;
+        // Caller-supplied overrides come from currently uploaded PDFs and are fresher than DB rows.
+        auditOverrides = { ...fetched.overrides, ...(auditOverrides ?? {}) };
       } catch (e) {
         console.warn("[proposals POST] mp_bill_audits fetch failed:", e);
       }

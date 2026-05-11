@@ -98,7 +98,7 @@ export type MpPptRowsInput = {
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
 const r = (v: number | undefined) => Math.round(Number(v) || 0);
 
-function shouldUseDbAuditOverride(unitsFromInput: number, dbAudit: MpMonthlyAuditOverride | undefined): boolean {
+function hasAlignedOverrideUnits(unitsFromInput: number, dbAudit: MpMonthlyAuditOverride | undefined): boolean {
   if (!dbAudit) return false;
   if (!Number.isFinite(dbAudit.netPayableInr) || dbAudit.netPayableInr === 0) return false;
   const dbUnitsRaw = Number(dbAudit.units ?? 0);
@@ -115,6 +115,39 @@ function shouldUseDbAuditOverride(unitsFromInput: number, dbAudit: MpMonthlyAudi
   // Reject stale/misaligned audited rows (common when old bad scans were saved).
   // Example: current month units=307 but stale DB audit has 347.
   return !(diff >= 10 && pct >= 0.03);
+}
+
+function shouldUseAuditOverride(
+  unitsFromInput: number,
+  dbAudit: MpMonthlyAuditOverride | undefined,
+  expected: { energyCharge: number; fixedCharge: number },
+  category: MpTariffCategory
+): boolean {
+  if (!hasAlignedOverrideUnits(unitsFromInput, dbAudit)) return false;
+
+  const energy = Number(dbAudit?.energyInr);
+  const fixed = Number(dbAudit?.fixedInr);
+  if (!Number.isFinite(energy) || !Number.isFinite(fixed)) {
+    // Net-only legacy rows cannot safely drive component columns.
+    return false;
+  }
+
+  if (category === "LV2.2") {
+    const energyTol = Math.max(100, Math.abs(expected.energyCharge) * 0.08);
+    const fixedTol = Math.max(25, Math.abs(expected.fixedCharge) * 0.15);
+    return (
+      Math.abs(energy - expected.energyCharge) <= energyTol &&
+      Math.abs(fixed - expected.fixedCharge) <= fixedTol
+    );
+  }
+
+  // Generic guard: reject obvious component swaps or stale rows.
+  const energyTol = Math.max(100, Math.abs(expected.energyCharge) * 0.25);
+  const fixedTol = Math.max(100, Math.abs(expected.fixedCharge) * 0.35);
+  return (
+    Math.abs(energy - expected.energyCharge) <= energyTol &&
+    Math.abs(fixed - expected.fixedCharge) <= fixedTol
+  );
 }
 
 /** LV1.2 domestic >150u: ₹/0.1kW block from the tariff year of the reference bill. */
@@ -225,21 +258,6 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     const monthKey = MONTH_KEYS[i];
     const units = n(input.monthlyUnits[monthKey]);
 
-    const dbAudit = input.monthlyAuditOverrides?.[monthKey];
-    if (shouldUseDbAuditOverride(units, dbAudit)) {
-      const safeDbAudit = dbAudit as MpMonthlyAuditOverride;
-      return {
-        label,
-        units: n(safeDbAudit.units ?? units),
-        energy: n(safeDbAudit.energyInr ?? 0),
-        fixed: n(safeDbAudit.fixedInr ?? 0),
-        duty: r(safeDbAudit.electricityDutyInr),
-        fuel: r(safeDbAudit.fppasInr),
-        total: n(safeDbAudit.netPayableInr),
-        source: "mp_audit_db"
-      };
-    }
-
     const actual = n(Number(input.monthlyBillActuals?.[monthKey]) || 0);
     if (units <= 0 && actual <= 0) {
       return { label, units: 0, energy: 0, fixed: 0, duty: 0, fuel: 0, total: 0, source: "no_consumption" };
@@ -282,6 +300,21 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       printedFppasInr:
         usePrintedBillLinesThisRow && Number.isFinite(printedFppas) ? printedFppas : undefined
     });
+
+    const dbAudit = input.monthlyAuditOverrides?.[monthKey];
+    if (shouldUseAuditOverride(units, dbAudit, breakdown, category)) {
+      const safeDbAudit = dbAudit as MpMonthlyAuditOverride;
+      return {
+        label,
+        units: n(safeDbAudit.units ?? units),
+        energy: n(safeDbAudit.energyInr ?? 0),
+        fixed: n(safeDbAudit.fixedInr ?? 0),
+        duty: r(safeDbAudit.electricityDutyInr),
+        fuel: r(safeDbAudit.fppasInr),
+        total: n(safeDbAudit.netPayableInr),
+        source: "mp_audit_db"
+      };
+    }
 
     const engineSource: PptAuditRow["source"] = isFY2026_27OrLater(rowBillMonthIso)
       ? "mp_engine_2026_27"

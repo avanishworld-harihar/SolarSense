@@ -1086,7 +1086,9 @@ export default function ProposalPage() {
       const merged = mergeCustomerForProposal(manual, latestBill || previousBill);
       const customerName = merged?.name?.trim() || manual.officialBillName || manual.leadContactName || "Customer";
       const location = [merged?.district || manual.city, merged?.state || manual.state].filter(Boolean).join(", ");
-      const monthlyBillActuals = buildMonthlyBillActualsFromBills([latestBill, ...additionalBills], auditedMonthTotals);
+      const uploadedBills = [latestBill, ...additionalBills];
+      const monthlyBillActuals = buildMonthlyBillActualsFromBills(uploadedBills, auditedMonthTotals);
+      const monthlyAuditOverrides = buildMonthlyAuditOverridesFromBills(uploadedBills);
       const response = await fetch("/api/proposal-ppt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1111,6 +1113,7 @@ export default function ProposalPage() {
             previousBill?.current_month_bill_amount_inr ??
             null,
           monthlyBillActuals,
+          monthlyAuditOverrides,
           ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
           grossSystemCostInr: effectiveResult.grossCost,
           pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
@@ -1167,7 +1170,9 @@ export default function ProposalPage() {
       const merged = mergeCustomerForProposal(manual, latestBill || previousBill);
       const customerName = merged?.name?.trim() || manual.officialBillName || manual.leadContactName || "Customer";
       const location = [merged?.district || manual.city, merged?.state || manual.state].filter(Boolean).join(", ");
-      const monthlyBillActuals = buildMonthlyBillActualsFromBills([latestBill, ...additionalBills], auditedMonthTotals);
+      const uploadedBills = [latestBill, ...additionalBills];
+      const monthlyBillActuals = buildMonthlyBillActualsFromBills(uploadedBills, auditedMonthTotals);
+      const monthlyAuditOverrides = buildMonthlyAuditOverridesFromBills(uploadedBills);
       const response = await fetch("/api/proposals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1192,6 +1197,7 @@ export default function ProposalPage() {
             previousBill?.current_month_bill_amount_inr ??
             null,
           monthlyBillActuals,
+          monthlyAuditOverrides,
           clientRef: clientRef || undefined,
           leadId: selectedLeadId || undefined,
           ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
@@ -2039,6 +2045,44 @@ function buildMonthlyBillActualsFromBills(
     const amount = pickActualMonthBillAmount(bill);
     if (amount != null && amount > 0) out[key] = amount;
   }
+  return out;
+}
+
+function buildMonthlyAuditOverridesFromBills(
+  bills: Array<ParsedBillShape | null | undefined>
+): Partial<Record<keyof MonthlyUnits, {
+  netPayableInr: number;
+  energyInr?: number;
+  fixedInr?: number;
+  fppasInr?: number;
+  electricityDutyInr?: number;
+  units?: number;
+}>> {
+  const out: Partial<Record<keyof MonthlyUnits, {
+    netPayableInr: number;
+    energyInr?: number;
+    fixedInr?: number;
+    fppasInr?: number;
+    electricityDutyInr?: number;
+    units?: number;
+  }>> = {};
+
+  for (const bill of bills) {
+    if (!bill) continue;
+    const key = monthKeyFromBillLabel(bill.bill_month);
+    if (!key) continue;
+    const net = pickActualMonthBillAmount(bill);
+    if (net == null || net <= 0) continue;
+    out[key] = {
+      netPayableInr: net,
+      ...(billInrFromParsed(bill.energy_charges_inr) != null ? { energyInr: billInrFromParsed(bill.energy_charges_inr) } : {}),
+      ...(billInrFromParsed(bill.fixed_charges_inr) != null ? { fixedInr: billInrFromParsed(bill.fixed_charges_inr) } : {}),
+      ...(billInrFromParsed(bill.fppas_inr) != null ? { fppasInr: billInrFromParsed(bill.fppas_inr) } : {}),
+      ...(billInrFromParsed(bill.electricity_duty_inr) != null ? { electricityDutyInr: billInrFromParsed(bill.electricity_duty_inr) } : {}),
+      ...(billInrFromParsed(bill.metered_unit_consumption) != null ? { units: billInrFromParsed(bill.metered_unit_consumption) } : {})
+    };
+  }
+
   return out;
 }
 
