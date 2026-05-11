@@ -17,7 +17,7 @@
  *   electricityDuty = (energyCharge + fppas − exemption) × dutyRate   for LV2.2
  *                     (₹160 for FY 2025-26 bills; APR-2026 uses ₹170.913… to match MPEZ duty line with FY27 rates)
  *                  = (energyCharge + fixedCharge) × dutyRate   for all other categories
- *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, NO consumption cap)
+ *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, ≤150 u/mo eligible; ₹1/u on first 100 u slice)
  *   onlineRebate   = − min(0.5% × grossPayable, ₹1000) when paid online
  *   advanceCredit  = − manually-supplied advance interest (1%/month)
  *   netPayable     = energy + fixed + fppas + duty + extras − rebates − subsidy + CCB
@@ -35,7 +35,6 @@ import {
   MP_DISCOMS,
   MP_FPPAS_DEFAULT_PCT,
   MP_REBATES_FY_2025_26,
-  MP_TARIFF_FY_2025_26,
   getFppasForBillMonth,
   type CategoryTariff,
   type EnergySlab,
@@ -45,7 +44,7 @@ import {
   type MpPhase,
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
-import { MP_TARIFF_FY_2026_27, isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
+import { isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
 import { getMpCategoryTariff, getMpElectricityDutyRule, resolveMpTariffVersion } from "@/lib/mp-tariff-registry";
 
 const r2 = (n: number): number => Math.round(n * 100) / 100;
@@ -103,6 +102,12 @@ export type MpBillEngineInput = {
   printedElectricityDutyInr?: number;
   /** Strict audit: use printed FPPAS / fuel surcharge from the bill line when available. */
   printedFppasInr?: number;
+  /**
+   * M.P. Govt. subsidy line from bill OCR (MPEZ/MPCZ). When set, overrides the
+   * analytical AGJY formula so net payable matches the printed bill (the line
+   * often exceeds narrow "first 100 u slab − ₹100" estimates).
+   */
+  printedMpGovtSubsidyInr?: number | null;
 };
 
 export type MpBillLineKind =
@@ -382,7 +387,18 @@ export function computeFppas(units: number, fppasPct?: number, billMonth?: strin
 /* 5. Atal Griha Jyoti — LV-1.2 domestic, ≤150 u/month eligible.       */
 /* ------------------------------------------------------------------ */
 
-export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: number, energy: number, billMonth?: string): {
+/** Same `energySlabs` as `calculateMpBill` (after rural / LV2 overrides). Smart Billing override passed separately. */
+export type MpAgjySliceContext = {
+  energySlabs: EnergySlab[];
+  billMonth?: string;
+  energyRateOverridePerUnit?: number | null;
+};
+
+export function computeAtalGrihaJyotiSubsidy(
+  category: MpTariffCategory,
+  units: number,
+  ctx: MpAgjySliceContext
+): {
   applied: boolean;
   amount: number; // negative
   reason: string;
@@ -401,36 +417,28 @@ export function computeAtalGrihaJyotiSubsidy(category: MpTariffCategory, units: 
     };
   }
 
-  // First 100 units at ₹1/unit, state pays the difference at slab energy rates.
+  // First min(units, 100) units at ₹1/unit effective; state pays slab tariff minus that slice.
+  // Note: for 100–150 u/mo the credit is **constant** (full 100-u slab stack) — only units <100 vary.
   const subsidisedUnits = Math.min(units, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
   if (subsidisedUnits <= 0) return { applied: false, amount: 0, reason: "Zero qualifying units." };
 
-  // Use correct tariff year's energy slabs for the subsidy calculation.
-  const useFY2627 = isFY2026_27OrLater(billMonth);
-  const tariffSlabs = useFY2627
-    ? MP_TARIFF_FY_2026_27[category].energySlabs
-    : MP_TARIFF_FY_2025_26[category].energySlabs;
-
-  let energyOnFirst100 = 0;
-  let remaining = subsidisedUnits;
-  for (const s of tariffSlabs) {
-    const segLow = s.fromUnit <= 0 ? 1 : s.fromUnit;
-    const segHigh = s.toUnit ?? Infinity;
-    if (remaining <= 0) break;
-    if (subsidisedUnits < segLow) break;
-    const take = Math.min(remaining, segHigh - segLow + 1);
-    energyOnFirst100 += take * s.ratePerUnit;
-    remaining -= take;
-  }
-  const consumerPays = subsidisedUnits * ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit;
-  const subsidy = r2(energyOnFirst100 - consumerPays);
+  const useFY2627 = isFY2026_27OrLater(ctx.billMonth);
   const fyLabel = useFY2627 ? "FY 2026-27" : "FY 2025-26";
+
+  let energyOnSlice: number;
+  if (typeof ctx.energyRateOverridePerUnit === "number" && Number.isFinite(ctx.energyRateOverridePerUnit)) {
+    energyOnSlice = r2(subsidisedUnits * ctx.energyRateOverridePerUnit);
+  } else {
+    energyOnSlice = computeEnergyChargeTelescopic(subsidisedUnits, ctx.energySlabs).total;
+  }
+
+  const consumerPays = subsidisedUnits * ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit;
+  const subsidy = r2(energyOnSlice - consumerPays);
   const reason =
     `AGJY (${fyLabel}) on first ${subsidisedUnits} u (month ≤${cap} u). ` +
-    `Slab energy = ₹${r2(energyOnFirst100)}; consumer @ ₹${ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit}/u = ₹${r2(consumerPays)}; ` +
+    `Slab/flat energy on slice = ₹${r2(energyOnSlice)}; consumer @ ₹${ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit}/u = ₹${r2(consumerPays)}; ` +
     `state subsidy credit = ₹${subsidy}.`;
 
-  void energy;
   return { applied: true, amount: -subsidy, reason };
 }
 
@@ -522,9 +530,30 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     };
   }
 
-  const subsidy = input.agjyClaimed
-    ? computeAtalGrihaJyotiSubsidy(input.category, input.units, ec.total, input.billMonth)
+  let subsidy = input.agjyClaimed
+    ? computeAtalGrihaJyotiSubsidy(input.category, input.units, {
+        energySlabs,
+        billMonth: input.billMonth,
+        energyRateOverridePerUnit: input.energyRateOverridePerUnit
+      })
     : { applied: false, amount: 0, reason: "AGJY not claimed." };
+
+  const pinSub = input.printedMpGovtSubsidyInr;
+  if (
+    input.agjyClaimed &&
+    typeof pinSub === "number" &&
+    Number.isFinite(pinSub) &&
+    pinSub !== 0
+  ) {
+    const norm = pinSub > 0 ? -Math.abs(pinSub) : pinSub;
+    subsidy = {
+      applied: true,
+      amount: r2(norm),
+      reason:
+        `M.P. Govt. subsidy from bill (pinned ₹${r2(norm)}). ` +
+        `Analytical AGJY slice estimate omitted in favour of printed DISCOM line.`
+    };
+  }
 
   const arrear = max0(input.principalArrearInr ?? 0);
   const grossBeforeDuty = ec.total + fc.amount + fppas.amount;

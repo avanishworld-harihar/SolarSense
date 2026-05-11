@@ -421,7 +421,8 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     energyRateOverridePerUnit: smartBilling.energyRateOverridePerUnit,
     fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr,
     printedElectricityDutyInr: num(parsed.electricity_duty_inr) ?? undefined,
-    printedFppasInr: num(parsed.fppas_inr) ?? undefined
+    printedFppasInr: num(parsed.fppas_inr) ?? undefined,
+    printedMpGovtSubsidyInr: num(parsed.mp_govt_subsidy_amount_inr) ?? undefined
   };
 
   const breakdown = calculateMpBill(engineInput);

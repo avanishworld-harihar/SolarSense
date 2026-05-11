@@ -71,6 +71,8 @@ export type ProposalDict = {
   "audit.dutyFuel": string;
   "audit.netBill": string;
   "audit.total": string;
+  /** Appended after `(−₹… AGJY)` on net cell; `{{n}}` = qualifying units (min(month, 100)). */
+  "audit.agjySliceHint": string;
 
   // Insight cards.
   "insight.summer.title": string;
@@ -230,6 +232,7 @@ const EN: ProposalDict = {
   "audit.dutyFuel": "Duty + Fuel ₹",
   "audit.netBill": "Net Bill ₹",
   "audit.total": "Total",
+  "audit.agjySliceHint": " · first {{n}} u",
 
   "insight.summer.title": "Summer Bill Trap",
   "insight.summer.sub": "Annual bill share Apr-Jul",
@@ -377,6 +380,7 @@ const HI: ProposalDict = {
   "audit.dutyFuel": "ड्यूटी+फ्यूल ₹",
   "audit.netBill": "नेट बिल ₹",
   "audit.total": "कुल",
+  "audit.agjySliceHint": " · पहले {{n}} u",
 
   "insight.summer.title": "गर्मी का बिल जाल",
   "insight.summer.sub": "अप्रैल-जुलाई में सालाना बिल का हिस्सा",

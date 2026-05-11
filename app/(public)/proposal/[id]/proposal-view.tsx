@@ -28,6 +28,7 @@ import {
 import type { ProposalDeckSummary } from "@/lib/proposal-ppt";
 import { PROPOSAL_BRANDING_UPDATED_EVENT, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
+import { ATAL_GRIHA_JYOTI } from "@/lib/mp-tariff-2025-26";
 import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
 
 // ---------------------------------------------------------------------------
@@ -142,14 +143,17 @@ type ProposalViewProps = {
 };
 
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
-/** Net bill cell: optional `(−₹… AGJY)` when state subsidy credit applies (subsidy < 0 in data). */
-const auditNetCell = (total: number, subsidy?: number) => {
+/** Net bill cell: `(−₹… AGJY)` plus slice hint so identical credits for 100–150 u are understood. */
+function formatAuditNetBillCell(D: ProposalDict, total: number, subsidy?: number, rowUnits?: number) {
   const base = inr(total);
   const s = Math.round(subsidy ?? 0);
   if (s >= 0) return base;
   const a = Math.abs(s).toLocaleString("en-IN");
-  return `${base} (−₹${a} AGJY)`;
-};
+  const core = `${base} (−₹${a} AGJY)`;
+  if (rowUnits == null || rowUnits <= 0 || rowUnits > ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) return core;
+  const sliceU = Math.min(Math.round(rowUnits), ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
+  return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
+}
 const inrK = (v: number) => {
   const x = Math.max(0, Math.round(v));
   if (x >= 100000) return `₹${(x / 100000).toFixed(1)}L`;
@@ -637,7 +641,7 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
                   <td className="px-3 py-2 text-right text-slate-700">{inr(r.fixed)}</td>
                   <td className="px-3 py-2 text-right text-slate-700">{inr(r.duty + r.fuel)}</td>
                   <td className={`px-3 py-2 text-right text-[11px] font-bold leading-snug sm:text-sm ${isPeak ? "text-rose-700" : "text-slate-900"}`}>
-                    {auditNetCell(r.total, r.subsidy)}
+                    {formatAuditNetBillCell(D, r.total, r.subsidy, r.units)}
                   </td>
                 </tr>
               );
@@ -648,7 +652,7 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
               <td className="px-3 py-2 text-right">{inr(summary.auditTotals.energy)}</td>
               <td className="px-3 py-2 text-right">{inr(summary.auditTotals.fixed)}</td>
               <td className="px-3 py-2 text-right">{inr(summary.auditTotals.duty + summary.auditTotals.fuel)}</td>
-              <td className="px-3 py-2 text-right text-[11px] leading-snug sm:text-sm">{auditNetCell(summary.auditTotals.total, summary.auditTotals.subsidy)}</td>
+              <td className="px-3 py-2 text-right text-[11px] leading-snug sm:text-sm">{formatAuditNetBillCell(D, summary.auditTotals.total, summary.auditTotals.subsidy)}</td>
             </tr>
           </tbody>
         </table>

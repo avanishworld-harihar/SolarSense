@@ -75,6 +75,8 @@ export type MpMonthlyAuditOverride = {
    * between netPayableInr and (energy+fixed+duty+fuel).
    */
   pfSurchargeInr?: number;
+  /** Printed M.P. Govt. subsidy (₹, negative when shown as credit on bill). */
+  mpGovtSubsidyInr?: number;
 };
 
 export type MpPptRowsInput = {
@@ -329,6 +331,14 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     // Proposal flow should remain rule-first even with only 1-2 uploaded bills.
     // We do not pin monthly duty/FPPAS to one scanned bill line here.
 
+    const monthOv = input.monthlyAuditOverrides?.[monthKey];
+    const printedSubsidyInr =
+      typeof monthOv?.mpGovtSubsidyInr === "number" &&
+      Number.isFinite(monthOv.mpGovtSubsidyInr) &&
+      monthOv.mpGovtSubsidyInr !== 0
+        ? monthOv.mpGovtSubsidyInr
+        : undefined;
+
     const breakdown = calculateMpBill({
       discomCode,
       category,
@@ -342,7 +352,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       // AGJY: LV-1.2 only; engine applies subsidy only when month ≤150 u (see ATAL_GRIHA_JYOTI).
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
-      fixedChargeOverrideInr: rowFcOverride
+      fixedChargeOverrideInr: rowFcOverride,
+      printedMpGovtSubsidyInr: printedSubsidyInr
     });
 
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];
@@ -355,13 +366,25 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       const netFromBill = n(safeDbAudit.netPayableInr);
       // Standard component sum (no penalty charges).
       const compSum = energy + fixed + duty + fuel;
+      const rawGap = r(netFromBill - compSum);
+      const printedSubsidy =
+        typeof safeDbAudit.mpGovtSubsidyInr === "number" &&
+        Number.isFinite(safeDbAudit.mpGovtSubsidyInr) &&
+        safeDbAudit.mpGovtSubsidyInr !== 0
+          ? r(safeDbAudit.mpGovtSubsidyInr)
+          : 0;
+      // Fallback inference: when printed subsidy is absent but net is materially
+      // below component-sum, treat that negative delta as subsidy-like credit.
+      const inferredSubsidy = printedSubsidy !== 0
+        ? printedSubsidy
+        : (rawGap < -50 ? rawGap : 0);
       // "other" tracks PF/Welding surcharge or metering charges — for internal
       // reference only. It is EXCLUDED from the proposal total so that the
       // proposal always shows base tariff charges only (solar savings are
       // calculated on these base charges; penalties can reduce post-solar).
       const other = typeof safeDbAudit.pfSurchargeInr === "number"
         ? Math.max(0, safeDbAudit.pfSurchargeInr)
-        : Math.max(0, netFromBill - compSum);
+        : Math.max(0, rawGap);
       return {
         label,
         units: n(safeDbAudit.units ?? units),
@@ -370,7 +393,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         duty,
         fuel,
         other,
-        subsidy: 0,
+        subsidy: inferredSubsidy,
         // Use base charges sum as total (excludes PF/metering penalties).
         // For typical 2-bill uploads (APR+MAR), other=0 so total=netFromBill exactly.
         total: other > 0 ? compSum : netFromBill,

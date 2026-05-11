@@ -28,6 +28,7 @@ import {
   type PaymentMilestone
 } from "@/lib/proposal-deck-helpers";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
+import { ATAL_GRIHA_JYOTI } from "@/lib/mp-tariff-2025-26";
 
 // =============================================================================
 // PUBLIC TYPES
@@ -202,14 +203,6 @@ type TotalCalibration = { intercept: number; slopePerUnit: number };
 
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
 const inr = (v: number) => `₹${n(v).toLocaleString("en-IN")}`;
-/** Net bill column: optional `(−₹… AGJY)` when state subsidy credit applies. */
-const auditNetCell = (total: number, subsidy?: number) => {
-  const base = inr(total);
-  const s = Math.round(subsidy ?? 0);
-  if (s >= 0) return base;
-  const a = Math.abs(s).toLocaleString("en-IN");
-  return `${base} (−₹${a} AGJY)`;
-};
 const inrK = (v: number) => {
   const x = n(v);
   if (x >= 100000) return `₹${(x / 100000).toFixed(1)}L`;
@@ -700,6 +693,16 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
   const summary = summarizeProposalDeck(input);
   const lang = summary.lang;
   const D: ProposalDict = dict(lang);
+  const auditNetCell = (total: number, subsidy?: number, rowUnits?: number) => {
+    const base = inr(total);
+    const s = Math.round(subsidy ?? 0);
+    if (s >= 0) return base;
+    const a = Math.abs(s).toLocaleString("en-IN");
+    const core = `${base} (−₹${a} AGJY)`;
+    if (rowUnits == null || rowUnits <= 0 || rowUnits > ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) return core;
+    const sliceU = Math.min(Math.round(rowUnits), ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
+    return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
+  };
   const labels = monthLabels(lang);
   const installer = summary.installer;
   const tagline = summary.tagline;
@@ -818,7 +821,7 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
         line: { color: T.border, width: 0.3 }
       });
       cx = left;
-      const cells = [r.label, String(r.units), inr(r.energy), inr(r.fixed), inr(r.duty + r.fuel), auditNetCell(r.total, r.subsidy)];
+      const cells = [r.label, String(r.units), inr(r.energy), inr(r.fixed), inr(r.duty + r.fuel), auditNetCell(r.total, r.subsidy, r.units)];
       cells.forEach((c, j) => {
         s2.addText(c, {
           x: cx + 0.05, y: yRow, w: colWs[j] - 0.1, h: rowH,

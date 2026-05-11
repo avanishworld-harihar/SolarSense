@@ -334,6 +334,8 @@ export const MP_ELECTRICITY_DUTY_FY_2025_26: Record<MpTariffCategory, Electricit
  *   • If `units > monthlyEligibilityCapUnits` → **no AGJY subsidy** for that month.
  *   • Else: first `min(units, 100)` units are valued at tariff slabs; consumer pays
  *     ₹1/unit on that slice; subsidy credit = slab energy − ₹1×slice (shown negative on bill).
+ *   • For any month with **100–150** metered units, the credit equals the **full 100-u**
+ *     telescopic stack minus ₹100 — so the rupee amount is **the same** across that range.
  *   • Fixed charge, electricity duty & FPPAS are **not** part of AGJY — full tariff applies.
  */
 export const ATAL_GRIHA_JYOTI = {

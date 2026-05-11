@@ -33,7 +33,9 @@ const monthlyAuditOverrideEntry = z.object({
   fixedInr: z.number().min(0).optional(),
   fppasInr: z.number().optional(),
   electricityDutyInr: z.number().optional(),
-  units: z.number().min(0).optional()
+  units: z.number().min(0).optional(),
+  pfSurchargeInr: z.number().min(0).optional(),
+  mpGovtSubsidyInr: z.number().optional()
 });
 
 const monthlyAuditOverridesSchema = z.object({
