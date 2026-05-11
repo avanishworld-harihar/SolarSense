@@ -382,7 +382,8 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     energyChargesInr: num(parsed.energy_charges_inr),
     fixedChargesInr: num(parsed.fixed_charges_inr),
     electricityDutyInr: num(parsed.electricity_duty_inr),
-    referenceUnits: units.chosen > 0 ? units.chosen : null
+    referenceUnits: units.chosen > 0 ? units.chosen : null,
+    billMonth: parsed.bill_month
   });
 
   const category = smartBilling.category;
@@ -417,7 +418,9 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
       parsed.nfp_flag && printedPayable != null && Number.isFinite(printedPayable) ? printedPayable : undefined,
     ccbAdjustmentInr: num(parsed.ccb_adjustment_inr) ?? undefined,
     energyRateOverridePerUnit: smartBilling.energyRateOverridePerUnit,
-    fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr
+    fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr,
+    printedElectricityDutyInr: num(parsed.electricity_duty_inr) ?? undefined,
+    printedFppasInr: num(parsed.fppas_inr) ?? undefined
   };
 
   const breakdown = calculateMpBill(engineInput);

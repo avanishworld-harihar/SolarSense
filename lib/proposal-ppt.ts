@@ -80,6 +80,8 @@ export type PremiumProposalPptInput = {
   billEnergyChargesInr?: number;
   /** Electricity Duty line (₹) — optional cross-check. */
   billElectricityDutyInr?: number;
+  /** FPPAS / fuel surcharge line (₹) — optional strict line match. */
+  billFppasInr?: number;
   /** Metered units on the reference bill row (for implied ₹/kWh). */
   referenceBillUnits?: number;
   /** Fixed charge (₹) on reference bill — Smart Multi-Factor validation. */
@@ -364,6 +366,7 @@ function buildAuditRows(input: PremiumProposalPptInput, labels: string[]): {
       billFixedChargeInr: input.billFixedChargeInr,
       billEnergyChargesInr: input.billEnergyChargesInr,
       billElectricityDutyInr: input.billElectricityDutyInr,
+      billFppasInr: input.billFppasInr,
       referenceBillUnits: input.referenceBillUnits,
       referenceBillMonth: input.billMonth
     });

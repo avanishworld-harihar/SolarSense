@@ -107,6 +107,9 @@ function buildMpSmartBillingApiPayload(manual: ManualProposalCustomer, latestBil
     ...(billInrFromParsed(ref?.electricity_duty_inr) != null
       ? { billElectricityDutyInr: billInrFromParsed(ref?.electricity_duty_inr) }
       : {}),
+    ...(billInrFromParsed(ref?.fppas_inr) != null
+      ? { billFppasInr: billInrFromParsed(ref?.fppas_inr) }
+      : {}),
     ...(billInrFromParsed(ref?.fixed_charges_inr) != null
       ? { billFixedChargeInr: billInrFromParsed(ref?.fixed_charges_inr) }
       : {}),

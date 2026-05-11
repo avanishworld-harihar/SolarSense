@@ -123,10 +123,10 @@ export async function fetchMpAuditOverridesByRef(input: FetchAuditOverridesInput
     if (net == null || !Number.isFinite(net) || net === 0) continue;
     overrides[key] = {
       netPayableInr: net,
-      energyInr: num(row.energy_charge_inr) ?? undefined,
-      fixedInr: num(row.fixed_charge_inr) ?? undefined,
-      fppasInr: num(row.fppas_inr) ?? undefined,
-      electricityDutyInr: num(row.electricity_duty_inr) ?? undefined,
+      energyInr: num(row.printed_energy_inr) ?? num(row.energy_charge_inr) ?? undefined,
+      fixedInr: num(row.printed_fixed_inr) ?? num(row.fixed_charge_inr) ?? undefined,
+      fppasInr: num(row.printed_fppas_inr) ?? num(row.fppas_inr) ?? undefined,
+      electricityDutyInr: num(row.printed_electricity_duty_inr) ?? num(row.electricity_duty_inr) ?? undefined,
       units: num(row.units_chosen) ?? undefined
     };
   }

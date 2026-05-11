@@ -31,7 +31,6 @@
 import {
   ATAL_GRIHA_JYOTI,
   MP_DISCOMS,
-  MP_ELECTRICITY_DUTY_FY_2025_26,
   MP_FPPAS_DEFAULT_PCT,
   MP_REBATES_FY_2025_26,
   MP_TARIFF_FY_2025_26,
@@ -44,11 +43,8 @@ import {
   type MpPhase,
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
-import {
-  MP_ELECTRICITY_DUTY_FY_2026_27,
-  MP_TARIFF_FY_2026_27,
-  isFY2026_27OrLater
-} from "@/lib/mp-tariff-2026-27";
+import { MP_TARIFF_FY_2026_27, isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
+import { getMpCategoryTariff, getMpElectricityDutyRule, resolveMpTariffVersion } from "@/lib/mp-tariff-registry";
 
 const r2 = (n: number): number => Math.round(n * 100) / 100;
 const max0 = (n: number): number => (n < 0 ? 0 : n);
@@ -101,6 +97,10 @@ export type MpBillEngineInput = {
   energyRateOverridePerUnit?: number;
   /** Smart Billing: pin monthly fixed ₹ from a verified bill line. */
   fixedChargeOverrideInr?: number;
+  /** Strict audit: use printed Electricity Duty from the bill line when available. */
+  printedElectricityDutyInr?: number;
+  /** Strict audit: use printed FPPAS / fuel surcharge from the bill line when available. */
+  printedFppasInr?: number;
 };
 
 export type MpBillLineKind =
@@ -276,8 +276,7 @@ function fixedLoadBased(input: MpBillEngineInput, t: CategoryTariff): { amount: 
 }
 
 export function computeFixedCharge(input: MpBillEngineInput): { amount: number; formula: string } {
-  const useFY2627 = isFY2026_27OrLater(input.billMonth);
-  const t = useFY2627 ? MP_TARIFF_FY_2026_27[input.category] : MP_TARIFF_FY_2025_26[input.category];
+  const t = getMpCategoryTariff(input.category, input.billMonth);
   if (input.category === "LV1.1" || input.category === "LV1.2") {
     return fixedDomestic(input.units, input.area ?? "urban", input.sanctionedLoadKw ?? 1, t);
   }
@@ -293,9 +292,7 @@ export function computeElectricityDuty(category: MpTariffCategory, units: number
   rate: number;
   formula: string;
 } {
-  const useFY2627 = isFY2026_27OrLater(billMonth);
-  const dutyTable = useFY2627 ? MP_ELECTRICITY_DUTY_FY_2026_27 : MP_ELECTRICITY_DUTY_FY_2025_26;
-  const rule = dutyTable[category];
+  const rule = getMpElectricityDutyRule(category, billMonth);
   let rate = 0;
   for (const b of rule.brackets) {
     if (b.untilUnits == null || units <= b.untilUnits) { rate = b.rate; break; }
@@ -400,16 +397,14 @@ export function computeAdvanceCredit(advanceBalanceInr?: number): { amount: numb
 
 export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   // Auto-select tariff year based on billMonth.
-  const useFY2627 = isFY2026_27OrLater(input.billMonth);
-  const t = useFY2627
-    ? MP_TARIFF_FY_2026_27[input.category]
-    : MP_TARIFF_FY_2025_26[input.category];
+  const tariffVersion = resolveMpTariffVersion(input.billMonth);
+  const t = tariffVersion.tariffs[input.category];
   if (!t) throw new Error(`Unknown MP tariff category: ${input.category}`);
 
   /**
    * LV-2.2 Sanctioned-Load-Based sub-type uses a NON-TELESCOPIC energy regime:
-   *   • consumption ≤ 50 units → ALL units billed at ₹6.50/unit
-   *   • consumption > 50 units → ALL units billed at ₹8.00/unit
+   *   • consumption ≤ 50 units → ALL units billed at the low LV2.2 rate
+   *   • consumption > 50 units → ALL units billed at the high LV2.2 rate
    * (Verified against all actual MPEZ bills — every month = units × flat rate exactly.)
    */
   const lv22SL = input.category === "LV2.2" && t.loadFixed
@@ -444,8 +439,22 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   }
 
   // Auto-lookup FPPAS from monthly table if not explicitly overridden.
-  const fppas = computeFppas(input.units, input.fppasPct, input.billMonth);
-  const ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth);
+  let fppas = computeFppas(input.units, input.fppasPct, input.billMonth);
+  if (typeof input.printedFppasInr === "number" && Number.isFinite(input.printedFppasInr)) {
+    fppas = {
+      amount: r2(input.printedFppasInr),
+      rate: input.units > 0 ? r2(input.printedFppasInr / input.units) : 0,
+      formula: `Printed FPPAS line override: ₹${r2(input.printedFppasInr)}`
+    };
+  }
+  let ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth);
+  if (typeof input.printedElectricityDutyInr === "number" && Number.isFinite(input.printedElectricityDutyInr)) {
+    ed = {
+      amount: r2(input.printedElectricityDutyInr),
+      rate: 0,
+      formula: `Printed Electricity Duty line override: ₹${r2(input.printedElectricityDutyInr)}`
+    };
+  }
 
   const subsidy = input.agjyClaimed
     ? computeAtalGrihaJyotiSubsidy(input.category, input.units, ec.total, input.billMonth)
@@ -474,7 +483,7 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   }
 
   const notes: string[] = [];
-  const fyLabel = useFY2627 ? "FY 2026-27" : "FY 2025-26";
+  const fyLabel = `FY ${tariffVersion.fy}`;
   const subTypeNote = lv22SL ? " [Sub-type A: Sanctioned-Load-Based ≤10kW, non-telescopic]" : "";
   notes.push(`[${fyLabel}] Category ${t.category}${subTypeNote}: ${t.applicabilityNote}`);
   notes.push(`EC slabs: ${ec.perSlab.map((p) => `${p.from}-${p.to ?? "∞"}@${p.rate}=₹${p.subtotal}`).join("; ")}`);
@@ -497,6 +506,12 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   }
   if (input.fixedChargeOverrideInr != null) {
     notes.push(`Smart Billing: fixed charge pinned @ ₹${input.fixedChargeOverrideInr}/mo (board cross-check).`);
+  }
+  if (input.printedFppasInr != null) {
+    notes.push(`Strict Audit: FPPAS pinned to printed bill line ₹${r2(input.printedFppasInr)}.`);
+  }
+  if (input.printedElectricityDutyInr != null) {
+    notes.push(`Strict Audit: Electricity Duty pinned to printed bill line ₹${r2(input.printedElectricityDutyInr)}.`);
   }
 
   const lines: MpBillLine[] = [

@@ -10,12 +10,8 @@
  * ToD surcharges are explicitly OUT OF SCOPE — see product decision in issue thread.
  */
 
-import {
-  MP_TARIFF_FY_2025_26,
-  normalizeTariffCategory,
-  type MpAreaProfile,
-  type MpTariffCategory
-} from "@/lib/mp-tariff-2025-26";
+import { normalizeTariffCategory, type CategoryTariff, type MpAreaProfile, type MpTariffCategory } from "@/lib/mp-tariff-2025-26";
+import { getMpCategoryTariff } from "@/lib/mp-tariff-registry";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -37,6 +33,7 @@ export type MpSmartBillingSignals = {
   fixedChargesInr?: number | null;
   electricityDutyInr?: number | null;
   referenceUnits?: number | null;
+  billMonth?: string | null;
 };
 
 export type MpSmartBillingResolution = {
@@ -133,10 +130,11 @@ function roughExpectedLv22Sl(
   units: number,
   loadKw: number,
   area: MpAreaProfile,
-  demandOpted: boolean
+  demandOpted: boolean,
+  tariff: CategoryTariff
 ): { ec: number; fc: number } | null {
   if (demandOpted || loadKw > 10) return null;
-  const lf = MP_TARIFF_FY_2025_26["LV2.2"].loadFixed;
+  const lf = tariff.loadFixed;
   if (!lf?.sanctionedLoadLimitKw) return null;
   const split = lf.consumptionSplitUnits ?? 50;
   const urban = area !== "rural";
@@ -201,7 +199,7 @@ export function resolveMpSmartBilling(signals: MpSmartBillingSignals): MpSmartBi
     nz(signals.fixedChargesInr) != null
   ) {
     const fc = nz(signals.fixedChargesInr)!;
-    const rough = roughExpectedLv22Sl(u, loadKw, area, false);
+    const rough = roughExpectedLv22Sl(u, loadKw, area, false, getMpCategoryTariff("LV2.2", signals.billMonth));
     if (rough) {
       const ecDev = Math.abs(rough.ec - e) / Math.max(e, 1);
       const fcDev = Math.abs(rough.fc - fc) / Math.max(fc, 1);

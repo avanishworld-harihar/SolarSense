@@ -36,8 +36,8 @@ export type MpAreaProfile = "urban" | "rural";
 export type MpTariffCategory =
   | "LV1.1" // Domestic — BPL / unmetered (legacy)
   | "LV1.2" // Domestic — metered (most consumers)
-  | "LV2.1" // Non-Domestic — sanctioned-load based, ≤10 kW
-  | "LV2.2" // Non-Domestic — demand based, >10 kW
+  | "LV2.1" // Non-Domestic — schools/education/hostels
+  | "LV2.2" // Non-Domestic — commercial; sanctioned-load ≤10 kW or demand-based
   | "LV3"   // Public Water Works & Street Light
   | "LV4"   // LT Industrial (mandatory demand-based)
   | "LV5.1" // Agriculture — metered
@@ -466,6 +466,14 @@ export function detectMpDiscomFromAddress(address?: string | null): MpDiscomMeta
 export function normalizeTariffCategory(raw?: string | null): MpTariffCategory | null {
   const s = String(raw ?? "").toLowerCase().replace(/\s+/g, " ");
   if (!s) return null;
+  // Exact/minor LV codes first. MPEZ often prints values like "LV2 [LV2.2]";
+  // a broad "LV2" match must not downgrade that to LV2.1.
+  if (/lv\s*[-]?\s*1\s*\.?\s*1\b/.test(s)) return "LV1.1";
+  if (/lv\s*[-]?\s*1\s*\.?\s*2\b/.test(s)) return "LV1.2";
+  if (/lv\s*[-]?\s*2\s*\.?\s*1\b/.test(s)) return "LV2.1";
+  if (/lv\s*[-]?\s*2\s*\.?\s*2\b/.test(s)) return "LV2.2";
+  if (/lv\s*[-]?\s*5\s*\.?\s*1\b/.test(s)) return "LV5.1";
+  if (/lv\s*[-]?\s*5\s*\.?\s*2\b/.test(s)) return "LV5.2";
   // Direct LV codes first.
   const m = s.match(/lv\s*[-]?\s*(\d)\s*\.?\s*(\d)?/i);
   if (m) {

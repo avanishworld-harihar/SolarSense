@@ -86,6 +86,8 @@ export type MpPptRowsInput = {
   billEnergyChargesInr?: number;
   /** Electricity Duty ₹ — cross-check Duty line. */
   billElectricityDutyInr?: number;
+  /** FPPAS / fuel surcharge ₹ — printed line from reference bill. */
+  billFppasInr?: number;
   /** Reference month metered units (for implied ₹/unit from bill). */
   referenceBillUnits?: number;
   /** Bill month on the reference scan (e.g. APR-2026) — used to pick FY for ₹/block when inferring load from printed FC. */
@@ -93,6 +95,7 @@ export type MpPptRowsInput = {
 };
 
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
+const r = (v: number | undefined) => Math.round(Number(v) || 0);
 
 function shouldUseDbAuditOverride(unitsFromInput: number, dbAudit: MpMonthlyAuditOverride | undefined): boolean {
   if (!dbAudit) return false;
@@ -190,7 +193,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     energyChargesInr: input.billEnergyChargesInr,
     fixedChargesInr: input.billFixedChargeInr,
     electricityDutyInr: input.billElectricityDutyInr,
-    referenceUnits: input.referenceBillUnits
+    referenceUnits: input.referenceBillUnits,
+    billMonth: input.referenceBillMonth
   });
   const category = smartBilling.category;
 
@@ -228,8 +232,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         units: n(safeDbAudit.units ?? units),
         energy: n(safeDbAudit.energyInr ?? 0),
         fixed: n(safeDbAudit.fixedInr ?? 0),
-        duty: n(safeDbAudit.electricityDutyInr ?? 0),
-        fuel: n(safeDbAudit.fppasInr ?? 0),
+        duty: r(safeDbAudit.electricityDutyInr),
+        fuel: r(safeDbAudit.fppasInr),
         total: n(safeDbAudit.netPayableInr),
         source: "mp_audit_db"
       };
@@ -254,6 +258,9 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       printedFc > 0;
     const rowFcOverride =
       typeof fcOv === "number" && Number.isFinite(fcOv) ? Math.round(fcOv) : usePrintedFcThisRow ? Math.round(printedFc) : undefined;
+    const usePrintedBillLinesThisRow = refMonthKey === monthKey;
+    const printedDuty = Number(input.billElectricityDutyInr);
+    const printedFppas = Number(input.billFppasInr);
 
     const breakdown = calculateMpBill({
       discomCode,
@@ -268,7 +275,11 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       // AGJY applies to all LV-1.2 consumers regardless of consumption level.
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
-      fixedChargeOverrideInr: rowFcOverride
+      fixedChargeOverrideInr: rowFcOverride,
+      printedElectricityDutyInr:
+        usePrintedBillLinesThisRow && Number.isFinite(printedDuty) ? printedDuty : undefined,
+      printedFppasInr:
+        usePrintedBillLinesThisRow && Number.isFinite(printedFppas) ? printedFppas : undefined
     });
 
     const engineSource: PptAuditRow["source"] = isFY2026_27OrLater(rowBillMonthIso)
@@ -281,8 +292,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         units,
         energy: n(breakdown.energyCharge),
         fixed: n(breakdown.fixedCharge),
-        duty: n(breakdown.electricityDuty),
-        fuel: n(breakdown.fppasCharge),
+        duty: r(breakdown.electricityDuty),
+        fuel: r(breakdown.fppasCharge),
         total: actual,
         source: "actual_input"
       };
@@ -293,8 +304,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       units,
       energy: n(breakdown.energyCharge),
       fixed: n(breakdown.fixedCharge),
-      duty: n(breakdown.electricityDuty),
-      fuel: n(breakdown.fppasCharge),
+      duty: r(breakdown.electricityDuty),
+      fuel: r(breakdown.fppasCharge),
       total: n(breakdown.netPayable),
       source: engineSource
     };

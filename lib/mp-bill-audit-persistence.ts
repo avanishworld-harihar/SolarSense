@@ -98,6 +98,7 @@ export async function saveMpBillAuditRecord(input: SaveMpBillAuditInput): Promis
     printed_energy_inr: r.printed.energyChargeInr,
     printed_fixed_inr: r.printed.fixedChargeInr,
     printed_fppas_inr: r.printed.fppasInr,
+    printed_electricity_duty_inr: r.printed.electricityDutyInr,
     printed_subsidy_inr: r.printed.subsidyInr,
     printed_arrear_inr: r.printed.arrearInr,
     printed_received_inr: r.printed.receivedAgainstBillInr,

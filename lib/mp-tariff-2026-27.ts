@@ -21,11 +21,12 @@
  * Atal Griha Jyoti Subsidy (APR-2026): ₹167.39 on the bill.
  *   Applies to all LV-1.2 consumers regardless of consumption level.
  *
- * ─── OTHER CATEGORIES ────────────────────────────────────────────────────────
- * LV2.1 / LV2.2 / LV3 / LV4 / LV5 / LV6 rates for FY 2026-27 are NOT yet
- * individually verified against actual bills. These categories retain the
- * FY 2025-26 values until verified. Update when actual bills become available.
- * ─────────────────────────────────────────────────────────────────────────────
+ * LV2.2 (Non-Domestic) official MPERC FY 2026-27 schedule:
+ *   Sanctioned-load based, connected load ≤10 kW:
+ *     ≤50 u → ₹6.80/u + ₹98/kW urban
+ *     >50 u → ₹8.30/u + ₹154/kW urban
+ *   Demand-based:
+ *     ₹7.40/u + ₹312/kW or ₹250/kVA urban
  */
 
 import type {
@@ -82,17 +83,21 @@ export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
   },
   "LV2.2": {
     category: "LV2.2",
-    applicabilityNote: "Non-Domestic — Shops, offices, hospitals etc. (FY 2026-27 rates pending verification; using FY 2025-26 rates.)",
-    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.50 }],
+    applicabilityNote:
+      "Non-Domestic — Shops, offices, hospitals etc. FY 2026-27. " +
+      "SUB-TYPE A (Sanctioned-Load-Based, ≤10 kW): non-telescopic — " +
+      "≤50 u → ₹6.80/u + ₹98/kW; >50 u → ₹8.30/u + ₹154/kW. " +
+      "SUB-TYPE B (Demand-Based): ₹7.40/u + ₹312/kW.",
+    energySlabs: [{ fromUnit: 0, toUnit: null, ratePerUnit: 7.40 }],
     loadFixed: {
       sanctionedLoadLimitKw: 10,
       consumptionSplitUnits: 50,
-      perKwUrbanLow: 94,   perKwRuralLow: 78,
-      perKwUrbanHigh: 153, perKwRuralHigh: 131,
-      energyRatePerUnitLow: 6.90,
-      energyRatePerUnitHigh: 8.50,
-      perKwUrban: 322, perKwRural: 235,
-      perKvaUrban: 258, perKvaRural: 188
+      perKwUrbanLow: 98,   perKwRuralLow: 83,
+      perKwUrbanHigh: 154, perKwRuralHigh: 133,
+      energyRatePerUnitLow: 6.80,
+      energyRatePerUnitHigh: 8.30,
+      perKwUrban: 312, perKwRural: 230,
+      perKvaUrban: 250, perKvaRural: 184
     }
   },
   "LV3": {

@@ -62,7 +62,7 @@ const monthlyAuditOverrideEntry = z.object({
   energyInr: z.number().min(0).optional(),
   fixedInr: z.number().min(0).optional(),
   fppasInr: z.number().optional(),
-  electricityDutyInr: z.number().min(0).optional(),
+  electricityDutyInr: z.number().optional(),
   units: z.number().min(0).optional()
 });
 
@@ -100,7 +100,8 @@ const bodySchema = z.object({
   purposeOfSupply: z.string().max(200).optional(),
   contractDemandKva: z.number().min(0).max(2000).optional(),
   billEnergyChargesInr: z.number().min(0).max(50000000).optional(),
-  billElectricityDutyInr: z.number().min(0).max(50000000).optional(),
+  billElectricityDutyInr: z.number().min(-50000000).max(50000000).optional(),
+  billFppasInr: z.number().min(-50000000).max(50000000).optional(),
   billFixedChargeInr: z.number().min(0).max(50000000).optional(),
   referenceBillUnits: z.number().min(0).max(2_000_000).optional(),
   areaProfile: z.enum(["urban", "rural"]).optional(),
