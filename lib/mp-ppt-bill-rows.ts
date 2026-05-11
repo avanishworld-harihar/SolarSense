@@ -253,8 +253,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
   });
   const category = smartBilling.category;
 
-  const erOv = smartBilling.energyRateOverridePerUnit;
-  const fcOv = smartBilling.fixedChargeOverrideInr;
+  const erOv = category === "LV2.2" ? undefined : smartBilling.energyRateOverridePerUnit;
+  const fcOv = category === "LV2.2" ? undefined : smartBilling.fixedChargeOverrideInr;
 
   /** Sanctioned load (kW): prefer form/OCR, but bump from reference bill FC when domestic OCR load caps FC too low. */
   let sanctionedLoadKwForEngine = (() => {
@@ -323,7 +323,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       fppasPct: input.monthlyFppasPct?.[monthKey],
       // AGJY applies to all LV-1.2 consumers regardless of consumption level.
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
-      energyRateOverridePerUnit: category === "LV2.2" ? undefined : erOv,
+      energyRateOverridePerUnit: erOv,
       fixedChargeOverrideInr: rowFcOverride,
       printedElectricityDutyInr:
         usePrintedBillLinesThisRow && Number.isFinite(printedDuty) ? printedDuty : undefined,
