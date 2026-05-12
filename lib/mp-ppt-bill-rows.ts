@@ -26,7 +26,7 @@ import {
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
 import { MP_TARIFF_FY_2026_27, isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
-import { engineBillMonthIsoForRow, monthKeyFromBillMonthLabel } from "@/lib/mp-bill-month";
+import { engineBillMonthIsoForRow } from "@/lib/mp-bill-month";
 import type { MonthlyUnits } from "@/lib/types";
 import { resolveMpSmartBilling, type MpSmartBillingResolution } from "@/lib/mp-smart-billing";
 
@@ -116,57 +116,11 @@ export type MpPptRowsInput = {
 const n = (v: number) => Math.max(0, Math.round(Number(v) || 0));
 const r = (v: number | undefined) => Math.round(Number(v) || 0);
 
-function hasAlignedOverrideUnits(unitsFromInput: number, dbAudit: MpMonthlyAuditOverride | undefined): boolean {
-  if (!dbAudit) return false;
-  if (!Number.isFinite(dbAudit.netPayableInr) || dbAudit.netPayableInr === 0) return false;
-  const dbUnitsRaw = Number(dbAudit.units ?? 0);
-  // If DB row has no units metadata, allow it (legacy rows).
-  if (!Number.isFinite(dbUnitsRaw) || dbUnitsRaw <= 0) return true;
-  // If current input has no units, DB can still be used.
-  if (!Number.isFinite(unitsFromInput) || unitsFromInput <= 0) return true;
-
-  const dbUnits = Math.round(dbUnitsRaw);
-  const inputUnits = Math.round(unitsFromInput);
-  const diff = Math.abs(dbUnits - inputUnits);
-  const pct = inputUnits > 0 ? diff / inputUnits : 0;
-
-  // Reject stale/misaligned audited rows (common when old bad scans were saved).
-  // Example: current month units=307 but stale DB audit has 347.
-  return !(diff >= 10 && pct >= 0.03);
-}
-
-function shouldUseAuditOverride(
-  unitsFromInput: number,
-  dbAudit: MpMonthlyAuditOverride | undefined,
-  expected: { energyCharge: number; fixedCharge: number },
-  category: MpTariffCategory
-): boolean {
-  if (!hasAlignedOverrideUnits(unitsFromInput, dbAudit)) return false;
-
-  const energy = Number(dbAudit?.energyInr);
-  const fixed = Number(dbAudit?.fixedInr);
-  if (!Number.isFinite(energy) || !Number.isFinite(fixed)) {
-    // Net-only legacy rows cannot safely drive component columns.
-    return false;
-  }
-
-  if (category === "LV2.2") {
-    const energyTol = Math.max(100, Math.abs(expected.energyCharge) * 0.08);
-    const fixedTol = Math.max(25, Math.abs(expected.fixedCharge) * 0.15);
-    return (
-      Math.abs(energy - expected.energyCharge) <= energyTol &&
-      Math.abs(fixed - expected.fixedCharge) <= fixedTol
-    );
-  }
-
-  // Generic guard: reject obvious component swaps or stale rows.
-  const energyTol = Math.max(100, Math.abs(expected.energyCharge) * 0.25);
-  const fixedTol = Math.max(100, Math.abs(expected.fixedCharge) * 0.35);
-  return (
-    Math.abs(energy - expected.energyCharge) <= energyTol &&
-    Math.abs(fixed - expected.fixedCharge) <= fixedTol
-  );
-}
+// `shouldUseAuditOverride` / `hasAlignedOverrideUnits` were removed when the
+// proposal flow was made strict-tariff. The MP tariff list is the canonical
+// source — saved per-month audit rows are kept on the input only for the
+// `pfSurchargeInr` side-channel (which still feeds `other`), but they no
+// longer replace tariff-computed energy/fixed/duty/fuel components.
 
 /** LV1.2 domestic >150u: ₹/0.1kW block from the tariff year of the reference bill. */
 function lv12DomesticPerPointKw(area: MpAreaProfile, referenceBillMonth?: string | null): number {
@@ -329,20 +283,18 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
 
     // Bill month drives FY tariff + monthly FPPAS. Align each row to the real
     // calendar year implied by `referenceBillMonth` (e.g. MAR-2026 → Jul row =
-    // 2025-07) so domestic FC blocks match printed MPEZ bills (was wrongly using
-    // FY 2026-27 for mid-2025 rows when ISO month parsing failed).
+    // 2025-07) so domestic FC blocks match the printed MPEZ bills (was wrongly
+    // using FY 2026-27 for mid-2025 rows when ISO month parsing failed).
     const rowBillMonthIso = engineBillMonthIsoForRow(i, input.referenceBillMonth);
-    const refMonthKey = monthKeyFromBillMonthLabel(input.referenceBillMonth);
-    const printedFc = Number(input.billFixedChargeInr);
-    const usePrintedFcThisRow =
-      category === "LV1.2" &&
-      refMonthKey === monthKey &&
-      Number.isFinite(printedFc) &&
-      printedFc > 0;
-    const rowFcOverride =
-      typeof fcOv === "number" && Number.isFinite(fcOv) ? Math.round(fcOv) : usePrintedFcThisRow ? Math.round(printedFc) : undefined;
-    // Proposal flow should remain rule-first even with only 1-2 uploaded bills.
-    // We do not pin monthly duty/FPPAS to one scanned bill line here.
+    // STRICT-TARIFF RULE: every monthly row is built purely from the codified
+    // MPERC tariff list. Even for the reference month (the one the uploaded
+    // bill was scanned from), we DO NOT pin the printed Fixed Charge. The
+    // engine derives FC from `ceil(units/15) × ₹/block` (LV1.2 >150 u) or the
+    // connection-slab rule (≤150 u), capped only by sanctioned-load blocks.
+    // Sanctioned-load itself is corrected upstream from the printed bill via
+    // `inferMinSanctionedLoadKwFromDomesticBill`, so the tariff-side FC stays
+    // accurate without overriding the output.
+    const rowFcOverride = typeof fcOv === "number" && Number.isFinite(fcOv) ? Math.round(fcOv) : undefined;
     const prevRowIdx = (i + 11) % 12;
     const priorMonthUnitsRaw = Number(input.monthlyUnits[MONTH_KEYS[prevRowIdx]] ?? 0);
     const priorMeteredUnits =
@@ -365,48 +317,27 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       priorMeteredUnits
     });
 
+    // STRICT-TARIFF RULE: previously this branch replaced the engine-computed
+    // energy/fixed/duty/fuel with the printed values stored on a past audit
+    // row (`monthlyAuditOverrides`). That made the proposal projection drift
+    // away from the codified MPERC tariff whenever a saved bill row existed.
+    //
+    // The MP tariff list is now the single source of truth — every monthly
+    // row, including months that have a saved audit, is computed from the
+    // engine. The DB audit is still consulted for non-economic side-data:
+    //   • PF / welding surcharge (added to `other`, excluded from totals)
+    //   • a sanity-check `units` value when the input unit count is missing
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];
-    if (shouldUseAuditOverride(units, dbAudit, breakdown, category)) {
-      const safeDbAudit = dbAudit as MpMonthlyAuditOverride;
-      const energy = n(safeDbAudit.energyInr ?? 0);
-      const fixed  = n(safeDbAudit.fixedInr ?? 0);
-      const duty   = r(safeDbAudit.electricityDutyInr);
-      const fuel   = r(safeDbAudit.fppasInr);
-      const netFromBill = n(safeDbAudit.netPayableInr);
-      const compSum = energy + fixed + duty + fuel;
-      const rawGap = r(netFromBill - compSum);
-      const engineModelledSubsidy = category === "LV1.2" ? r(breakdown.subsidyCredit) : 0;
-      /** Rule-based subsidy only (never replace with printed bill line in projections). */
-      const inferredSubsidy = engineModelledSubsidy !== 0 ? engineModelledSubsidy : 0;
-      /**
-       * "other" tracks PF/Welding surcharge, metering charges, Interest-on-SD,
-       * etc. — for internal reference only. It is EXCLUDED from the proposal
-       * total so that the proposal always shows base tariff charges only.
-       */
-      const otherFromGap = Math.max(0, rawGap);
-      const other = typeof safeDbAudit.pfSurchargeInr === "number"
-        ? Math.max(0, safeDbAudit.pfSurchargeInr)
-        : otherFromGap;
-      return {
-        label,
-        units: n(safeDbAudit.units ?? units),
-        energy,
-        fixed,
-        duty,
-        fuel,
-        other,
-        subsidy: inferredSubsidy,
-        total: other > 0 ? compSum : netFromBill,
-        source: "mp_audit_db"
-      };
-    }
+    const otherFromDbAudit =
+      dbAudit && typeof dbAudit.pfSurchargeInr === "number" && Number.isFinite(dbAudit.pfSurchargeInr)
+        ? Math.max(0, dbAudit.pfSurchargeInr)
+        : 0;
 
     const engineSource: PptAuditRow["source"] = isFY2026_27OrLater(rowBillMonthIso)
       ? "mp_engine_2026_27"
       : "mp_engine_2025_26";
 
     if (actual > 0) {
-      const subsidy = r(breakdown.subsidyCredit);
       return {
         label,
         units,
@@ -414,8 +345,10 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         fixed: n(breakdown.fixedCharge),
         duty: r(breakdown.electricityDuty),
         fuel: r(breakdown.fppasCharge),
-        other: 0,
-        subsidy,
+        // PF/welding surcharge from saved audit row stays informational only
+        // (excluded from `total` per existing convention).
+        other: otherFromDbAudit,
+        subsidy: r(breakdown.subsidyCredit),
         // Net must match tariff engine (includes AGJY); do not pin to uploaded
         // gross lines alone or the row no longer reconciles with components.
         total: n(breakdown.netPayable),
@@ -430,7 +363,7 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       fixed: n(breakdown.fixedCharge),
       duty: r(breakdown.electricityDuty),
       fuel: r(breakdown.fppasCharge),
-      other: 0,
+      other: otherFromDbAudit,
       subsidy: r(breakdown.subsidyCredit),
       total: n(breakdown.netPayable),
       source: engineSource

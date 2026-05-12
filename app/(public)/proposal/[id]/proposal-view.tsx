@@ -151,24 +151,16 @@ type ProposalViewProps = {
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
 
 /**
- * Net bill cell: appends `(−₹… MP Sub)` when the row carries an M.P. Govt.
- * domestic subsidy credit. Tier suffix mirrors the engine (first N u slice, 151–300, 301–500).
+ * Net bill cell: subsidy first in parentheses, then net — e.g. `(−₹545 MP Sub) ₹225`.
+ * Rule book: MP Govt. Domestic Subsidy is paid ONLY for monthly consumption ≤ 150 u.
+ * Any subsidy line on a >150-u row must be 0 (forfeited); no tier suffix is shown.
  */
-function formatAuditNetBillCell(D: ProposalDict, total: number, subsidy?: number, rowUnits?: number) {
+function formatAuditNetBillCell(_D: ProposalDict, total: number, subsidy?: number, _rowUnits?: number) {
   const base = inr(total);
   const s = Math.round(subsidy ?? 0);
   if (s >= 0) return base;
   const a = Math.abs(s).toLocaleString("en-IN");
-  const core = `${base} (−₹${a} MP Sub)`;
-  if (rowUnits == null || rowUnits <= 0) return core;
-  const u = Math.round(rowUnits);
-  if (u <= ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) {
-    const sliceU = Math.min(u, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
-    return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
-  }
-  if (u <= 300) return `${core} · 151–300 u tier`;
-  if (u <= 500) return `${core} · 301–500 u cap`;
-  return core;
+  return `(−₹${a} MP Sub) ${base}`;
 }
 const inrK = (v: number) => {
   const x = Math.max(0, Math.round(v));

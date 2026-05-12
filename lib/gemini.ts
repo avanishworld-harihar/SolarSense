@@ -66,33 +66,128 @@ export async function analyzeBillWithGemini(
 
   const prompt = `Extract bill fields from this Indian electricity bill image/PDF.
 Return ONLY valid JSON (no markdown), exactly this shape:
-{"name":"","address":"","consumer_id":"","meter_number":"","connection_date":"","sanctioned_load":"","phase":"Single or Three","connection_type":"purpose as printed e.g. Shops/Showrooms or Domestic","purpose_of_supply":"","tariff_category":"","contract_demand_kva":null,"discom":"","state":"","district":"","country":"India","bill_month":"","fixed_charges_inr":null,"energy_charges_inr":null,"electricity_duty_inr":null,"regulatory_surcharges_inr":null,"fppas_inr":null,"total_amount_payable_inr":null,"read_type":"","bill_type_label":"","metered_unit_consumption":null,"total_amount_till_due_inr":null,"total_amount_after_due_inr":null,"current_month_bill_amount_inr":null,"principal_arrear_inr":null,"amount_received_against_bill_inr":null,"mp_govt_subsidy_amount_inr":null,"rebate_incentive_inr":null,"ccb_adjustment_inr":null,"nfp_flag":false,"strict_audit_mode":"strict_v1","strict_audit_notes":[],"months":{"jan":null,"feb":null,"mar":null,"apr":null,"may":null,"jun":null,"jul":null,"aug":null,"sep":null,"oct":null,"nov":null,"dec":null},"consumption_history":[],"format_memory":"","tariff_slabs_detected":[]}
+{"name":"","address":"","consumer_id":"","meter_number":"","connection_date":"","sanctioned_load":"","phase":"Single or Three","connection_type":"purpose as printed e.g. Shops/Showrooms or Domestic","purpose_of_supply":"","tariff_category":"","contract_demand_kva":null,"discom":"","state":"","district":"","country":"India","bill_month":"","fixed_charges_inr":null,"energy_charges_inr":null,"electricity_duty_inr":null,"regulatory_surcharges_inr":null,"fppas_inr":null,"total_amount_payable_inr":null,"read_type":"","bill_type_label":"","metered_unit_consumption":null,"total_amount_till_due_inr":null,"total_amount_after_due_inr":null,"current_month_bill_amount_inr":null,"principal_arrear_inr":null,"amount_received_against_bill_inr":null,"mp_govt_subsidy_amount_inr":null,"tod_rebate_inr":null,"pf_welding_surcharge_inr":null,"rebate_incentive_inr":null,"ccb_adjustment_inr":null,"nfp_flag":false,"strict_audit_mode":"strict_v1","strict_audit_notes":[],"months":{"jan":null,"feb":null,"mar":null,"apr":null,"may":null,"jun":null,"jul":null,"aug":null,"sep":null,"oct":null,"nov":null,"dec":null},"consumption_history":[],"format_memory":"","tariff_slabs_detected":[]}
 ${hintBlock}
+======================================================================
 INDIAN ELECTRICITY BILL STRUCTURE (read carefully before extracting):
+======================================================================
 • CURRENT MONTH section (top/header area): Bill Month, Billing Date, Metered Unit Consumption (= actual units consumed this month = Current Reading MINUS Previous Reading, a 2–3 digit number like 170 or 419), Current Reading (4–6 digit meter accumulator like 12847), Previous Reading (4–6 digit accumulator like 12406), Read Type, Bill Type. All charge lines (Fixed Charge, Energy Charges, FPPAS, Electricity Duty, Subsidy, Rebate, Arrear, CCB) also belong to current month.
 • LAST SIX MONTHS CONSUMPTION table (lower section): Shows history. It contains 5 recent previous months PLUS one "same month last year" entry (often bold or listed first) as a year-on-year comparison reference. Example: bill_month=APR-2026 → table shows APR-2025 (same month last year), NOV-2025, DEC-2025, JAN-2026, FEB-2026, MAR-2026.
 • BILLING DETAILS / CHARGE BREAKDOWN: separate section with all INR charge line items.
 • CRITICAL — COLUMN GUARD (MP DISCOM layouts): NEVER put values from **M.P. Govt. Subsidy Amount / Government subsidy** rows into metered_unit_consumption — those figures are ₹ (decimals like −544.96 or −76.57) and MUST go ONLY in mp_govt_subsidy_amount_inr. metered_unit_consumption is exclusively the month's **consumption kWh** (whole number).
 • CRITICAL — metered_unit_consumption vs meter reading: metered_unit_consumption is the NET UNITS consumed (Current Reading − Previous Reading = typically 100–600 units for domestic). Current Reading and Previous Reading are large accumulator values (4–6 digits, e.g. 12847). NEVER use a 4–6 digit accumulator value as metered_unit_consumption.
 
-Rules:
+======================================================================
+FIELD EXTRACTION RULES — CRITICAL for tariff engine downstream
+======================================================================
+The codified MPERC tariff list does the calculation. You MUST extract the
+inputs so the rule engine can pick the right slab + sub-type. Wrong
+sanctioned_load / tariff_category / purpose forces the engine into the
+wrong sub-rule. Be precise — leave a field blank rather than guess.
+
+──── (A) metered_unit_consumption (THIS MONTH's kWh) ────
+• Net units = Current Reading − Previous Reading.
+• Always a positive whole number, typically 1–9999.
+• NEVER copy a 4–6 digit meter accumulator here.
+• NEVER copy any ₹ value (decimals, negative signs) here.
+
+──── (B) sanctioned_load (KW string verbatim) ────
+• Label PREFERENCE order (use the first one you find):
+    1. "Sanctioned Load"   2. "Authorised Load" / "Auth. Load"
+    3. "S. Load"           4. "Connected Load"  (fallback only)
+• Copy EXACTLY as printed WITH unit: "2.0 KW", "5.0 KW", "0.5 HP", "10 KW".
+• Strip arbitrary surrounding text but keep the number + unit.
+• Typical MP domestic single-phase: 1.0–2.0 KW; three-phase: 3.0–8.0 KW.
+• Typical MP commercial: 1.0–10.0 KW (sanctioned-load tariff) or higher (demand-based).
+• If BOTH "Sanctioned Load" and "Connected Load" print with different values,
+  USE the "Sanctioned Load" line. Add a strict_audit_notes entry.
+• DO NOT confuse with "Contract Demand" (that is a separate field in kVA).
+
+──── (C) contract_demand_kva (number in kVA) ────
+• Number-only — only if "Contract Demand" / "CD" / "Cont. Demand" is printed
+  separately with kVA unit.
+• null if absent or zero — that means the consumer is on sanctioned-load tariff.
+• NEVER copy sanctioned_load (KW) here.
+
+──── (D) phase ────
+• "Single" if bill prints "SINGLE", "1-Phase", "1 Ph", "1Φ", "1 PH".
+• "Three" if bill prints "THREE", "3-Phase", "3 Ph", "3Φ", "3 PH".
+• If sanctioned_load ≤ 2 KW with no explicit phase printed → "Single".
+
+──── (E) tariff_category (EXACT printed code) ────
+• Copy the EXACT printed tariff code (e.g. "LV-1.2", "LV2 [LV2.2]", "LV 2.1", "LV-5.1").
+• Valid MPERC LT codes: LV-1.1, LV-1.2, LV-2.1, LV-2.2, LV-3, LV-4, LV-5.1, LV-5.2, LV-6.
+• If no code is printed (only a label like "Domestic"), leave tariff_category empty —
+  the back-end will map from purpose_of_supply.
+
+──── (F) purpose_of_supply AND connection_type ────
+• Copy the EXACT printed purpose into BOTH fields. Both must match.
+• If only one purpose line is printed, duplicate it into both.
+• Common MP purposes (LV mapping — for your self-check only, DO NOT paraphrase):
+    - "Domestic" / "घरेलू" / "Light & Fan" / "Residential" → LV1.2
+    - "BPL Lifeline" / "बीपीएल"                          → LV1.1
+    - "Schools" / "Educational" / "College" / "Hostel"
+      / "Working Women Hostel" / "Laboratory"            → LV2.1
+    - "Shops" / "Showrooms" / "Office" / "Hospital"
+      / "Restaurant" / "Hotel" / "Commercial"
+      / "Non-Domestic" / "Godown"                        → LV2.2
+    - "Public Water Works" / "PWW" / "Street Light"      → LV3
+    - "LT Industrial" / "Manufacturing" / "Workshop"
+      / "Industry"                                       → LV4
+    - "Agriculture - Metered" / "Krishi - Metered"
+      / "Pump - Metered"                                 → LV5.1
+    - "Agriculture - Unmetered" / "Flat-rate Pump"       → LV5.2
+    - "EV Charging" / "Battery Charging Station"         → LV6
+• If purpose is illegible or absent, leave BOTH empty. DO NOT guess.
+
+──── (G) bill_month (drives FY tariff + monthly FPPAS) ────
+• Format as printed (with year): "APR-2026", "Apr 2026", "April 2026".
+• If only "April" is printed without a year, check billing date / reading
+  date / due date to disambiguate. Add a strict_audit_notes entry if uncertain.
+
+──── (H) discom + state ────
+• Identify MP DISCOM from logo/header/address:
+    - MPPaKVVCL (M.P. Paschim Kshetra / MPWZ-Indore zone)
+    - MPMKVVCL (M.P. Madhya Kshetra / MPCZ-Bhopal zone)
+    - MPPKVVCL (M.P. Poorv Kshetra / MPEZ-Jabalpur zone)
+
+======================================================================
+CHARGE LINE RULES
+======================================================================
 1) STRICT AUDIT: use only printed values; no inference/assumptions.
 2) Unknown text="", unknown numbers=null, and add note in strict_audit_notes when uncertain.
 3) Do NOT infer meter type from section headers (e.g. "Smart Meter RC/DC Amount Received" is not meter type).
-4) PURPOSE: copy purpose_of_supply like connection_type (Shops/Showrooms, School, Hospital, Domestic). If only one line exists, duplicate it in both fields.
-4a) sanctioned_load: copy the **Sanctioned Load** / **Connected Load** line exactly as printed (e.g. "2.0 KW"). phase: set "Single" or "Three" to match the bill (MP DISCOMs often print "SINGLE" for single-phase domestic).
-5) CHARGES: extract fixed_charges_inr, energy_charges_inr, electricity_duty_inr, fppas_inr, regulatory_surcharges_inr as separate printed lines. Note in strict_audit_notes if ToD surcharges are mixed with flat energy.
-6) contract_demand_kva: only if "Contract Demand" or similar is printed separately (number in kVA).
-7) consumption_history: include EVERY row from the history table as {"month":"MMM-YYYY","units":number} — including the "same month last year" row. Always include the year in month label (e.g. "APR-2025").
-8) CRITICAL — months object (year-disambiguation): months keys jan–dec have NO year field, so:
+4) CHARGES: extract fixed_charges_inr, energy_charges_inr, electricity_duty_inr, fppas_inr, regulatory_surcharges_inr as separate printed lines. Note in strict_audit_notes if ToD surcharges are mixed with flat energy.
+5) pf_welding_surcharge_inr: extract from "PF Surcharge" / "Welding Surcharge" /
+   "Low PF Surcharge" lines (LV2.2 only; usually ₹0 except when power factor
+   < threshold). null if no such line.
+6) consumption_history: include EVERY row from the history table as {"month":"MMM-YYYY","units":number} — including the "same month last year" row. Always include the year in month label (e.g. "APR-2025").
+7) CRITICAL — months object (year-disambiguation): months keys jan–dec have NO year field, so:
    a) Current bill month key → ALWAYS set from metered_unit_consumption (round to integer). Example: bill_month="APR-2026" → months.apr = round(metered_unit_consumption). NEVER use the history table for this key.
    b) Previous months → use the 5 recent history months from the current billing year window. Map EACH row to its EXACT labelled month — DO NOT shift or swap month assignments. NOV-2025 row → months.nov. DEC-2025 row → months.dec. Never assign a value from one month's row to a different month key.
    c) "Same month last year" row → put in consumption_history ONLY. NEVER write to months (not even to the same-month key). Example: DEC-2024 bold row in a DEC-2025 bill → consumption_history only, NOT months.dec.
    d) CONFUSION GUARD example: DEC-2025 bill has metered=194 units (for DEC). History shows NOV-2025: 276. Set months.dec=194, months.nov=276. Do NOT put 194 into months.nov — that is DEC's value.
-9) format_memory: one short sentence on where monthly history appears; else "".
-10) tariff_slabs_detected: [] if slab table not visible.
-11) nfp_flag=true only if "NFP" or "Not For Payment" is explicitly printed.
-12) CRITICAL — mp_govt_subsidy_amount_inr: extract from line labelled "M.P. Govt. Subsidy Amount" / "MP Govt Subsidy" / "Subsidy Amount" / "AGJY" / "Atal Griha Jyoti" / "Indira Griha Jyoti" / "Mukhyamantri … Subsidy". The bill prints this as a NEGATIVE ₹ value (e.g. "-544.96", "-100.00", "( 544.96 )"). Preserve the sign — return a NEGATIVE NUMBER. If the line shows ₹0.00 (consumer > 150 u, no subsidy), set to 0 (not null). If the line is missing entirely from the bill, only then return null. Do NOT confuse with "Rebate & Incentive" or "Interest On Security Deposit" — those are SEPARATE lines. **Our app never feeds this value into subsidy calculation** — subsidy is computed from units + tariff rules; this field is only so subsidy ₹ is not mistaken for kWh and for optional bill-vs-model comparison.
+8) format_memory: one short sentence on where monthly history appears; else "".
+9) tariff_slabs_detected: [] if slab table not visible.
+10) nfp_flag=true only if "NFP" or "Not For Payment" is explicitly printed.
+11) CRITICAL — mp_govt_subsidy_amount_inr: extract ONLY from the line whose label EXACTLY reads "M.P. Govt. Subsidy Amount" / "MP Govt Subsidy" / "Subsidy Amount" / "AGJY" / "Atal Griha Jyoti" / "Indira Griha Jyoti" / "Mukhyamantri … Subsidy". RULE: MP Govt. Domestic Subsidy is paid ONLY when monthly consumption ≤ 150 units. If metered_unit_consumption > 150 then this line is ALWAYS ₹0.00 — return 0, NEVER a negative value. Below 150 u the bill prints a NEGATIVE ₹ (e.g. "-544.96"); preserve the sign. NEVER copy the value from any other negative line — especially NOT from "Other / TOD Rebate & Surcharge", "Rebate & Incentive", "Online Payment Rebate", "Lock Credit / Employee Rebate" or "Interest On Security Deposit". The TOD Rebate goes ONLY in tod_rebate_inr; subsidy and TOD are independent fields. If the M.P. Govt. Subsidy line is entirely absent (no row at all), return null.
+12) CRITICAL — tod_rebate_inr: extract ONLY from lines labelled "TOD" / "Time of Day" / "ToD Rebate & Surcharge" / "Other / TOD…". Signed ₹ as printed (rebate often negative; e.g. MAR-2026 −₹76.57, APR-2026 −₹100.00 on >150-u bills). NEVER put this amount into mp_govt_subsidy_amount_inr — TOD and Subsidy are independent fields.
+
+======================================================================
+SELF-AUDIT BEFORE RETURNING
+======================================================================
+Add to strict_audit_notes whenever ANY of these are true (so downstream
+defaults / sub-rules can compensate):
+  • "Sanctioned Load not printed"          (sanctioned_load empty)
+  • "Tariff code not printed"              (tariff_category empty)
+  • "Purpose / connection type not printed"
+  • "Phase not printed"
+  • "Bill month year ambiguous"            (no year on bill month)
+  • "Both Sanctioned + Connected Load printed — used Sanctioned"
+  • "Contract Demand present (demand-based sub-type)"
+  • "ToD energy line present — flat-energy may include ToD components"
+  • "Subsidy line not visible — units > 150 implies zero per MPERC rule"
+
 Return ONLY the JSON object.`;
 
   const parts: GeminiPart[] = [
@@ -266,6 +361,7 @@ export function normalizeParsedBillShape(raw: Record<string, unknown>): ParsedBi
     ),
     mp_govt_subsidy_amount_inr: toNullableNumber(raw.mp_govt_subsidy_amount_inr ?? raw.mpGovtSubsidyAmountInr),
     tod_rebate_inr: toNullableNumber(raw.tod_rebate_inr ?? raw.todRebateInr),
+    pf_welding_surcharge_inr: toNullableNumber(raw.pf_welding_surcharge_inr ?? raw.pfWeldingSurchargeInr),
     fppas_inr: toNullableNumber(raw.fppas_inr ?? raw.fppasInr),
     electricity_duty_inr: toNullableNumber(raw.electricity_duty_inr ?? raw.electricityDutyInr),
     regulatory_surcharges_inr: toNullableNumber(

@@ -693,21 +693,13 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
   const summary = summarizeProposalDeck(input);
   const lang = summary.lang;
   const D: ProposalDict = dict(lang);
-  const auditNetCell = (total: number, subsidy?: number, rowUnits?: number) => {
+  // Rule book: subsidy paid ONLY for ≤150 u. No tier suffix needed at any consumption.
+  const auditNetCell = (total: number, subsidy?: number) => {
     const base = inr(total);
     const s = Math.round(subsidy ?? 0);
     if (s >= 0) return base;
     const a = Math.abs(s).toLocaleString("en-IN");
-    const core = `${base} (−₹${a} MP Sub)`;
-    if (rowUnits == null || rowUnits <= 0) return core;
-    const u = Math.round(rowUnits);
-    if (u <= ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) {
-      const sliceU = Math.min(u, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
-      return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
-    }
-    if (u <= 300) return `${core} · 151–300 u tier`;
-    if (u <= 500) return `${core} · 301–500 u cap`;
-    return core;
+    return `(−₹${a} MP Sub) ${base}`;
   };
   const labels = monthLabels(lang);
   const installer = summary.installer;
@@ -827,7 +819,7 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
         line: { color: T.border, width: 0.3 }
       });
       cx = left;
-      const cells = [r.label, String(r.units), inr(r.energy), inr(r.fixed), inr(r.duty + r.fuel), auditNetCell(r.total, r.subsidy, r.units)];
+      const cells = [r.label, String(r.units), inr(r.energy), inr(r.fixed), inr(r.duty + r.fuel), auditNetCell(r.total, r.subsidy)];
       cells.forEach((c, j) => {
         s2.addText(c, {
           x: cx + 0.05, y: yRow, w: colWs[j] - 0.1, h: rowH,

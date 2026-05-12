@@ -481,8 +481,9 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     ccbAdjustmentInr: num(parsed.ccb_adjustment_inr) ?? undefined,
     energyRateOverridePerUnit: smartBilling.energyRateOverridePerUnit,
     fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr,
-    printedElectricityDutyInr: num(parsed.electricity_duty_inr) ?? undefined,
-    printedFppasInr: num(parsed.fppas_inr) ?? undefined,
+    // Printed Electricity Duty / FPPAS lines are intentionally NOT passed to
+    // the engine — the MP tariff list is the canonical source. Both values are
+    // still kept in `printed` below for the variance comparison view.
     printedTodRebateInr: num(parsed.tod_rebate_inr) ?? undefined,
     priorMeteredUnits: priorMeteredUnitsFromParsed(parsed)
   };
@@ -532,8 +533,32 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
   ) {
     riskFlags.push("Sanctioned load not parsed — fixed-charge / LV sub-type may be off.");
   }
+  // OCR completeness flags — surface so the user knows when a saved-tariff
+  // calculation may have relied on an inferred default instead of a printed value.
+  if (!parsed.tariff_category?.trim()) {
+    riskFlags.push("Tariff code not printed on bill — category resolved from purpose only.");
+  }
+  if (!parsed.purpose_of_supply?.toString().trim() && !parsed.connection_type?.trim()) {
+    riskFlags.push("Purpose / connection type not parsed — category resolution at risk.");
+  }
+  if (!parsed.phase?.trim()) {
+    riskFlags.push("Phase not parsed — defaulted from sanctioned-load size.");
+  }
+  if (!parsed.bill_month?.trim()) {
+    riskFlags.push("Bill month not parsed — FY tariff version + FPPAS lookup may default.");
+  } else if (!/\b\d{4}\b/.test(parsed.bill_month)) {
+    riskFlags.push("Bill month year ambiguous — verify FY tariff version manually.");
+  }
   if (smartBilling.hadCategoryConflict) {
     riskFlags.push("Tariff header vs purpose of supply reconciled (smart multi-factor resolver).");
+  }
+  // Propagate any self-audit notes raised by the OCR model (Anthropic/Gemini)
+  // so the UI sees the exact same warnings the parser surfaced.
+  if (Array.isArray(parsed.strict_audit_notes) && parsed.strict_audit_notes.length > 0) {
+    for (const note of parsed.strict_audit_notes.slice(0, 8)) {
+      const trimmed = String(note ?? "").trim();
+      if (trimmed) riskFlags.push(`OCR self-audit: ${trimmed}`);
+    }
   }
 
   const smartBillingNotes =

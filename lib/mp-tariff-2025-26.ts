@@ -368,42 +368,41 @@ export const ATAL_GRIHA_JYOTI = {
 /**
  * MP Govt. Domestic Subsidy schedule — FY 2025-26 (effective MAY-2025 → MAR-2026).
  *
- * Empirically reverse-engineered from a verified 12-month MPEZ bill set
- * (consumer N1906004864, LV-1.2 urban) covering units 122 → 435 across the
- * full FY. The printed `M.P. Govt. Subsidy Amount` line on each bill follows
- * a TIERED model, NOT the simple "₹1/u on first 100 u − ₹100" rule that
- * older engine builds used (which materially under-counts the credit).
+ * RULE BOOK (binding):
+ *   **MP Govt. Domestic Subsidy is paid ONLY when monthly consumption ≤ 150 units.**
+ *   The moment consumption crosses 150 u in a month, the consumer loses the
+ *   subsidy for that entire month — the printed `M.P. Govt. Subsidy Amount`
+ *   line is **₹0.00** (verified across the full 12-month MPEZ bill set for
+ *   consumer N1906004864, units 122 → 435).
  *
- *   Tier A — Heavy subsidy bracket (≤150 u/month, LV-1.2 only):
- *     The state covers (a) the full slab energy on the first 100 u plus
- *     (b) a proportional share of fixed charge and electricity duty
- *     scaled by 100/units, minus the consumer's ₹100 cap. Encoded as:
+ *   Within the ≤150 u eligibility bracket the state covers:
+ *     (a) the full slab energy on the first 100 u, plus
+ *     (b) a proportional share of fixed charge + electricity duty scaled by
+ *         100/units, minus the consumer's ₹100 cap. Encoded as:
  *
  *       subsidy = slabEnergy(min(units, 100))
  *               + (fixedCharge + electricityDuty) × min(100/units, 1)
- *               − consumerCapInr
+ *               − ₹100
  *
- *     Verified against printed line on NOV/DEC/JAN/FEB bills (Tier A FC+ED proration
- *     can use prior calendar month's units as denominator when gated — e.g. DEC-2025
- *     after NOV 122 u; see `mp-bill-engine.ts`):
+ *     Verified against printed subsidy lines on NOV/DEC/JAN/FEB bills (Tier A
+ *     FC+ED proration can use the prior calendar month's units as denominator
+ *     after a low month — see `mp-bill-engine.ts`):
  *       NOV · 122 u → printed −₹544.96, model ≈ −₹544.64 (Δ ₹0.32)
  *       DEC · 147 u → printed −₹559.69, model ≈ −₹559.39 (Δ ₹0.30)
  *       JAN · 126 u → printed −₹529.98, model ≈ −₹544.59 (Δ ₹14.61)
  *       FEB · 122 u → printed −₹536.31, model ≈ −₹547.10 (Δ ₹10.79)
  *
- *   Tier B — Mid-consumption bracket (151–300 u/month, LV-1.2 only):
- *     Verified MAR-2026 (275 u → −₹76.57): subsidy ≈ ₹0.279 × units.
- *
- *   Tier C — High-consumption courtesy cap (300 u < units ≤ 500, LV-1.2 only):
- *     FY 2025-26 set this to ₹0 (verified: AUG-25 316 u → 0; SEP-25 326 u → 0;
- *     JUL-25 361 u → 0; MAY-25 422 u → 0; JUN-25 435 u → 0).
- *
- *   Tier D — Above 500 u: no subsidy.
+ *   ABOVE 150 u: NO subsidy in any sub-tier.
+ *     Verified printed `M.P. Govt. Subsidy Amount = 0.00` on:
+ *       MAR-2026 · 275 u (TOD rebate of −₹76.57 sits on a SEPARATE line)
+ *       OCT-2025 · 236 u; AUG-2025 · 316 u; SEP-2025 · 326 u;
+ *       JUL-2025 · 361 u; MAY-2025 · 422 u; JUN-2025 · 435 u
  *
  * The bill engine uses this schedule as the **only** M.P. Govt. domestic subsidy
- * for LV-1.2 — from units + tariff context inside `calculateMpBill`, never from
- * the printed subsidy line on the bill.
-
+ * for LV-1.2 — from units + tariff rules inside `calculateMpBill`. The printed
+ * subsidy line on the bill is NEVER fed back into the engine; ToD rebate /
+ * surcharge is a wholly separate field (`printedTodRebateInr`) and must not
+ * be confused with `mp_govt_subsidy_amount_inr` during OCR.
  */
 export type MpDomesticSubsidyTier = {
   /** Inclusive upper unit bound; null = catch-all. */
@@ -453,28 +452,13 @@ export const MP_DOMESTIC_SUBSIDY_FY_2025_26: MpDomesticSubsidySchedule = {
         "verified against 4 MPEZ bills, average residual < ₹15."
     },
     {
-      untilUnits: 300,
-      model: "per_unit_credit",
-      perUnitInr: 0.279,
-      // Verified empirically: extension to 151-300 u domestic consumers landed
-      // on the MAR-2026 billing cycle (₹76.57 credit for 275 u). The 5 prior
-      // FY 2025-26 months with 151-300 u consumption (OCT-2025 236 u, plus
-      // 316-422 u Aug-Sep) all printed ₹0 on the subsidy line. Engine therefore
-      // gates this tier behind `effectiveFromYearMonth = 2026-03`.
-      effectiveFromYearMonth: "2026-03",
-      note:
-        "151–300 u: ₹0.279/u credit, effective MAR-2026+ in FY 2025-26 " +
-        "(verified MAR-2026 275 u → −₹76.57; pre-MAR FY 25-26 rows priced at ₹0)."
-    },
-    {
-      untilUnits: 500,
-      model: "none",
-      note: "301–500 u: FY 2025-26 had no MP Govt. courtesy cap (verified across 5 MPEZ bills)."
-    },
-    {
       untilUnits: null,
       model: "none",
-      note: ">500 u: no subsidy."
+      note:
+        ">150 u: M.P. Govt. Domestic Subsidy is forfeited for the entire month per MP rule book. " +
+        "Verified printed `M.P. Govt. Subsidy Amount = 0.00` across MAR-2026 (275 u), OCT-2025 (236 u), " +
+        "AUG-25/SEP-25 (316/326 u), JUL-25 (361 u), MAY-25/JUN-25 (422/435 u). " +
+        "The −₹76.57 line on MAR-26 is the **Other / TOD Rebate & Surcharge**, not subsidy."
     }
   ]
 };

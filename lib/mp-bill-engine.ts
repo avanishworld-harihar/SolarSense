@@ -116,9 +116,19 @@ export type MpBillEngineInput = {
   energyRateOverridePerUnit?: number;
   /** Smart Billing: pin monthly fixed ₹ from a verified bill line. */
   fixedChargeOverrideInr?: number;
-  /** Strict audit: use printed Electricity Duty from the bill line when available. */
+  /**
+   * DEPRECATED: previously pinned the engine output to the printed ED line.
+   * The MP tariff list is the canonical source — calculation must always derive
+   * Electricity Duty from `MP_ELECTRICITY_DUTY_*` rules. This field is now
+   * IGNORED by `calculateMpBill`. Callers that want to surface a printed line
+   * for comparison must keep it in their own UI/comparison object.
+   */
   printedElectricityDutyInr?: number;
-  /** Strict audit: use printed FPPAS / fuel surcharge from the bill line when available. */
+  /**
+   * DEPRECATED: see `printedElectricityDutyInr`. FPPAS must come from
+   * `MP_FPPAS_MONTHLY_RATES` (or the explicit `fppasPct` override). This field
+   * is now IGNORED — calculation is strict tariff-driven.
+   */
   printedFppasInr?: number;
   /**
    * Prior calendar month metered units (e.g. from OCR `months` / history). Used only for Tier A
@@ -680,24 +690,15 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     };
   }
 
-  // Auto-lookup FPPAS from monthly table if not explicitly overridden.
-  let fppas = computeFppas(input.units, input.fppasPct, input.billMonth);
-  if (typeof input.printedFppasInr === "number" && Number.isFinite(input.printedFppasInr)) {
-    fppas = {
-      amount: r2(input.printedFppasInr),
-      rate: input.units > 0 ? r2(input.printedFppasInr / input.units) : 0,
-      formula: `Printed FPPAS line override: ₹${r2(input.printedFppasInr)}`
-    };
-  }
-  // Pass fppas.amount so LV2.2 duty base = energy + FPPAS − ₹160 (verified formula).
-  let ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth, fppas.amount);
-  if (typeof input.printedElectricityDutyInr === "number" && Number.isFinite(input.printedElectricityDutyInr)) {
-    ed = {
-      amount: r2(input.printedElectricityDutyInr),
-      rate: 0,
-      formula: `Printed Electricity Duty line override: ₹${r2(input.printedElectricityDutyInr)}`
-    };
-  }
+  // Strict tariff: FPPAS always comes from the monthly MPERC table (or explicit
+  // `fppasPct` override). Printed FPPAS line is intentionally NOT pinned here —
+  // it is only kept by the audit caller for display / variance comparison.
+  const fppas = computeFppas(input.units, input.fppasPct, input.billMonth);
+  // Strict tariff: Electricity Duty always comes from the codified MPERC duty
+  // rules (`MP_ELECTRICITY_DUTY_*`). Printed ED line is NOT pinned — the audit
+  // caller should compare printed vs computed in its own variance view.
+  // (LV2.2 duty base uses fppas.amount per verified formula: EC + FPPAS − ₹160.)
+  const ed = computeElectricityDuty(input.category, input.units, ec.total, fc.amount, input.billMonth, fppas.amount);
 
   const arrear = max0(input.principalArrearInr ?? 0);
 
@@ -777,12 +778,9 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   if (input.fixedChargeOverrideInr != null) {
     notes.push(`Smart Billing: fixed charge pinned @ ₹${input.fixedChargeOverrideInr}/mo (board cross-check).`);
   }
-  if (input.printedFppasInr != null) {
-    notes.push(`Strict Audit: FPPAS pinned to printed bill line ₹${r2(input.printedFppasInr)}.`);
-  }
-  if (input.printedElectricityDutyInr != null) {
-    notes.push(`Strict Audit: Electricity Duty pinned to printed bill line ₹${r2(input.printedElectricityDutyInr)}.`);
-  }
+  // Note: printedFppasInr / printedElectricityDutyInr are intentionally ignored
+  // by the calculation. The MP tariff list is the single source of truth; the
+  // audit layer surfaces printed-vs-calculated variance separately.
 
   const lines: MpBillLine[] = [
     { kind: "energy", label: "Energy Charges (slab-wise)", amountInr: r2(ec.total), detail: { units: input.units } },
