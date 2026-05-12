@@ -15,8 +15,55 @@
 import type {
   CategoryTariff,
   ElectricityDutyRule,
+  MpDomesticSubsidySchedule,
   MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
+
+/**
+ * MP Govt. Domestic Subsidy schedule — FY 2026-27 (effective APR-2026 onwards).
+ *
+ * Verified APR-2026 (327 u → −₹100): the courtesy cap for the 301-500 u
+ * bracket was reinstated for FY 2026-27 (was ₹0 in FY 2025-26). Tiers A
+ * and B follow the same formulas as FY 2025-26 (no MP gazette change to
+ * the AGJY anchor), but the slab energies/duties on Tier A naturally
+ * use the FY 2026-27 tariffs because the engine looks them up from the
+ * active tariff year. We retain `consumerCapInr = 100` (verified).
+ */
+export const MP_DOMESTIC_SUBSIDY_FY_2026_27: MpDomesticSubsidySchedule = {
+  fy: "2026-27",
+  eligibleCategories: ["LV1.2"],
+  tiers: [
+    {
+      untilUnits: 150,
+      model: "agjy_slab_with_proportional_fc_duty",
+      consumerCapInr: 100,
+      subsidisedFirstUnitsCount: 100,
+      note:
+        "≤150 u (AGJY anchor, FY 26-27): subsidy = slabEnergy(min(units,100)) + (FC+ED)×(100/units) − ₹100 " +
+        "using FY 26-27 slab rates (₹4.71 / ₹5.67)."
+    },
+    {
+      untilUnits: 300,
+      model: "per_unit_credit",
+      perUnitInr: 0.305,
+      note:
+        "151–300 u: ₹0.305/u credit. FY 26-27 calibrated halfway between FY 25-26 (₹0.279/u) " +
+        "and the verified 301 u APR-26 cap (₹100 ≈ ₹0.331/u). Subject to recalibration as " +
+        "more FY 26-27 bills in this band are observed."
+    },
+    {
+      untilUnits: 500,
+      model: "flat_cap",
+      flatInr: 100,
+      note: "301–500 u: flat ₹100 courtesy cap (verified APR-2026 327 u → −₹100)."
+    },
+    {
+      untilUnits: null,
+      model: "none",
+      note: ">500 u: no subsidy."
+    }
+  ]
+};
 
 export const MP_TARIFF_FY_2026_27: Record<MpTariffCategory, CategoryTariff> = {
   "LV1.1": {

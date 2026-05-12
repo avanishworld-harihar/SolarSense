@@ -13,6 +13,7 @@ import { parsePdfBillFallback } from "@/lib/pdf-bill-fallback";
 import type { ParsedBillShape } from "@/lib/bill-parse";
 import { auditMpBill, type MpBillAuditReport } from "@/lib/mp-bill-audit";
 import { saveMpBillAuditRecord } from "@/lib/mp-bill-audit-persistence";
+import { sanitizeMpMeteredVsSubsidyFields } from "@/lib/mp-bill-field-sanitize";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -556,6 +557,9 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // MP DISCOM slips: ₹ subsidy often sits on the numeric column OCR labels as consumption.
+    parsed = sanitizeMpMeteredVsSubsidyFields(parsed);
 
     // ── Safety net: force current bill month slot = metered_unit_consumption ──────
     // Problem: MP DISCOM bills show the PREVIOUS billing period month (e.g. MAR-2026)

@@ -2058,7 +2058,6 @@ function buildMonthlyAuditOverridesFromBills(
   electricityDutyInr?: number;
   units?: number;
   pfSurchargeInr?: number;
-  mpGovtSubsidyInr?: number;
 }>> {
   const out: Partial<Record<keyof MonthlyUnits, {
     netPayableInr: number;
@@ -2068,7 +2067,6 @@ function buildMonthlyAuditOverridesFromBills(
     electricityDutyInr?: number;
     units?: number;
     pfSurchargeInr?: number;
-    mpGovtSubsidyInr?: number;
   }>> = {};
 
   for (const bill of bills) {
@@ -2083,7 +2081,6 @@ function buildMonthlyAuditOverridesFromBills(
     const fppasInr = billInrFromParsed(bill.fppas_inr) ?? undefined;
     const electricityDutyInr = billInrFromParsed(bill.electricity_duty_inr) ?? undefined;
     const unitsVal = billInrFromParsed(bill.metered_unit_consumption) ?? undefined;
-    const mpGovtSubsidyInr = billInrFromParsed(bill.mp_govt_subsidy_amount_inr);
 
     // Welding/PF Surcharge: prefer explicit OCR field; fall back to computing
     // the gap between the printed net and standard components so that
@@ -2108,8 +2105,7 @@ function buildMonthlyAuditOverridesFromBills(
       ...(fppasInr != null ? { fppasInr } : {}),
       ...(electricityDutyInr != null ? { electricityDutyInr } : {}),
       ...(unitsVal != null ? { units: unitsVal } : {}),
-      ...(pfSurchargeInr != null ? { pfSurchargeInr } : {}),
-      ...(mpGovtSubsidyInr != null && mpGovtSubsidyInr !== 0 ? { mpGovtSubsidyInr } : {})
+      ...(pfSurchargeInr != null ? { pfSurchargeInr } : {})
     };
   }
 

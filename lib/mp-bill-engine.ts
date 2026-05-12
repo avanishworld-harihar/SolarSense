@@ -17,10 +17,11 @@
  *   electricityDuty = (energyCharge + fppas − exemption) × dutyRate   for LV2.2
  *                     (₹160 for FY 2025-26 bills; APR-2026 uses ₹170.913… to match MPEZ duty line with FY27 rates)
  *                  = (energyCharge + fixedCharge) × dutyRate   for all other categories
- *   subsidy        = − Atal Griha Jyoti credit (LV-1.2 only, ≤150 u/mo eligible; ₹1/u on first 100 u slice)
+ *   subsidy        = − MP domestic rule schedule only (LV-1.2; units + FC/ED context from this run). Never from bill OCR.
+ *   todRebate      = Time-of-Day rebate/surcharge line ("Other / TOD…") — **never** merged with subsidy
  *   onlineRebate   = − min(0.5% × grossPayable, ₹1000) when paid online
  *   advanceCredit  = − manually-supplied advance interest (1%/month)
- *   netPayable     = energy + fixed + fppas + duty + extras − rebates − subsidy + CCB
+ *   netPayable     = energy + fixed + fppas + duty + todRebate + subsidy + arrear + … + rebates + CCB
  *                    (may be < 0 for credit bills; NFP uses printed net when provided else 0)
  *
  * ─── TARIFF AUTO-SELECTION (May 2026) ────────────────────────────────────────
@@ -41,11 +42,18 @@ import {
   type MpAreaProfile,
   type MpDiscomCode,
   type MpDiscomMeta,
+  type MpDomesticSubsidyTier,
   type MpPhase,
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
 import { isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
-import { getMpCategoryTariff, getMpElectricityDutyRule, resolveMpTariffVersion } from "@/lib/mp-tariff-registry";
+import {
+  getMpCategoryTariff,
+  getMpDomesticSubsidySchedule,
+  getMpElectricityDutyRule,
+  resolveMpTariffVersion
+} from "@/lib/mp-tariff-registry";
+import { isEligibleForMpDomesticSubsidy } from "@/lib/mp-subsidy-eligibility";
 
 const r2 = (n: number): number => Math.round(n * 100) / 100;
 const max0 = (n: number): number => (n < 0 ? 0 : n);
@@ -103,11 +111,10 @@ export type MpBillEngineInput = {
   /** Strict audit: use printed FPPAS / fuel surcharge from the bill line when available. */
   printedFppasInr?: number;
   /**
-   * M.P. Govt. subsidy line from bill OCR (MPEZ/MPCZ). When set, overrides the
-   * analytical AGJY formula so net payable matches the printed bill (the line
-   * often exceeds narrow "first 100 u slab − ₹100" estimates).
+   * Printed **ToD rebate & surcharge** line ("Other / TOD Rebate & Surcharge"). Signed as on bill
+   * (credit usually negative, e.g. −43.80). Separate from M.P. Govt. subsidy — never merge.
    */
-  printedMpGovtSubsidyInr?: number | null;
+  printedTodRebateInr?: number | null;
 };
 
 export type MpBillLineKind =
@@ -115,6 +122,7 @@ export type MpBillLineKind =
   | "fixed"
   | "fppas"
   | "electricity_duty"
+  | "tod_rebate"
   | "subsidy"
   | "online_rebate"
   | "advance_credit"
@@ -140,6 +148,8 @@ export type MpBillBreakdown = {
   fixedCharge: number;
   fppasCharge: number;
   electricityDuty: number;
+  /** ToD line (signed). Credit < 0. Never combined with subsidyCredit. */
+  todRebateInr: number;
   subsidyCredit: number; // negative number (e.g. -441)
   onlineRebate: number;  // negative number when applicable
   advanceCredit: number; // negative number
@@ -384,63 +394,188 @@ export function computeFppas(units: number, fppasPct?: number, billMonth?: strin
 }
 
 /* ------------------------------------------------------------------ */
-/* 5. Atal Griha Jyoti — LV-1.2 domestic, ≤150 u/month eligible.       */
+/* 5. MP Govt. Domestic Subsidy — tiered (AGJY anchor + extensions).   */
 /* ------------------------------------------------------------------ */
 
-/** Same `energySlabs` as `calculateMpBill` (after rural / LV2 overrides). Smart Billing override passed separately. */
-export type MpAgjySliceContext = {
+/** Parse a bill-month label into a comparable "YYYY-MM" key. Returns null when ambiguous. */
+function billMonthToIsoKey(raw?: string | null): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim().toLowerCase();
+  if (!s) return null;
+  const iso = s.match(/^(\d{4})-(\d{2})(?:-\d{2})?$/);
+  if (iso) return `${iso[1]}-${iso[2]}`;
+  const months: Record<string, number> = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+  };
+  let monthNum = 0;
+  let year = 0;
+  for (const p of s.split(/[\s\-\/]+/).filter(Boolean)) {
+    const n = parseInt(p, 10);
+    if (!Number.isNaN(n) && n >= 2000 && n <= 2099) { year = n; continue; }
+    const m = months[p.slice(0, 3)];
+    if (m) monthNum = m;
+  }
+  if (!year || !monthNum) return null;
+  return `${year}-${String(monthNum).padStart(2, "0")}`;
+}
+
+/**
+ * Resolve which subsidy tier applies for this consumption.
+ * Tiers are evaluated in declaration order; first `untilUnits >= units` wins.
+ * `effectiveFromYearMonth` gates the tier — a row whose bill month predates
+ * the gate falls through to the next eligible tier (or to "none").
+ */
+function pickSubsidyTier(
+  tiers: MpDomesticSubsidyTier[],
+  units: number,
+  billMonth?: string | null
+): MpDomesticSubsidyTier | null {
+  const rowKey = billMonthToIsoKey(billMonth);
+  for (const tier of tiers) {
+    if (tier.untilUnits != null && units > tier.untilUnits) continue;
+    if (tier.effectiveFromYearMonth && rowKey && rowKey < tier.effectiveFromYearMonth) {
+      // Tier not yet active for this billing month — keep searching higher
+      // tiers (this lets `none` tiers downstream catch the row).
+      continue;
+    }
+    if (tier.untilUnits == null) return tier;
+    return tier;
+  }
+  return null;
+}
+
+/** Context for the analytical subsidy fallback (replaces the legacy AGJY-only context). */
+export type MpDomesticSubsidyContext = {
   energySlabs: EnergySlab[];
   billMonth?: string;
   energyRateOverridePerUnit?: number | null;
+  /** Engine-computed fixed charge (₹) for the row — used by Tier A proportional credit. */
+  fixedChargeInr?: number;
+  /** Engine-computed electricity duty (₹) for the row — used by Tier A proportional credit. */
+  electricityDutyInr?: number;
 };
 
-export function computeAtalGrihaJyotiSubsidy(
+/**
+ * Compute the MP Govt. domestic subsidy credit (always returned as a NEGATIVE amount).
+ *
+ * Tier A (≤150 u): subsidy = slabEnergy(min(units, N)) + (FC + ED) × min(N/units, 1) − cap
+ * Tier B (151–300 u): subsidy = perUnit × units
+ * Tier C (301–500 u FY 26-27): flat ₹ cap
+ * Tier D (>500 u or FY 25-26 >300 u): zero
+ *
+ * The legacy `computeAtalGrihaJyotiSubsidy` name is preserved as an alias for callers
+ * that still depend on the AGJY-only signature; internally both call this function.
+ */
+export function computeMpDomesticSubsidy(
   category: MpTariffCategory,
   units: number,
-  ctx: MpAgjySliceContext
+  ctx: MpDomesticSubsidyContext
 ): {
   applied: boolean;
-  amount: number; // negative
+  amount: number; // negative when applied, 0 otherwise
   reason: string;
+  tier?: MpDomesticSubsidyTier;
 } {
-  if (!ATAL_GRIHA_JYOTI.eligibleCategories.includes(category)) {
-    return { applied: false, amount: 0, reason: `Category ${category} is not AGJY-eligible.` };
+  const schedule = getMpDomesticSubsidySchedule(ctx.billMonth);
+  if (!schedule.eligibleCategories.includes(category)) {
+    return { applied: false, amount: 0, reason: `Category ${category} not eligible for MP Govt. domestic subsidy.` };
   }
-  if (units <= 0) return { applied: false, amount: 0, reason: "Zero units — AGJY not applicable." };
+  if (units <= 0) {
+    return { applied: false, amount: 0, reason: "Zero units — no subsidy applicable." };
+  }
 
-  const cap = ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits;
-  if (units > cap) {
+  const tier = pickSubsidyTier(schedule.tiers, units, ctx.billMonth);
+  if (!tier || tier.model === "none") {
     return {
       applied: false,
       amount: 0,
-      reason: `AGJY: monthly consumption ${units} u exceeds eligibility cap (${cap} u) — no subsidy this month.`
+      reason: tier
+        ? `MP Govt. subsidy (${schedule.fy}): no credit for ${units} u — ${tier.note}`
+        : `MP Govt. subsidy (${schedule.fy}): consumption ${units} u falls outside scheduled tiers.`,
+      tier: tier ?? undefined
     };
   }
 
-  // First min(units, 100) units at ₹1/unit effective; state pays slab tariff minus that slice.
-  // Note: for 100–150 u/mo the credit is **constant** (full 100-u slab stack) — only units <100 vary.
-  const subsidisedUnits = Math.min(units, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
-  if (subsidisedUnits <= 0) return { applied: false, amount: 0, reason: "Zero qualifying units." };
+  const fyLabel = `FY ${schedule.fy}`;
 
-  const useFY2627 = isFY2026_27OrLater(ctx.billMonth);
-  const fyLabel = useFY2627 ? "FY 2026-27" : "FY 2025-26";
-
-  let energyOnSlice: number;
-  if (typeof ctx.energyRateOverridePerUnit === "number" && Number.isFinite(ctx.energyRateOverridePerUnit)) {
-    energyOnSlice = r2(subsidisedUnits * ctx.energyRateOverridePerUnit);
-  } else {
-    energyOnSlice = computeEnergyChargeTelescopic(subsidisedUnits, ctx.energySlabs).total;
+  if (tier.model === "agjy_slab_with_proportional_fc_duty") {
+    const anchorUnits = Math.min(units, tier.subsidisedFirstUnitsCount ?? ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
+    if (anchorUnits <= 0) {
+      return { applied: false, amount: 0, reason: "Zero qualifying units for AGJY anchor.", tier };
+    }
+    let energyOnSlice: number;
+    if (typeof ctx.energyRateOverridePerUnit === "number" && Number.isFinite(ctx.energyRateOverridePerUnit)) {
+      energyOnSlice = r2(anchorUnits * ctx.energyRateOverridePerUnit);
+    } else {
+      energyOnSlice = computeEnergyChargeTelescopic(anchorUnits, ctx.energySlabs).total;
+    }
+    const fc = Math.max(0, Number(ctx.fixedChargeInr) || 0);
+    const ed = Math.max(0, Number(ctx.electricityDutyInr) || 0);
+    const proportion = Math.min(1, anchorUnits / Math.max(1, units));
+    const proportionalFcEd = (fc + ed) * proportion;
+    const consumerCap = tier.consumerCapInr ?? ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount;
+    const credit = r2(Math.max(0, energyOnSlice + proportionalFcEd - consumerCap));
+    if (credit <= 0) {
+      return {
+        applied: false,
+        amount: 0,
+        reason: `AGJY anchor (${fyLabel}): computed credit ≤ ₹0 (energy=${r2(energyOnSlice)}, FC+ED×${proportion.toFixed(3)}=${r2(proportionalFcEd)}, cap=₹${consumerCap}).`,
+        tier
+      };
+    }
+    return {
+      applied: true,
+      amount: -credit,
+      reason:
+        `MP Govt. subsidy ${fyLabel} (Tier A, AGJY anchor, ≤150 u): ` +
+        `slabEnergy(first ${anchorUnits} u) = ₹${r2(energyOnSlice)} + ` +
+        `(FC ₹${r2(fc)} + ED ₹${r2(ed)}) × ${proportion.toFixed(3)} = ₹${r2(proportionalFcEd)}; ` +
+        `consumer cap ₹${consumerCap}; net credit = ₹${credit}.`,
+      tier
+    };
   }
 
-  const consumerPays = subsidisedUnits * ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit;
-  const subsidy = r2(energyOnSlice - consumerPays);
-  const reason =
-    `AGJY (${fyLabel}) on first ${subsidisedUnits} u (month ≤${cap} u). ` +
-    `Slab/flat energy on slice = ₹${r2(energyOnSlice)}; consumer @ ₹${ATAL_GRIHA_JYOTI.consumerCappedRatePerUnit}/u = ₹${r2(consumerPays)}; ` +
-    `state subsidy credit = ₹${subsidy}.`;
+  if (tier.model === "per_unit_credit") {
+    const rate = tier.perUnitInr ?? 0;
+    if (rate <= 0) {
+      return { applied: false, amount: 0, reason: `${fyLabel} per-unit credit rate is zero.`, tier };
+    }
+    const credit = r2(rate * units);
+    return {
+      applied: true,
+      amount: -credit,
+      reason:
+        `MP Govt. subsidy ${fyLabel} (Tier B, 151–300 u): ` +
+        `₹${rate}/u × ${units} u = ₹${credit}.`,
+      tier
+    };
+  }
 
-  return { applied: true, amount: -subsidy, reason };
+  if (tier.model === "flat_cap") {
+    const credit = r2(Math.max(0, Number(tier.flatInr) || 0));
+    if (credit <= 0) {
+      return { applied: false, amount: 0, reason: `${fyLabel} flat cap is zero.`, tier };
+    }
+    return {
+      applied: true,
+      amount: -credit,
+      reason: `MP Govt. subsidy ${fyLabel} (Tier C, 301–500 u): flat ₹${credit} courtesy cap.`,
+      tier
+    };
+  }
+
+  return { applied: false, amount: 0, reason: `Unhandled subsidy tier model: ${tier.model}.`, tier };
 }
+
+/**
+ * @deprecated Use `computeMpDomesticSubsidy`. Retained as a backwards-compatible alias
+ * for code paths that still import `computeAtalGrihaJyotiSubsidy`. Behaviour is
+ * IDENTICAL to `computeMpDomesticSubsidy` (the new function returns 0 for tiers the
+ * old AGJY-only model rejected, and the same tier-A credit when units ≤ 150).
+ */
+export type MpAgjySliceContext = MpDomesticSubsidyContext;
+export const computeAtalGrihaJyotiSubsidy = computeMpDomesticSubsidy;
 
 /* ------------------------------------------------------------------ */
 /* 6. Rebates — online + advance credit.                              */
@@ -530,34 +665,36 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     };
   }
 
-  let subsidy = input.agjyClaimed
-    ? computeAtalGrihaJyotiSubsidy(input.category, input.units, {
-        energySlabs,
-        billMonth: input.billMonth,
-        energyRateOverridePerUnit: input.energyRateOverridePerUnit
-      })
-    : { applied: false, amount: 0, reason: "AGJY not claimed." };
+  const arrear = max0(input.principalArrearInr ?? 0);
 
-  const pinSub = input.printedMpGovtSubsidyInr;
-  if (
-    input.agjyClaimed &&
-    typeof pinSub === "number" &&
-    Number.isFinite(pinSub) &&
-    pinSub !== 0
-  ) {
-    const norm = pinSub > 0 ? -Math.abs(pinSub) : pinSub;
-    subsidy = {
-      applied: true,
-      amount: r2(norm),
-      reason:
-        `M.P. Govt. subsidy from bill (pinned ₹${r2(norm)}). ` +
-        `Analytical AGJY slice estimate omitted in favour of printed DISCOM line.`
-    };
+  // ToD: separate from M.P. Govt. subsidy — never merge or net into subsidyCredit.
+  const todRaw = input.printedTodRebateInr;
+  let todRebateInr = 0;
+  if (typeof todRaw === "number" && Number.isFinite(todRaw) && Math.abs(todRaw) >= 0.01) {
+    todRebateInr = r2(todRaw);
   }
 
-  const arrear = max0(input.principalArrearInr ?? 0);
+  let subsidy: ReturnType<typeof computeMpDomesticSubsidy>;
+  if (!isEligibleForMpDomesticSubsidy(input.category)) {
+    subsidy = {
+      applied: false,
+      amount: 0,
+      reason: `Category ${input.category}: M.P. Govt. domestic subsidy applies only to LV-1.2 residential.`
+    };
+  } else if (!(input.agjyClaimed ?? true)) {
+    subsidy = { applied: false, amount: 0, reason: "MP Govt. domestic subsidy not claimed." };
+  } else {
+    subsidy = computeMpDomesticSubsidy(input.category, input.units, {
+      energySlabs,
+      billMonth: input.billMonth,
+      energyRateOverridePerUnit: input.energyRateOverridePerUnit,
+      fixedChargeInr: fc.amount,
+      electricityDutyInr: ed.amount
+    });
+  }
+
   const grossBeforeDuty = ec.total + fc.amount + fppas.amount;
-  const grossPayable = grossBeforeDuty + ed.amount + arrear + subsidy.amount;
+  const grossPayable = grossBeforeDuty + ed.amount + arrear + todRebateInr + subsidy.amount;
 
   const onlineRebate = computeOnlineRebate(grossPayable, input.paidOnline);
   const advance = computeAdvanceCredit(input.advanceBalanceInr);
@@ -585,7 +722,10 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
   notes.push(`FC: ${fc.formula}`);
   notes.push(`FPPAS: ${fppas.formula}`);
   notes.push(`Electricity Duty: ${ed.formula}`);
-  notes.push(`Atal Griha Jyoti: ${subsidy.reason}`);
+  notes.push(`MP Govt. Domestic Subsidy: ${subsidy.reason}`);
+  if (todRebateInr !== 0) {
+    notes.push(`ToD Rebate & Surcharge (separate from subsidy): ₹${r2(todRebateInr)}.`);
+  }
   if (input.paidOnline) notes.push(onlineRebate.note);
   if (input.advanceBalanceInr && input.advanceBalanceInr > 0) notes.push(advance.note);
   if (input.nfp) {
@@ -615,7 +755,15 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     { kind: "fppas",  label: "FPPAS (Fuel Adjustment)", amountInr: r2(fppas.amount), detail: { rate: fppas.rate } },
     { kind: "electricity_duty", label: "Electricity Duty", amountInr: r2(ed.amount), detail: { rate: ed.rate } }
   ];
-  if (subsidy.amount !== 0) lines.push({ kind: "subsidy", label: "Atal Griha Jyoti Subsidy", amountInr: r2(subsidy.amount) });
+  if (todRebateInr !== 0) {
+    lines.push({
+      kind: "tod_rebate",
+      label: "ToD Rebate & Surcharge",
+      amountInr: r2(todRebateInr),
+      detail: { source: "printed_bill_line" }
+    });
+  }
+  if (subsidy.amount !== 0) lines.push({ kind: "subsidy", label: "M.P. Govt. Domestic Subsidy", amountInr: r2(subsidy.amount) });
   if (arrear !== 0) lines.push({ kind: "arrear", label: "Principal Arrear", amountInr: r2(arrear) });
   if (onlineRebate.amount !== 0) lines.push({ kind: "online_rebate", label: "Online Payment Rebate", amountInr: r2(onlineRebate.amount) });
   if (advance.amount !== 0) lines.push({ kind: "advance_credit", label: "Advance Payment Credit", amountInr: r2(advance.amount) });
@@ -635,6 +783,7 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
     fixedCharge: r2(fc.amount),
     fppasCharge: r2(fppas.amount),
     electricityDuty: r2(ed.amount),
+    todRebateInr: r2(todRebateInr),
     subsidyCredit: r2(subsidy.amount),
     onlineRebate: r2(onlineRebate.amount),
     advanceCredit: r2(advance.amount),

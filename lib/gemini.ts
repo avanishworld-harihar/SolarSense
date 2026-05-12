@@ -72,6 +72,7 @@ INDIAN ELECTRICITY BILL STRUCTURE (read carefully before extracting):
 • CURRENT MONTH section (top/header area): Bill Month, Billing Date, Metered Unit Consumption (= actual units consumed this month = Current Reading MINUS Previous Reading, a 2–3 digit number like 170 or 419), Current Reading (4–6 digit meter accumulator like 12847), Previous Reading (4–6 digit accumulator like 12406), Read Type, Bill Type. All charge lines (Fixed Charge, Energy Charges, FPPAS, Electricity Duty, Subsidy, Rebate, Arrear, CCB) also belong to current month.
 • LAST SIX MONTHS CONSUMPTION table (lower section): Shows history. It contains 5 recent previous months PLUS one "same month last year" entry (often bold or listed first) as a year-on-year comparison reference. Example: bill_month=APR-2026 → table shows APR-2025 (same month last year), NOV-2025, DEC-2025, JAN-2026, FEB-2026, MAR-2026.
 • BILLING DETAILS / CHARGE BREAKDOWN: separate section with all INR charge line items.
+• CRITICAL — COLUMN GUARD (MP DISCOM layouts): NEVER put values from **M.P. Govt. Subsidy Amount / Government subsidy** rows into metered_unit_consumption — those figures are ₹ (decimals like −544.96 or −76.57) and MUST go ONLY in mp_govt_subsidy_amount_inr. metered_unit_consumption is exclusively the month's **consumption kWh** (whole number).
 • CRITICAL — metered_unit_consumption vs meter reading: metered_unit_consumption is the NET UNITS consumed (Current Reading − Previous Reading = typically 100–600 units for domestic). Current Reading and Previous Reading are large accumulator values (4–6 digits, e.g. 12847). NEVER use a 4–6 digit accumulator value as metered_unit_consumption.
 
 Rules:
@@ -90,6 +91,7 @@ Rules:
 9) format_memory: one short sentence on where monthly history appears; else "".
 10) tariff_slabs_detected: [] if slab table not visible.
 11) nfp_flag=true only if "NFP" or "Not For Payment" is explicitly printed.
+12) CRITICAL — mp_govt_subsidy_amount_inr: extract from line labelled "M.P. Govt. Subsidy Amount" / "MP Govt Subsidy" / "Subsidy Amount" / "AGJY" / "Atal Griha Jyoti" / "Indira Griha Jyoti" / "Mukhyamantri … Subsidy". The bill prints this as a NEGATIVE ₹ value (e.g. "-544.96", "-100.00", "( 544.96 )"). Preserve the sign — return a NEGATIVE NUMBER. If the line shows ₹0.00 (consumer > 150 u, no subsidy), set to 0 (not null). If the line is missing entirely from the bill, only then return null. Do NOT confuse with "Rebate & Incentive" or "Interest On Security Deposit" — those are SEPARATE lines. **Our app never feeds this value into subsidy calculation** — subsidy is computed from units + tariff rules; this field is only so subsidy ₹ is not mistaken for kWh and for optional bill-vs-model comparison.
 Return ONLY the JSON object.`;
 
   const parts: GeminiPart[] = [
@@ -262,6 +264,7 @@ export function normalizeParsedBillShape(raw: Record<string, unknown>): ParsedBi
       raw.amount_received_against_bill_inr ?? raw.amountReceivedAgainstBillInr
     ),
     mp_govt_subsidy_amount_inr: toNullableNumber(raw.mp_govt_subsidy_amount_inr ?? raw.mpGovtSubsidyAmountInr),
+    tod_rebate_inr: toNullableNumber(raw.tod_rebate_inr ?? raw.todRebateInr),
     fppas_inr: toNullableNumber(raw.fppas_inr ?? raw.fppasInr),
     electricity_duty_inr: toNullableNumber(raw.electricity_duty_inr ?? raw.electricityDutyInr),
     regulatory_surcharges_inr: toNullableNumber(

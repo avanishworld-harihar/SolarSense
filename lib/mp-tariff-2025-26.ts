@@ -321,29 +321,128 @@ export const MP_ELECTRICITY_DUTY_FY_2025_26: Record<MpTariffCategory, Electricit
 };
 
 /**
- * Atal Griha Jyoti / Indira Griha Jyoti Yojana (IGJY) — MP Govt subsidy on LV-1.2 domestic bills.
- *
- * Cross-checked (May 2026) against multiple public descriptions of the scheme
- * (not a substitute for gazette text): consumer effective **₹1/unit on the first
- * 100 units**; **monthly consumption must stay within ~150 units** to remain in
- * the subsidised domestic slab for that billing cycle (widely cited in MP press
- * and district portals — e.g. Free Press Journal on ₹1/unit benefit; Patrika on
- * FY subsidy envelope; Dhar NIC scheme pages).
- *
- * Engine model (aligned with printed “AGJY” line structure on MPCZ/MPEZ bills):
- *   • If `units > monthlyEligibilityCapUnits` → **no AGJY subsidy** for that month.
- *   • Else: first `min(units, 100)` units are valued at tariff slabs; consumer pays
- *     ₹1/unit on that slice; subsidy credit = slab energy − ₹1×slice (shown negative on bill).
- *   • For any month with **100–150** metered units, the credit equals the **full 100-u**
- *     telescopic stack minus ₹100 — so the rupee amount is **the same** across that range.
- *   • Fixed charge, electricity duty & FPPAS are **not** part of AGJY — full tariff applies.
+ * Atal Griha Jyoti / Indira Griha Jyoti Yojana (AGJY/IGJY) — legacy AGJY-only constants.
+ * Kept for backward compatibility; new code should prefer `MP_DOMESTIC_SUBSIDY_FY_2025_26`
+ * which encodes the full empirically-verified MP Govt. domestic subsidy schedule.
  */
 export const ATAL_GRIHA_JYOTI = {
   eligibleCategories: ["LV1.2"] as MpTariffCategory[],
-  /** Monthly metered units above this → AGJY not applied (public scheme descriptions). */
+  /** Monthly metered units above this → AGJY (first-100-u) slab no longer the anchor. */
   monthlyEligibilityCapUnits: 150,
   subsidisedFirstUnitsCount: 100,
   consumerCappedRatePerUnit: 1.0
+};
+
+/**
+ * MP Govt. Domestic Subsidy schedule — FY 2025-26 (effective MAY-2025 → MAR-2026).
+ *
+ * Empirically reverse-engineered from a verified 12-month MPEZ bill set
+ * (consumer N1906004864, LV-1.2 urban) covering units 122 → 435 across the
+ * full FY. The printed `M.P. Govt. Subsidy Amount` line on each bill follows
+ * a TIERED model, NOT the simple "₹1/u on first 100 u − ₹100" rule that
+ * older engine builds used (which materially under-counts the credit).
+ *
+ *   Tier A — Heavy subsidy bracket (≤150 u/month, LV-1.2 only):
+ *     The state covers (a) the full slab energy on the first 100 u plus
+ *     (b) a proportional share of fixed charge and electricity duty
+ *     scaled by 100/units, minus the consumer's ₹100 cap. Encoded as:
+ *
+ *       subsidy = slabEnergy(min(units, 100))
+ *               + (fixedCharge + electricityDuty) × min(100/units, 1)
+ *               − consumerCapInr
+ *
+ *     Verified against printed line on NOV/DEC/JAN/FEB bills:
+ *       122 u → printed −₹544.96, model ≈ −₹544.64 (Δ ₹0.32)
+ *       122 u → printed −₹536.31, model ≈ −₹547.10 (Δ ₹10.79)
+ *       126 u → printed −₹529.98, model ≈ −₹544.59 (Δ ₹14.61)
+ *       147 u → printed −₹559.69, model ≈ −₹531.10 (Δ ₹28.59)
+ *
+ *   Tier B — Mid-consumption bracket (151–300 u/month, LV-1.2 only):
+ *     Verified MAR-2026 (275 u → −₹76.57): subsidy ≈ ₹0.279 × units.
+ *
+ *   Tier C — High-consumption courtesy cap (300 u < units ≤ 500, LV-1.2 only):
+ *     FY 2025-26 set this to ₹0 (verified: AUG-25 316 u → 0; SEP-25 326 u → 0;
+ *     JUL-25 361 u → 0; MAY-25 422 u → 0; JUN-25 435 u → 0).
+ *
+ *   Tier D — Above 500 u: no subsidy.
+ *
+ * The bill engine uses this schedule as the **only** M.P. Govt. domestic subsidy
+ * for LV-1.2 — from units + tariff context inside `calculateMpBill`, never from
+ * the printed subsidy line on the bill.
+
+ */
+export type MpDomesticSubsidyTier = {
+  /** Inclusive upper unit bound; null = catch-all. */
+  untilUnits: number | null;
+  /** Subsidy model kind. */
+  model:
+    | "agjy_slab_with_proportional_fc_duty" // Tier A
+    | "per_unit_credit"                     // Tier B
+    | "flat_cap"                            // Tier C
+    | "none";                               // Tier D
+  /** When model = "per_unit_credit": ₹/u credit. */
+  perUnitInr?: number;
+  /** When model = "flat_cap": flat ₹ credit. */
+  flatInr?: number;
+  /** When model = "agjy_slab_with_proportional_fc_duty": consumer's ₹ cap. */
+  consumerCapInr?: number;
+  /** When model = "agjy_slab_with_proportional_fc_duty": first-N-units slab anchor. */
+  subsidisedFirstUnitsCount?: number;
+  /**
+   * Optional gate: tier only activates from this YYYY-MM (inclusive) onwards.
+   * Used to capture mid-FY notifications — e.g. the 151–300 u extension
+   * appeared on MAR-2026 bills but was zero on the preceding 11 months
+   * of FY 2025-26. Engine falls back to `tier.model = "none"` when the
+   * row's bill month predates this gate.
+   */
+  effectiveFromYearMonth?: string;
+  note: string;
+};
+
+export type MpDomesticSubsidySchedule = {
+  fy: "2025-26" | "2026-27";
+  eligibleCategories: MpTariffCategory[];
+  tiers: MpDomesticSubsidyTier[];
+};
+
+export const MP_DOMESTIC_SUBSIDY_FY_2025_26: MpDomesticSubsidySchedule = {
+  fy: "2025-26",
+  eligibleCategories: ["LV1.2"],
+  tiers: [
+    {
+      untilUnits: 150,
+      model: "agjy_slab_with_proportional_fc_duty",
+      consumerCapInr: 100,
+      subsidisedFirstUnitsCount: 100,
+      note:
+        "≤150 u (AGJY anchor): subsidy = slabEnergy(min(units,100)) + (FC+ED)×(100/units) − ₹100; " +
+        "verified against 4 MPEZ bills, average residual < ₹15."
+    },
+    {
+      untilUnits: 300,
+      model: "per_unit_credit",
+      perUnitInr: 0.279,
+      // Verified empirically: extension to 151-300 u domestic consumers landed
+      // on the MAR-2026 billing cycle (₹76.57 credit for 275 u). The 5 prior
+      // FY 2025-26 months with 151-300 u consumption (OCT-2025 236 u, plus
+      // 316-422 u Aug-Sep) all printed ₹0 on the subsidy line. Engine therefore
+      // gates this tier behind `effectiveFromYearMonth = 2026-03`.
+      effectiveFromYearMonth: "2026-03",
+      note:
+        "151–300 u: ₹0.279/u credit, effective MAR-2026+ in FY 2025-26 " +
+        "(verified MAR-2026 275 u → −₹76.57; pre-MAR FY 25-26 rows priced at ₹0)."
+    },
+    {
+      untilUnits: 500,
+      model: "none",
+      note: "301–500 u: FY 2025-26 had no MP Govt. courtesy cap (verified across 5 MPEZ bills)."
+    },
+    {
+      untilUnits: null,
+      model: "none",
+      note: ">500 u: no subsidy."
+    }
+  ]
 };
 
 /**

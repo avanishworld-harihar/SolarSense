@@ -127,8 +127,7 @@ export async function fetchMpAuditOverridesByRef(input: FetchAuditOverridesInput
       fixedInr: num(row.printed_fixed_inr) ?? num(row.fixed_charge_inr) ?? undefined,
       fppasInr: num(row.printed_fppas_inr) ?? num(row.fppas_inr) ?? undefined,
       electricityDutyInr: num(row.printed_electricity_duty_inr) ?? num(row.electricity_duty_inr) ?? undefined,
-      units: num(row.units_chosen) ?? undefined,
-      mpGovtSubsidyInr: num(row.printed_subsidy_inr) ?? num(row.subsidy_inr) ?? undefined
+      units: num(row.units_chosen) ?? undefined
     };
   }
 

@@ -143,16 +143,28 @@ type ProposalViewProps = {
 };
 
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
-/** Net bill cell: `(−₹… AGJY)` plus slice hint so identical credits for 100–150 u are understood. */
+
+/**
+ * Net bill cell: appends `(−₹… MP Sub)` when the row carries an M.P. Govt.
+ * domestic subsidy credit. The tier suffix ("AGJY first N u", "151–300 u tier",
+ * "₹100 cap") makes it clear which scheme the credit came from so installers
+ * and customers can reconcile against the printed DISCOM bill at a glance.
+ */
 function formatAuditNetBillCell(D: ProposalDict, total: number, subsidy?: number, rowUnits?: number) {
   const base = inr(total);
   const s = Math.round(subsidy ?? 0);
   if (s >= 0) return base;
   const a = Math.abs(s).toLocaleString("en-IN");
-  const core = `${base} (−₹${a} AGJY)`;
-  if (rowUnits == null || rowUnits <= 0 || rowUnits > ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) return core;
-  const sliceU = Math.min(Math.round(rowUnits), ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
-  return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
+  const core = `${base} (−₹${a} MP Sub)`;
+  if (rowUnits == null || rowUnits <= 0) return core;
+  const u = Math.round(rowUnits);
+  if (u <= ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) {
+    const sliceU = Math.min(u, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
+    return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
+  }
+  if (u <= 300) return `${core} · 151–300 u tier`;
+  if (u <= 500) return `${core} · 301–500 u cap`;
+  return core;
 }
 const inrK = (v: number) => {
   const x = Math.max(0, Math.round(v));

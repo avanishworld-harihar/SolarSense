@@ -32,6 +32,7 @@ import {
   type MpTariffCategory
 } from "@/lib/mp-tariff-2025-26";
 import { isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
+import { isEligibleForMpDomesticSubsidy } from "@/lib/mp-subsidy-eligibility";
 
 const TOLERANCE_INR = 5;
 
@@ -103,6 +104,8 @@ export type MpBillAuditReport = {
     fppasInr: number | null;
     electricityDutyInr: number | null;
     subsidyInr: number | null;
+    /** ToD line — never merged with subsidyInr. */
+    todRebateInr: number | null;
     rebateIncentiveInr: number | null;
     arrearInr: number | null;
     receivedAgainstBillInr: number | null;
@@ -298,6 +301,19 @@ function classifyVariance(args: {
     );
     return { reason: "fppas_mismatch", explanations };
   }
+  const printedTod = num(parsed.tod_rebate_inr);
+  if (
+    printedTod != null &&
+    Number.isFinite(printedTod) &&
+    Math.abs(printedTod) >= 0.01 &&
+    Math.abs(printedTod - breakdown.todRebateInr) > Math.max(2, deltaAbs * 0.12)
+  ) {
+    explanations.push(
+      `ToD rebate/surcharge: OCR ₹${r2(printedTod)} vs engine ₹${r2(breakdown.todRebateInr)} ` +
+      `(M.P. Govt. subsidy is separate — not merged).`
+    );
+    return { reason: "surcharge_mismatch", explanations };
+  }
   const printedFc = num(parsed.fixed_charges_inr);
   if (printedFc != null && Math.abs(printedFc - breakdown.fixedCharge) > Math.max(5, deltaAbs * 0.4)) {
     explanations.push(
@@ -317,8 +333,8 @@ function classifyVariance(args: {
   const printedSubsidy = num(parsed.mp_govt_subsidy_amount_inr);
   if (printedSubsidy != null && Math.abs(Math.abs(printedSubsidy) - Math.abs(breakdown.subsidyCredit)) > Math.max(5, deltaAbs * 0.4)) {
     explanations.push(
-      `Atal Griha Jyoti subsidy mismatch: printed ₹${r2(printedSubsidy)} vs calculated ₹${breakdown.subsidyCredit}. ` +
-      `Re-check eligibility (units ≤ 150) and claimed flag.`
+      `M.P. Govt. domestic subsidy: printed ₹${r2(printedSubsidy)} vs rule-engine ₹${r2(breakdown.subsidyCredit)} ` +
+      `(engine uses tariff schedule; printed line is reconcile-only by default).`
     );
     return { reason: "agjy_subsidy_mismatch", explanations };
   }
@@ -410,7 +426,7 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     billMonth: parsed.bill_month?.trim() || undefined,
     // Explicit fppasPct override from caller takes precedence over auto-lookup.
     fppasPct: options?.fppasPct,
-    agjyClaimed: num(parsed.mp_govt_subsidy_amount_inr) != null && (num(parsed.mp_govt_subsidy_amount_inr) ?? 0) !== 0,
+    agjyClaimed: isEligibleForMpDomesticSubsidy(category) && units.chosen > 0,
     advanceBalanceInr: options?.advanceBalanceInr,
     paidOnline: options?.paidOnline,
     principalArrearInr: num(parsed.principal_arrear_inr) ?? 0,
@@ -422,7 +438,7 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr,
     printedElectricityDutyInr: num(parsed.electricity_duty_inr) ?? undefined,
     printedFppasInr: num(parsed.fppas_inr) ?? undefined,
-    printedMpGovtSubsidyInr: num(parsed.mp_govt_subsidy_amount_inr) ?? undefined
+    printedTodRebateInr: num(parsed.tod_rebate_inr) ?? undefined
   };
 
   const breakdown = calculateMpBill(engineInput);
@@ -433,6 +449,7 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     fppasInr: num(parsed.fppas_inr),
     electricityDutyInr: num(parsed.electricity_duty_inr),
     subsidyInr: num(parsed.mp_govt_subsidy_amount_inr),
+    todRebateInr: num(parsed.tod_rebate_inr),
     rebateIncentiveInr: num(parsed.rebate_incentive_inr),
     arrearInr: num(parsed.principal_arrear_inr),
     receivedAgainstBillInr: num(parsed.amount_received_against_bill_inr),

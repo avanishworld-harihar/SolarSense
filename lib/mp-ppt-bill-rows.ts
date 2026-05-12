@@ -1,20 +1,18 @@
 /**
- * Sol.52 — PPT month-wise audit rows powered by the FY 2025-26 MP engine.
+ * Sol.52 — PPT month-wise audit rows powered by the FY 2025-26 / 2026-27 MP engine.
  *
  * Replaces the old `estimateMonthlyBillBreakdownWithContext` based row builder
  * for MP customers. The output shape (AuditRow[]) is identical so the slide-
  * rendering code in `lib/proposal-ppt.ts` does not need to change.
  *
  * Hierarchy of truth (highest first):
- *   1. `monthlyAuditOverrides` — values pulled from `mp_bill_audits` table
- *      (real audited bills already validated against printed amounts).
- *   2. `monthlyBillActuals` — actuals provided directly by the proposal flow.
- *   3. Engine output from `calculateMpBill`, which auto-selects FY 2025-26
- *      before APR-2026 and FY 2026-27 from APR-2026 onward.
- *
- * Net effect: any month for which we have a saved audit row in Supabase is
- * shown EXACTLY as the audit calculated it. Other months are recomputed
- * deterministically (no two-point linear extrapolation hacks).
+ *   1. `monthlyAuditOverrides` — component rows from DB / uploaded bills when
+ *      energy+fixed match tolerance (validated bill capture).
+ *   2. `monthlyBillActuals` — net payable overrides from proposal flow.
+ *   3. **Rule-based engine** — `calculateMpBill` with MP domestic subsidy from
+ *      `computeMpDomesticSubsidy` (LV-1.2 only). Printed M.P. Govt. subsidy on
+ *      a bill is never pinned into projected months; use audit to reconcile.
+ *      (ToD is not used in proposals — we do not model or pass it per month.)
  */
 
 import { calculateMpBill } from "@/lib/mp-bill-engine";
@@ -75,8 +73,6 @@ export type MpMonthlyAuditOverride = {
    * between netPayableInr and (energy+fixed+duty+fuel).
    */
   pfSurchargeInr?: number;
-  /** Printed M.P. Govt. subsidy (₹, negative when shown as credit on bill). */
-  mpGovtSubsidyInr?: number;
 };
 
 export type MpPptRowsInput = {
@@ -305,6 +301,10 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     }
   }
 
+  /**
+   * Build rows from tariff + optional per-month OCR overrides. Subsidy is
+   * always from `calculateMpBill` / domestic schedule (units + rules), never from bill text.
+   */
   const rows: PptAuditRow[] = MONTH_LABELS.map((label, i) => {
     const monthKey = MONTH_KEYS[i];
     const units = n(input.monthlyUnits[monthKey]);
@@ -331,14 +331,6 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     // Proposal flow should remain rule-first even with only 1-2 uploaded bills.
     // We do not pin monthly duty/FPPAS to one scanned bill line here.
 
-    const monthOv = input.monthlyAuditOverrides?.[monthKey];
-    const printedSubsidyInr =
-      typeof monthOv?.mpGovtSubsidyInr === "number" &&
-      Number.isFinite(monthOv.mpGovtSubsidyInr) &&
-      monthOv.mpGovtSubsidyInr !== 0
-        ? monthOv.mpGovtSubsidyInr
-        : undefined;
-
     const breakdown = calculateMpBill({
       discomCode,
       category,
@@ -347,13 +339,10 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       contractDemandKva: input.contractDemandKva,
       area,
       billMonth: rowBillMonthIso,
-      // Explicit monthly FPPAS override takes precedence over auto-lookup.
       fppasPct: input.monthlyFppasPct?.[monthKey],
-      // AGJY: LV-1.2 only; engine applies subsidy only when month ≤150 u (see ATAL_GRIHA_JYOTI).
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
-      fixedChargeOverrideInr: rowFcOverride,
-      printedMpGovtSubsidyInr: printedSubsidyInr
+      fixedChargeOverrideInr: rowFcOverride
     });
 
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];
@@ -364,27 +353,20 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       const duty   = r(safeDbAudit.electricityDutyInr);
       const fuel   = r(safeDbAudit.fppasInr);
       const netFromBill = n(safeDbAudit.netPayableInr);
-      // Standard component sum (no penalty charges).
       const compSum = energy + fixed + duty + fuel;
       const rawGap = r(netFromBill - compSum);
-      const printedSubsidy =
-        typeof safeDbAudit.mpGovtSubsidyInr === "number" &&
-        Number.isFinite(safeDbAudit.mpGovtSubsidyInr) &&
-        safeDbAudit.mpGovtSubsidyInr !== 0
-          ? r(safeDbAudit.mpGovtSubsidyInr)
-          : 0;
-      // Fallback inference: when printed subsidy is absent but net is materially
-      // below component-sum, treat that negative delta as subsidy-like credit.
-      const inferredSubsidy = printedSubsidy !== 0
-        ? printedSubsidy
-        : (rawGap < -50 ? rawGap : 0);
-      // "other" tracks PF/Welding surcharge or metering charges — for internal
-      // reference only. It is EXCLUDED from the proposal total so that the
-      // proposal always shows base tariff charges only (solar savings are
-      // calculated on these base charges; penalties can reduce post-solar).
+      const engineModelledSubsidy = category === "LV1.2" ? r(breakdown.subsidyCredit) : 0;
+      /** Rule-based subsidy only (never replace with printed bill line in projections). */
+      const inferredSubsidy = engineModelledSubsidy !== 0 ? engineModelledSubsidy : 0;
+      /**
+       * "other" tracks PF/Welding surcharge, metering charges, Interest-on-SD,
+       * etc. — for internal reference only. It is EXCLUDED from the proposal
+       * total so that the proposal always shows base tariff charges only.
+       */
+      const otherFromGap = Math.max(0, rawGap);
       const other = typeof safeDbAudit.pfSurchargeInr === "number"
         ? Math.max(0, safeDbAudit.pfSurchargeInr)
-        : Math.max(0, rawGap);
+        : otherFromGap;
       return {
         label,
         units: n(safeDbAudit.units ?? units),
@@ -394,8 +376,6 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
         fuel,
         other,
         subsidy: inferredSubsidy,
-        // Use base charges sum as total (excludes PF/metering penalties).
-        // For typical 2-bill uploads (APR+MAR), other=0 so total=netFromBill exactly.
         total: other > 0 ? compSum : netFromBill,
         source: "mp_audit_db"
       };

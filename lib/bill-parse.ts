@@ -67,7 +67,16 @@ export interface ParsedBillShape {
   current_month_bill_amount_inr?: number | string | null;
   principal_arrear_inr?: number | string | null;
   amount_received_against_bill_inr?: number | string | null;
+  /**
+   * Printed line only — optional. Used so OCR does not confuse ₹ with kWh; optional audit vs rule engine.
+   * Subsidy in `calculateMpBill` is **never** sourced from this field (always from domestic schedule + units).
+   */
   mp_govt_subsidy_amount_inr?: number | string | null;
+  /**
+   * Time-of-Day rebate & surcharge ("Other / TOD…"). Signed as printed (credit typically negative).
+   * Never merge into `mp_govt_subsidy_amount_inr`.
+   */
+  tod_rebate_inr?: number | string | null;
   fppas_inr?: number | string | null;
   /**
    * Welding / Power Factor (PF) Surcharge printed on the bill (₹).
