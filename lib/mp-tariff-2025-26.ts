@@ -89,6 +89,38 @@ export const MP_DISCOMS: Record<MpDiscomCode, MpDiscomMeta> = {
   }
 };
 
+/**
+ * Typical **single-phase** MP domestic (LV1.2) sanctioned load printed on bills (e.g. "2.0 KW").
+ * Used only when OCR left `sanctioned_load` blank but state/DISCOM/purpose indicate MP metered domestic.
+ */
+export const MP_LV12_TYPICAL_SINGLE_PHASE_SANCTIONED_LOAD_KW = 2;
+
+/**
+ * Infer sanctioned load (kW) when the bill omits `sanctioned_load` — narrow: MP DISCOM + domestic cues only.
+ */
+export function inferMpLv12SanctionedLoadKwWhenBillOmits(parsed: {
+  sanctioned_load?: string | null | undefined;
+  state?: string | null | undefined;
+  discom?: string | null | undefined;
+  connection_type?: string | null | undefined;
+  purpose_of_supply?: string | null | undefined;
+  phase?: string | null | undefined;
+  tariff_category?: string | null | undefined;
+} | null | undefined): number | undefined {
+  if (!parsed) return undefined;
+  if (String(parsed.sanctioned_load ?? "").trim().length > 0) return undefined;
+  const zone = `${parsed.state ?? ""} ${parsed.discom ?? ""}`.toLowerCase();
+  const isMp =
+    /\bmadhya\b|^mp\b|mppk|mpez|mpcz|mpwz|paschim|madhya\s+kshetra|poorv\s+kshetra|vidyut\s+vitran|videut/i.test(zone);
+  if (!isMp) return undefined;
+  const purpose =
+    `${parsed.connection_type ?? ""} ${parsed.purpose_of_supply ?? ""} ${parsed.tariff_category ?? ""}`.toLowerCase();
+  if (!/domestic|residen|light\s*and\s*fan|home\s*stay|lv\s*[-]?\s*1\s*\.?\s*2/.test(purpose)) return undefined;
+  const ph = String(parsed.phase ?? "").toLowerCase();
+  if (ph && /three|3\s*-?\s*ph|3-?phase/.test(ph)) return undefined;
+  return MP_LV12_TYPICAL_SINGLE_PHASE_SANCTIONED_LOAD_KW;
+}
+
 /** Telescopic energy slab ([fromUnit, toUnit] inclusive, rate ₹/kWh). */
 export type EnergySlab = { fromUnit: number; toUnit: number | null; ratePerUnit: number };
 
@@ -351,11 +383,13 @@ export const ATAL_GRIHA_JYOTI = {
  *               + (fixedCharge + electricityDuty) × min(100/units, 1)
  *               − consumerCapInr
  *
- *     Verified against printed line on NOV/DEC/JAN/FEB bills:
- *       122 u → printed −₹544.96, model ≈ −₹544.64 (Δ ₹0.32)
- *       122 u → printed −₹536.31, model ≈ −₹547.10 (Δ ₹10.79)
- *       126 u → printed −₹529.98, model ≈ −₹544.59 (Δ ₹14.61)
- *       147 u → printed −₹559.69, model ≈ −₹531.10 (Δ ₹28.59)
+ *     Verified against printed line on NOV/DEC/JAN/FEB bills (Tier A FC+ED proration
+ *     can use prior calendar month's units as denominator when gated — e.g. DEC-2025
+ *     after NOV 122 u; see `mp-bill-engine.ts`):
+ *       NOV · 122 u → printed −₹544.96, model ≈ −₹544.64 (Δ ₹0.32)
+ *       DEC · 147 u → printed −₹559.69, model ≈ −₹559.39 (Δ ₹0.30)
+ *       JAN · 126 u → printed −₹529.98, model ≈ −₹544.59 (Δ ₹14.61)
+ *       FEB · 122 u → printed −₹536.31, model ≈ −₹547.10 (Δ ₹10.79)
  *
  *   Tier B — Mid-consumption bracket (151–300 u/month, LV-1.2 only):
  *     Verified MAR-2026 (275 u → −₹76.57): subsidy ≈ ₹0.279 × units.

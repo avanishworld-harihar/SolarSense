@@ -698,10 +698,16 @@ export async function buildPremiumProposalPptBuffer(input: PremiumProposalPptInp
     const s = Math.round(subsidy ?? 0);
     if (s >= 0) return base;
     const a = Math.abs(s).toLocaleString("en-IN");
-    const core = `${base} (−₹${a} AGJY)`;
-    if (rowUnits == null || rowUnits <= 0 || rowUnits > ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) return core;
-    const sliceU = Math.min(Math.round(rowUnits), ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
-    return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
+    const core = `${base} (−₹${a} MP Sub)`;
+    if (rowUnits == null || rowUnits <= 0) return core;
+    const u = Math.round(rowUnits);
+    if (u <= ATAL_GRIHA_JYOTI.monthlyEligibilityCapUnits) {
+      const sliceU = Math.min(u, ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount);
+      return core + D["audit.agjySliceHint"].replace(/\{\{n\}\}/g, String(sliceU));
+    }
+    if (u <= 300) return `${core} · 151–300 u tier`;
+    if (u <= 500) return `${core} · 301–500 u cap`;
+    return core;
   };
   const labels = monthLabels(lang);
   const installer = summary.installer;

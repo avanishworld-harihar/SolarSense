@@ -69,7 +69,7 @@ Rules:
 2) Unknown text="", unknown numbers=null; if uncertain/blurred add short note to strict_audit_notes.
 3) Never infer meter type from section labels (e.g. "Smart Meter RC/DC Amount Received" is not meter type).
 4) CRITICAL — tariff_category: copy the EXACT tariff code string as printed (e.g. "LV2 [LV2.2]", "LV 1.2").
-5) CRITICAL — sanctioned_load: copy EXACTLY as printed including units (e.g. "5.0 KW").
+5) CRITICAL — sanctioned_load: copy EXACTLY as printed including units (e.g. "2.0 KW", "5.0 KW"). phase: "Single" or "Three" as on the bill (MP bills often show "SINGLE" for 1-phase domestic).
 6) purpose_of_supply AND connection_type: copy the printed PURPOSE/use line into BOTH (e.g. Shops/Showrooms, School, Domestic, Hospital).
 7) Separate charge lines exactly: fixed_charges_inr, energy_charges_inr, electricity_duty_inr, fppas_inr, regulatory_surcharges_inr. Do NOT mix Time-of-Day (ToD) energy into flat energy lines — note in strict_audit_notes if ToD is present.
 8) contract_demand_kva: numeric kVA only if "Contract Demand" is printed separately.

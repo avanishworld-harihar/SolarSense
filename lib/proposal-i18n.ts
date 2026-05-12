@@ -71,7 +71,7 @@ export type ProposalDict = {
   "audit.dutyFuel": string;
   "audit.netBill": string;
   "audit.total": string;
-  /** Appended after `(−₹… AGJY)` on net cell; `{{n}}` = qualifying units (min(month, 100)). */
+  /** Appended after `(−₹… MP Sub)` for ≤150 u rows; `{{n}}` = qualifying units (min(month, 100)). */
   "audit.agjySliceHint": string;
 
   // Insight cards.

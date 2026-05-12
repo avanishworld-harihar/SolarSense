@@ -7,6 +7,7 @@ import {
   estimateMonthlyKwhFromBillAmount,
   getFallbackTariffContext
 } from "@/lib/tariff-engine";
+import { inferMpLv12SanctionedLoadKwWhenBillOmits } from "@/lib/mp-tariff-2025-26";
 import { calculateSolar, computeGrossSystemCostInr, DEFAULT_TARIFF_CONTEXT } from "@/lib/solar-engine";
 import type { CustomerLead, MonthlyUnits } from "@/lib/types";
 import type { TariffContext } from "@/lib/tariff-types";
@@ -83,6 +84,16 @@ function truncateConnectionType(raw: string): string {
   // Remove " - " and anything after it (AI often appends " - Low Tension / Commercial…")
   const cleaned = raw.replace(/\s*[-–]\s+(low tension|high tension|commercial|domestic|industrial|lt|ht).*/i, "").trim();
   return cleaned.slice(0, 40).trim();
+}
+
+/** Normalize phase label for forms (MPEZ prints "SINGLE"). */
+function normalizeBillPhaseLabel(raw?: string | null): string {
+  const s = raw?.trim() ?? "";
+  if (!s) return "";
+  const u = s.toUpperCase();
+  if (/\bSINGLE\b|1\s*-?\s*PH/.test(u)) return "Single";
+  if (/\bTHREE\b|3\s*-?\s*PH/.test(u)) return "Three";
+  return s;
 }
 
 function parseManualContractKva(s: string): number | undefined {
@@ -362,7 +373,31 @@ export default function ProposalPage() {
   const stateForSizing = manual.state.trim() || installerState;
   const discomQuery = manual.discom.trim() || installerDiscom.trim();
   const stateQuery = manual.state.trim() || installerState.trim();
-  const connectedLoadKw = useMemo(() => parseConnectedLoadKw(manual.sanctionedLoad), [manual.sanctionedLoad]);
+  const connectedLoadKw = useMemo(() => {
+    const parsed = parseConnectedLoadKw(manual.sanctionedLoad);
+    if (parsed != null && parsed > 0) return parsed;
+    const ref = latestBill ?? additionalBills.find((b): b is ParsedBillShape => Boolean(b));
+    const kw = inferMpLv12SanctionedLoadKwWhenBillOmits({
+      sanctioned_load: ref?.sanctioned_load,
+      state: (manual.state || ref?.state || "").trim() || undefined,
+      discom: (manual.discom || ref?.discom || "").trim() || undefined,
+      connection_type: manual.connectionType || ref?.connection_type,
+      purpose_of_supply: manual.purposeOfSupply || ref?.purpose_of_supply || undefined,
+      phase: manual.phase || ref?.phase,
+      tariff_category: manual.tariffCategory || ref?.tariff_category
+    });
+    return kw ?? null;
+  }, [
+    manual.sanctionedLoad,
+    manual.state,
+    manual.discom,
+    manual.connectionType,
+    manual.purposeOfSupply,
+    manual.phase,
+    manual.tariffCategory,
+    latestBill,
+    additionalBills
+  ]);
   const areaProfile = useMemo(() => inferAreaProfile(manual), [manual]);
   const billingRule = useMemo(() => getBillingRule(stateQuery, discomQuery), [stateQuery, discomQuery]);
   const learnedProfile = useMemo(() => {
@@ -848,10 +883,25 @@ export default function ProposalPage() {
         consumerId: prev.consumerId || data.consumer_id || "",
         meterNumber: prev.meterNumber || data.meter_number || "",
         connectionDate: prev.connectionDate || data.connection_date || "",
-        phase: prev.phase || data.phase || "",
+        phase: prev.phase || normalizeBillPhaseLabel(data.phase) || "",
         billPhone: prev.billPhone || data.registered_mobile || "",
         connectionType: prev.connectionType || truncateConnectionType(data.connection_type || ""),
-        sanctionedLoad: prev.sanctionedLoad || data.sanctioned_load || "",
+        sanctionedLoad: (() => {
+          const keep = prev.sanctionedLoad.trim();
+          if (keep) return prev.sanctionedLoad;
+          const printed = data.sanctioned_load?.trim();
+          if (printed) return printed;
+          const kw = inferMpLv12SanctionedLoadKwWhenBillOmits({
+            sanctioned_load: "",
+            state: data.state,
+            discom: data.discom,
+            connection_type: data.connection_type,
+            purpose_of_supply: data.purpose_of_supply ?? undefined,
+            phase: data.phase,
+            tariff_category: data.tariff_category
+          });
+          return kw != null ? `${kw} kW` : "";
+        })(),
         billingAddress: prev.billingAddress || data.address || "",
         tariffCategory: prev.tariffCategory || data.tariff_category || "",
         purposeOfSupply:
@@ -1047,9 +1097,22 @@ export default function ProposalPage() {
   function buildProposalExtrasPayload() {
     const sanctionedLoadKw = (() => {
       const s = manual.sanctionedLoad?.trim();
-      if (!s) return undefined;
-      const num = Number(s.replace(/[^0-9.]/g, ""));
-      return Number.isFinite(num) && num > 0 ? num : undefined;
+      if (s) {
+        const num = Number(s.replace(/[^0-9.]/g, ""));
+        if (Number.isFinite(num) && num > 0) return num;
+      }
+      const ref = latestBill ?? previousBill;
+      return (
+        inferMpLv12SanctionedLoadKwWhenBillOmits({
+          sanctioned_load: ref?.sanctioned_load,
+          state: manual.state || ref?.state,
+          discom: manual.discom || ref?.discom,
+          connection_type: manual.connectionType || ref?.connection_type,
+          purpose_of_supply: manual.purposeOfSupply || ref?.purpose_of_supply,
+          phase: manual.phase || ref?.phase,
+          tariff_category: manual.tariffCategory || ref?.tariff_category
+        }) ?? undefined
+      );
     })();
     const siteImages = siteImageUrls
       .map((s) => s.trim())

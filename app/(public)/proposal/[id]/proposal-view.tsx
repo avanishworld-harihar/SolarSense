@@ -39,6 +39,12 @@ function expandConnectionType(raw: string | undefined | null): string {
   const v = (raw ?? "").trim();
   if (!v) return "—";
   const upper = v.toUpperCase();
+  if (/domestic/i.test(v) && /lv\s*[-]?\s*1\s*\.?\s*2/i.test(v)) {
+    return "Domestic — LV1.2 (metered, single-phase typical)";
+  }
+  if (/\bdomestic\b/i.test(v) && /light\s*and\s*fan/i.test(v)) {
+    return "Domestic — light & fan (residential)";
+  }
   // Exact code matches first
   if (upper === "LT") return "LT — Low Tension (Residential)";
   if (upper === "HT") return "HT — High Tension (Industrial)";
@@ -146,9 +152,7 @@ const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-I
 
 /**
  * Net bill cell: appends `(−₹… MP Sub)` when the row carries an M.P. Govt.
- * domestic subsidy credit. The tier suffix ("AGJY first N u", "151–300 u tier",
- * "₹100 cap") makes it clear which scheme the credit came from so installers
- * and customers can reconcile against the printed DISCOM bill at a glance.
+ * domestic subsidy credit. Tier suffix mirrors the engine (first N u slice, 151–300, 301–500).
  */
 function formatAuditNetBillCell(D: ProposalDict, total: number, subsidy?: number, rowUnits?: number) {
   const base = inr(total);

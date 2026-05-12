@@ -19,7 +19,17 @@ const BILLS = [
   { month: "SEP-2025", units: 326, energy: 1960.62, fppas: -0.38, fixed: 220, duty: 616, monthBill: 3023.23, printedSubsidy: 0 },
   { month: "OCT-2025", units: 236, energy: 1346.56, fppas: -44.68, fixed: 142, duty: 448, monthBill: 1891.88, printedSubsidy: 0 },
   { month: "NOV-2025", units: 122, energy: 609.96, fppas: -24.79, fixed: 129, duty: 56, monthBill: 770.17, printedSubsidy: -544.96 },
-  { month: "DEC-2025", units: 147, energy: 748.03, fppas: -9.56, fixed: 129, duty: 74, monthBill: 941.46, printedSubsidy: -559.69 },
+  {
+    month: "DEC-2025",
+    units: 147,
+    priorUnits: 122,
+    energy: 748.03,
+    fppas: -9.56,
+    fixed: 129,
+    duty: 74,
+    monthBill: 941.46,
+    printedSubsidy: -559.69
+  },
   { month: "JAN-2026", units: 126, energy: 631.33, fppas: 7.60, fixed: 129, duty: 62, monthBill: 786.13, printedSubsidy: -529.98 },
   { month: "FEB-2026", units: 122, energy: 610.88, fppas: 5.34, fixed: 129, duty: 59, monthBill: 768.61, printedSubsidy: -536.31 },
   { month: "MAR-2026", units: 275, energy: 1615.44, fppas: 19.06, fixed: 177, duty: 532, monthBill: 2225.31, printedSubsidy: -76.57 },
@@ -58,6 +68,11 @@ function isoKey(month) {
   return `${y}-${String(idx + 1).padStart(2, "0")}`;
 }
 
+// Tier A FC+ED proration: match engine gates (prior month denominator after low-consumption month).
+const TIER_A_PRIOR_DENOM_MIN = 120;
+const TIER_A_PRIOR_DENOM_MAX_RATIO = 0.86;
+const TIER_A_PRIOR_JUMP_MIN = 15;
+
 function computeModelSubsidy(bill) {
   const fy = isFY2627(bill.month) ? "2026-27" : "2025-26";
   const rowKey = isoKey(bill.month);
@@ -67,7 +82,21 @@ function computeModelSubsidy(bill) {
   if (u <= 150) {
     const anchorUnits = Math.min(u, 100);
     const energyAnchor = slabEnergy(anchorUnits, fy);
-    const proportion = Math.min(1, anchorUnits / u);
+    const prior = bill.priorUnits;
+    let fcEdDenom = u;
+    if (
+      prior != null &&
+      prior > 0 &&
+      prior < 150 &&
+      prior <= TIER_A_PRIOR_DENOM_MAX_RATIO * u &&
+      prior >= TIER_A_PRIOR_DENOM_MIN &&
+      prior >= anchorUnits &&
+      u > prior &&
+      u - prior >= TIER_A_PRIOR_JUMP_MIN
+    ) {
+      fcEdDenom = prior;
+    }
+    const proportion = Math.min(1, anchorUnits / Math.max(1, fcEdDenom));
     const proportionalFcEd = (bill.fixed + bill.duty) * proportion;
     const credit = Math.max(0, energyAnchor + proportionalFcEd - 100);
     return -Math.round(credit * 100) / 100;

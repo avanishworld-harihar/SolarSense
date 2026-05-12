@@ -20,6 +20,7 @@ import {
   MP_TARIFF_FY_2025_26,
   detectMpDiscomFromAddress,
   resolveMpDiscomFromHint,
+  inferMpLv12SanctionedLoadKwWhenBillOmits,
   type MpAreaProfile,
   type MpDiscomCode,
   type MpTariffCategory
@@ -278,6 +279,18 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
     const raw = Number(input.connectedLoadKw);
     return Number.isFinite(raw) && raw > 0 ? raw : 0;
   })();
+  if (category === "LV1.2" && sanctionedLoadKwForEngine <= 0) {
+    const inferredKw = inferMpLv12SanctionedLoadKwWhenBillOmits({
+      sanctioned_load: "",
+      state: input.state,
+      discom: input.discom,
+      connection_type: input.connectionType,
+      purpose_of_supply: input.purposeOfSupply,
+      tariff_category: input.tariffCategory,
+      phase: undefined
+    });
+    if (inferredKw != null) sanctionedLoadKwForEngine = inferredKw;
+  }
 
   if (category === "LV1.2" && fcOv == null) {
     const fcPrinted = Number(input.billFixedChargeInr);
@@ -330,6 +343,12 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       typeof fcOv === "number" && Number.isFinite(fcOv) ? Math.round(fcOv) : usePrintedFcThisRow ? Math.round(printedFc) : undefined;
     // Proposal flow should remain rule-first even with only 1-2 uploaded bills.
     // We do not pin monthly duty/FPPAS to one scanned bill line here.
+    const prevRowIdx = (i + 11) % 12;
+    const priorMonthUnitsRaw = Number(input.monthlyUnits[MONTH_KEYS[prevRowIdx]] ?? 0);
+    const priorMeteredUnits =
+      category === "LV1.2" && priorMonthUnitsRaw > 0 && Number.isFinite(priorMonthUnitsRaw)
+        ? Math.round(priorMonthUnitsRaw)
+        : undefined;
 
     const breakdown = calculateMpBill({
       discomCode,
@@ -342,7 +361,8 @@ export function buildMpAuditRows(input: MpPptRowsInput): {
       fppasPct: input.monthlyFppasPct?.[monthKey],
       agjyClaimed: input.agjyClaimed ?? (category === "LV1.2" && units > 0),
       energyRateOverridePerUnit: erOv,
-      fixedChargeOverrideInr: rowFcOverride
+      fixedChargeOverrideInr: rowFcOverride,
+      priorMeteredUnits
     });
 
     const dbAudit = input.monthlyAuditOverrides?.[monthKey];

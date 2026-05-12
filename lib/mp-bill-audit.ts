@@ -25,6 +25,7 @@ import {
   MP_DISCOMS,
   detectMpDiscomFromAddress,
   resolveMpDiscomFromHint,
+  inferMpLv12SanctionedLoadKwWhenBillOmits,
   type MpAreaProfile,
   type MpDiscomCode,
   type MpDiscomMeta,
@@ -33,6 +34,7 @@ import {
 } from "@/lib/mp-tariff-2025-26";
 import { isFY2026_27OrLater } from "@/lib/mp-tariff-2026-27";
 import { isEligibleForMpDomesticSubsidy } from "@/lib/mp-subsidy-eligibility";
+import type { MonthKey } from "@/lib/types";
 
 const TOLERANCE_INR = 5;
 
@@ -163,6 +165,38 @@ function parseLoadKw(raw?: string | null): { kw: number | null; kva: number | nu
     kva: kva ? Number(kva) : null,
     phase
   };
+}
+
+const CALENDAR_MONTH_KEYS: MonthKey[] = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec"
+];
+
+function priorCalendarMonthKeyFromBillMonth(billMonthLabel?: string | null): MonthKey | null {
+  if (!billMonthLabel?.trim()) return null;
+  const m = billMonthLabel.trim().toLowerCase().match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);
+  if (!m) return null;
+  const idx = CALENDAR_MONTH_KEYS.indexOf(m[1] as MonthKey);
+  if (idx < 0) return null;
+  return CALENDAR_MONTH_KEYS[(idx + 11) % 12];
+}
+
+function priorMeteredUnitsFromParsed(parsed: ParsedBillShape): number | undefined {
+  const prevKey = priorCalendarMonthKeyFromBillMonth(parsed.bill_month);
+  if (!prevKey || !parsed.months) return undefined;
+  const v = num((parsed.months as Record<string, unknown>)[prevKey]);
+  if (v == null || !Number.isFinite(v) || v <= 0) return undefined;
+  return Math.round(v);
 }
 
 function parseBillMonthRange(label?: string | null): { fromIso: string | null; toIso: string | null } {
@@ -410,7 +444,18 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
       ? 0.88
       : 0.78;
 
-  if (sanctionedLoadKw == null && category === "LV1.2") sanctionedLoadKw = 1;
+  if (sanctionedLoadKw == null && category === "LV1.2") {
+    sanctionedLoadKw =
+      inferMpLv12SanctionedLoadKwWhenBillOmits({
+        sanctioned_load: parsed.sanctioned_load,
+        state: parsed.state,
+        discom: parsed.discom,
+        connection_type: parsed.connection_type,
+        purpose_of_supply: parsed.purpose_of_supply,
+        phase: parsed.phase,
+        tariff_category: parsed.tariff_category
+      }) ?? 1;
+  }
 
   const printedPayable = num(parsed.total_amount_payable_inr);
   const engineInput: MpBillEngineInput = {
@@ -438,7 +483,8 @@ export function auditMpBill(parsed: ParsedBillShape, options?: MpBillAuditOption
     fixedChargeOverrideInr: smartBilling.fixedChargeOverrideInr,
     printedElectricityDutyInr: num(parsed.electricity_duty_inr) ?? undefined,
     printedFppasInr: num(parsed.fppas_inr) ?? undefined,
-    printedTodRebateInr: num(parsed.tod_rebate_inr) ?? undefined
+    printedTodRebateInr: num(parsed.tod_rebate_inr) ?? undefined,
+    priorMeteredUnits: priorMeteredUnitsFromParsed(parsed)
   };
 
   const breakdown = calculateMpBill(engineInput);

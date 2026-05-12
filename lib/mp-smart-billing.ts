@@ -89,7 +89,7 @@ export function resolveCategoryMultiFactor(signals: MpSmartBillingSignals): {
       ? "LV2.1"
       : purposeHintsLV22Commercial(purpose)
         ? "LV2.2"
-        : /domestic|residen|home|light\s*and\s*fan|lifeline|bpl\b/i.test(purpose)
+        : /domestic|residen|home|light\s*and\s*fan|lifeline|bpl\b|lv\s*[-]?\s*1\s*\.?\s*2\b/i.test(purpose)
           ? "LV1.2"
           : /agri|kisan|pump|krishi/i.test(purpose)
             ? "LV5.1"

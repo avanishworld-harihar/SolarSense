@@ -80,6 +80,7 @@ Rules:
 2) Unknown text="", unknown numbers=null, and add note in strict_audit_notes when uncertain.
 3) Do NOT infer meter type from section headers (e.g. "Smart Meter RC/DC Amount Received" is not meter type).
 4) PURPOSE: copy purpose_of_supply like connection_type (Shops/Showrooms, School, Hospital, Domestic). If only one line exists, duplicate it in both fields.
+4a) sanctioned_load: copy the **Sanctioned Load** / **Connected Load** line exactly as printed (e.g. "2.0 KW"). phase: set "Single" or "Three" to match the bill (MP DISCOMs often print "SINGLE" for single-phase domestic).
 5) CHARGES: extract fixed_charges_inr, energy_charges_inr, electricity_duty_inr, fppas_inr, regulatory_surcharges_inr as separate printed lines. Note in strict_audit_notes if ToD surcharges are mixed with flat energy.
 6) contract_demand_kva: only if "Contract Demand" or similar is printed separately (number in kVA).
 7) consumption_history: include EVERY row from the history table as {"month":"MMM-YYYY","units":number} — including the "same month last year" row. Always include the year in month label (e.g. "APR-2025").

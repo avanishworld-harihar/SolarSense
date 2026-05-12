@@ -58,6 +58,16 @@ import { isEligibleForMpDomesticSubsidy } from "@/lib/mp-subsidy-eligibility";
 const r2 = (n: number): number => Math.round(n * 100) / 100;
 const max0 = (n: number): number => (n < 0 ? 0 : n);
 
+/**
+ * Tier A (≤150 u): when the current month exceeds a recent low bill, MPEZ has been observed to
+ * prorate FC+ED for the subsidy using the *prior* month's metered units as the denominator
+ * (DEC-2025 147 u, prior NOV 122 u → printed subsidy matches 100/122, not 100/147).
+ * Gates keep the path narrow so typical months still use `current` units.
+ */
+const MP_TIER_A_PRIOR_MONTH_FC_ED_DENOM_MIN_UNITS = 120;
+const MP_TIER_A_PRIOR_MONTH_FC_ED_DENOM_MAX_RATIO = 0.86;
+const MP_TIER_A_PRIOR_MONTH_FC_ED_MIN_JUMP_UNITS = 15;
+
 export type MpBillEngineInput = {
   discomCode: MpDiscomCode;
   category: MpTariffCategory;
@@ -110,6 +120,11 @@ export type MpBillEngineInput = {
   printedElectricityDutyInr?: number;
   /** Strict audit: use printed FPPAS / fuel surcharge from the bill line when available. */
   printedFppasInr?: number;
+  /**
+   * Prior calendar month metered units (e.g. from OCR `months` / history). Used only for Tier A
+   * (≤150 u) FC+ED proration when consumption jumps after a low month — verified DEC-2025 N1906004864.
+   */
+  priorMeteredUnits?: number | null;
   /**
    * Printed **ToD rebate & surcharge** line ("Other / TOD Rebate & Surcharge"). Signed as on bill
    * (credit usually negative, e.g. −43.80). Separate from M.P. Govt. subsidy — never merge.
@@ -454,12 +469,15 @@ export type MpDomesticSubsidyContext = {
   fixedChargeInr?: number;
   /** Engine-computed electricity duty (₹) for the row — used by Tier A proportional credit. */
   electricityDutyInr?: number;
+  /** Prior calendar month metered units (OCR)— narrows Tier A FC+ED proration denominator after a low month. */
+  priorMonthMeteredUnits?: number | null;
 };
 
 /**
  * Compute the MP Govt. domestic subsidy credit (always returned as a NEGATIVE amount).
  *
- * Tier A (≤150 u): subsidy = slabEnergy(min(units, N)) + (FC + ED) × min(N/units, 1) − cap
+ * Tier A (≤150 u): subsidy = slabEnergy(min(units, N)) + (FC + ED) × min(N/U*, 1) − cap where U* is normally
+ *   `units` but can be prior month's metered units when narrowly gated (low prior month → higher current).
  * Tier B (151–300 u): subsidy = perUnit × units
  * Tier C (301–500 u FY 26-27): flat ₹ cap
  * Tier D (>500 u or FY 25-26 >300 u): zero
@@ -512,7 +530,21 @@ export function computeMpDomesticSubsidy(
     }
     const fc = Math.max(0, Number(ctx.fixedChargeInr) || 0);
     const ed = Math.max(0, Number(ctx.electricityDutyInr) || 0);
-    const proportion = Math.min(1, anchorUnits / Math.max(1, units));
+    const priorRaw = Number(ctx.priorMonthMeteredUnits);
+    let fcEdDenomUnits = Math.max(1, units);
+    if (
+      Number.isFinite(priorRaw) &&
+      priorRaw > 0 &&
+      priorRaw < 150 &&
+      priorRaw <= MP_TIER_A_PRIOR_MONTH_FC_ED_DENOM_MAX_RATIO * units &&
+      priorRaw >= MP_TIER_A_PRIOR_MONTH_FC_ED_DENOM_MIN_UNITS &&
+      priorRaw >= anchorUnits &&
+      units > priorRaw &&
+      units - priorRaw >= MP_TIER_A_PRIOR_MONTH_FC_ED_MIN_JUMP_UNITS
+    ) {
+      fcEdDenomUnits = priorRaw;
+    }
+    const proportion = Math.min(1, anchorUnits / fcEdDenomUnits);
     const proportionalFcEd = (fc + ed) * proportion;
     const consumerCap = tier.consumerCapInr ?? ATAL_GRIHA_JYOTI.subsidisedFirstUnitsCount;
     const credit = r2(Math.max(0, energyOnSlice + proportionalFcEd - consumerCap));
@@ -530,7 +562,9 @@ export function computeMpDomesticSubsidy(
       reason:
         `MP Govt. subsidy ${fyLabel} (Tier A, AGJY anchor, ≤150 u): ` +
         `slabEnergy(first ${anchorUnits} u) = ₹${r2(energyOnSlice)} + ` +
-        `(FC ₹${r2(fc)} + ED ₹${r2(ed)}) × ${proportion.toFixed(3)} = ₹${r2(proportionalFcEd)}; ` +
+        `(FC ₹${r2(fc)} + ED ₹${r2(ed)}) × ${proportion.toFixed(3)}` +
+        (fcEdDenomUnits !== units ? ` (FC+ED proration ÷${fcEdDenomUnits} prior-mo u, current ${units} u)` : "") +
+        ` = ₹${r2(proportionalFcEd)}; ` +
         `consumer cap ₹${consumerCap}; net credit = ₹${credit}.`,
       tier
     };
@@ -689,7 +723,8 @@ export function calculateMpBill(input: MpBillEngineInput): MpBillBreakdown {
       billMonth: input.billMonth,
       energyRateOverridePerUnit: input.energyRateOverridePerUnit,
       fixedChargeInr: fc.amount,
-      electricityDutyInr: ed.amount
+      electricityDutyInr: ed.amount,
+      priorMonthMeteredUnits: input.priorMeteredUnits
     });
   }
 
