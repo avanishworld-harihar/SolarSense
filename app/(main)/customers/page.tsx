@@ -128,10 +128,25 @@ function CustomersPageContent() {
     [router]
   );
 
-  const workspaceCustomer = useMemo(
-    () => (selectedLeadId ? allCustomers.find((c) => c.id === selectedLeadId) ?? null : null),
-    [allCustomers, selectedLeadId]
-  );
+  const workspaceCustomer = useMemo(() => {
+    if (!selectedLeadId) return null;
+    if (!customers.some((c) => c.id === selectedLeadId)) return null;
+    return allCustomers.find((c) => c.id === selectedLeadId) ?? null;
+  }, [allCustomers, customers, selectedLeadId]);
+
+  useEffect(() => {
+    if (selectedLeadId == null) return;
+    if (customers.length === 0) {
+      setSelectedLeadId(null);
+      router.replace("/customers", { scroll: false });
+      return;
+    }
+    if (!customers.some((c) => c.id === selectedLeadId)) {
+      const next = customers[0]!.id;
+      setSelectedLeadId(next);
+      router.replace(`/customers?lead=${encodeURIComponent(next)}`, { scroll: false });
+    }
+  }, [customers, selectedLeadId, router]);
 
   const showListSkeleton = isLoading && data === undefined && !loadError;
 

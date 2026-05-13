@@ -410,38 +410,35 @@ export function CustomersLeadList({
                   </dl>
 
                   <div className="mt-4 flex flex-col gap-2 md:max-lg:mt-2.5 md:max-lg:gap-1.5">
-                    <div
-                      className={cn(
-                        "grid gap-2",
-                        customer.phone && waUrl ? "grid-cols-2" : "grid-cols-1"
-                      )}
-                    >
-                      {customer.phone ? (
-                        <a
-                          href={`tel:${customer.phone}`}
-                          onClick={() => handlePhoneCall(customer.id)}
-                          className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 text-base font-bold text-white shadow-md active:bg-indigo-700 md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-sm"
-                          aria-label={t("customers_mobileCall")}
-                        >
-                          <Phone className="h-5 w-5 shrink-0 md:max-lg:h-4 md:max-lg:w-4" strokeWidth={2} aria-hidden />
-                          {t("customers_mobileCall")}
-                        </a>
-                      ) : null}
-                      {waUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => openWhatsApp(customer.id, waUrl)}
-                          className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50 px-3 text-sm font-bold text-emerald-800 active:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200 md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-xs"
-                          aria-label={t("customers_whatsappAria")}
-                        >
-                          <MessageCircle className="h-5 w-5 shrink-0 md:max-lg:h-4 md:max-lg:w-4" strokeWidth={2} aria-hidden />
-                          {t("customers_whatsappShort")}
-                        </button>
-                      ) : null}
-                    </div>
+                    {customer.phone || waUrl ? (
+                      <div className="flex w-full min-w-0 gap-2">
+                        {customer.phone ? (
+                          <a
+                            href={`tel:${customer.phone}`}
+                            onClick={() => handlePhoneCall(customer.id)}
+                            className="flex min-h-12 min-w-0 flex-1 touch-manipulation items-center justify-center gap-2 rounded-xl bg-indigo-600 px-2 text-sm font-bold text-white shadow-md active:bg-indigo-700 sm:min-h-[3rem] sm:px-3 sm:text-base md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-sm"
+                            aria-label={t("customers_mobileCall")}
+                          >
+                            <Phone className="h-5 w-5 shrink-0 md:max-lg:h-4 md:max-lg:w-4" strokeWidth={2} aria-hidden />
+                            <span className="truncate">{t("customers_mobileCall")}</span>
+                          </a>
+                        ) : null}
+                        {waUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => openWhatsApp(customer.id, waUrl)}
+                            className="flex min-h-12 min-w-0 flex-1 touch-manipulation items-center justify-center gap-2 rounded-xl border border-emerald-300/90 bg-emerald-50 px-2 text-sm font-bold text-emerald-900 shadow-sm active:bg-emerald-100 dark:border-emerald-500/45 dark:bg-emerald-950/55 dark:text-emerald-100 dark:active:bg-emerald-900/50 sm:min-h-[3rem] sm:px-3 md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-xs"
+                            aria-label={t("customers_whatsappAria")}
+                          >
+                            <MessageCircle className="h-5 w-5 shrink-0 md:max-lg:h-4 md:max-lg:w-4" strokeWidth={2} aria-hidden />
+                            <span className="truncate">{t("customers_whatsappShort")}</span>
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <Link
                       href={commercialCta.href}
-                      className="inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white shadow-md active:bg-slate-800 dark:bg-white dark:text-slate-900 dark:active:bg-slate-200 md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-xs"
+                      className="ss-cta-primary min-h-12 w-full touch-manipulation md:max-lg:min-h-10"
                     >
                       {t(commercialCta.labelKey)}
                     </Link>
@@ -596,7 +593,7 @@ export function CustomersLeadList({
                               ) : null}
                               <Link
                                 href={commercialCta.href}
-                                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-3 text-[11px] font-extrabold uppercase tracking-wide text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                                className="inline-flex h-9 max-w-full shrink-0 items-center justify-center rounded-lg border border-teal-600/75 bg-gradient-to-r from-teal-50 to-indigo-50 px-3 text-[11px] font-extrabold uppercase tracking-wide text-teal-900 shadow-sm transition hover:brightness-105 dark:border-teal-400/45 dark:from-teal-950/50 dark:to-indigo-950/40 dark:text-teal-50"
                               >
                                 {t(commercialCta.labelKey)}
                               </Link>
@@ -606,7 +603,7 @@ export function CustomersLeadList({
                               <p>{t("customers_noPhoneOnFile")}</p>
                               <Link
                                 href={commercialCta.href}
-                                className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-3 text-[11px] font-extrabold uppercase tracking-wide text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                                className="inline-flex h-9 max-w-full items-center justify-center rounded-lg border border-teal-600/75 bg-gradient-to-r from-teal-50 to-indigo-50 px-3 text-[11px] font-extrabold uppercase tracking-wide text-teal-900 shadow-sm transition hover:brightness-105 dark:border-teal-400/45 dark:from-teal-950/50 dark:to-indigo-950/40 dark:text-teal-50"
                               >
                                 {t(commercialCta.labelKey)}
                               </Link>
