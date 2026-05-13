@@ -59,7 +59,9 @@ export function AppShell({ title, children }: { title: string; children: React.R
         <section
           className={cn(
             pageContainerClass(),
-            "min-h-screen flex-1 space-y-3 overflow-x-hidden pb-0 pt-3 sm:space-y-4 sm:pt-4 md:space-y-5 md:pt-5 lg:pb-0 lg:pt-6"
+            "min-h-screen flex-1 space-y-3 overflow-x-hidden pt-3 sm:space-y-4 sm:pt-4 md:space-y-5 md:pt-5",
+            /* Reserve space for fixed bottom nav (lg:hidden) + home indicator / Android gesture bar */
+            "pb-[max(6.75rem,calc(5.5rem+env(safe-area-inset-bottom,0px)))] lg:pb-0 lg:pt-6"
           )}
         >
           {children}

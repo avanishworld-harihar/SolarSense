@@ -148,7 +148,7 @@ export function ProposalManageClient({
     .join(" · ");
 
   return (
-    <div className="space-y-5 pb-24 lg:pb-6">
+    <div className="space-y-5 pb-4 lg:pb-6">
       <ProposalHubHeader
         title={t("proposals_detailWorkspaceTitle")}
         subtitle={headerSub}

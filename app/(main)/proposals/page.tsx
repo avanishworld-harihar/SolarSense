@@ -75,7 +75,7 @@ export default function ProposalsHubPage() {
   );
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6 pb-2 md:pb-4">
       <ProposalHubHeader
         variant="workspace"
         title={t("proposals_title")}

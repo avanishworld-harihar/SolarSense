@@ -64,7 +64,7 @@ export function ProposalHubDealList({
       <div className="shrink-0 border-b border-slate-100 px-3 py-2 dark:border-white/[0.06]">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{pipelineLabel}</p>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
         {PROPOSAL_STATUS_ORDER.map((st) => {
           const bucket = grouped.get(st) ?? [];
           if (bucket.length === 0) return null;
