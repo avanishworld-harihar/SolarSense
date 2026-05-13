@@ -253,7 +253,7 @@ function GlassProjectCardInner({
             </button>
             {project.leadId ? (
               <Link
-                href={`/proposal?leadId=${encodeURIComponent(project.leadId)}`}
+                href={`/customers?lead=${encodeURIComponent(project.leadId)}`}
                 className="inline-flex min-h-10 items-center justify-between rounded-xl border border-teal-200/70 bg-teal-50/80 px-3 text-xs font-extrabold text-teal-900 transition active:scale-[0.99]"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -377,7 +377,7 @@ function GlassProjectCardInner({
 
             {project.leadId ? (
               <Link
-                href={`/proposal?leadId=${encodeURIComponent(project.leadId)}`}
+                href={`/customers?lead=${encodeURIComponent(project.leadId)}`}
                 className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-teal-300 bg-teal-50 px-3 text-sm font-extrabold text-teal-900 shadow-sm transition hover:bg-teal-100 dark:border-teal-500/45 dark:bg-teal-950/45 dark:text-teal-100 dark:hover:bg-teal-900/50"
                 onClick={() => setSheetOpen(false)}
               >

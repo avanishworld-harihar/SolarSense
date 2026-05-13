@@ -59,7 +59,7 @@ export function ProjectPipelineList({
               <div className="flex shrink-0 items-center gap-1">
                 {glass.leadId ? (
                   <Link
-                    href={`/proposal?leadId=${encodeURIComponent(glass.leadId)}`}
+                    href={`/customers?lead=${encodeURIComponent(glass.leadId)}`}
                     className="inline-flex h-8 items-center gap-1 rounded-md border border-slate-200 px-2 text-[10px] font-bold text-slate-700 dark:border-white/15 dark:text-slate-200"
                   >
                     <Send className="h-3 w-3" />

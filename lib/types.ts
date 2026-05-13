@@ -28,6 +28,8 @@ export type CustomerLead = {
   survey_status?: string | null;
   /** Derived from projects linkage for Customers UI. */
   customer_stage?: "lead" | "in-pipeline" | "active-project";
+  /** Latest commercial proposal for this lead (CRM hand-off to /proposals/[id]). */
+  primary_proposal_id?: string | null;
 };
 
 export type MonthKey = "jan" | "feb" | "mar" | "apr" | "may" | "jun" | "jul" | "aug" | "sep" | "oct" | "nov" | "dec";

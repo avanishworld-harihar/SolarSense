@@ -1,6 +1,7 @@
 "use client";
 
 import { CustomersLeadList } from "@/components/customers-lead-list";
+import { CustomerWorkspacePane } from "@/components/customer-workspace-pane";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { useToast } from "@/components/ui/toast-center";
 import {
@@ -38,7 +39,7 @@ import { useLanguage } from "@/lib/language-context";
 import type { CustomerLead } from "@/lib/types";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import type { FormEvent } from "react";
-import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import useSWR, { useSWRConfig } from "swr";
 
@@ -88,6 +89,7 @@ function CustomersPageContent() {
   const allCustomers = data ?? [];
 
   const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   const customers = useMemo(() => {
     let list = allCustomers;
@@ -109,6 +111,26 @@ function CustomersPageContent() {
       "active-projects": allCustomers.filter((c) => (c.customer_stage ?? "lead") === "active-project").length
     }),
     [allCustomers]
+  );
+
+  const leadQs = searchParams.get("lead");
+  useEffect(() => {
+    if (leadQs && allCustomers.some((c) => c.id === leadQs)) {
+      setSelectedLeadId(leadQs);
+    }
+  }, [leadQs, allCustomers]);
+
+  const onWorkspaceSelectLead = useCallback(
+    (id: string) => {
+      setSelectedLeadId(id);
+      router.replace(`/customers?lead=${encodeURIComponent(id)}`, { scroll: false });
+    },
+    [router]
+  );
+
+  const workspaceCustomer = useMemo(
+    () => (selectedLeadId ? allCustomers.find((c) => c.id === selectedLeadId) ?? null : null),
+    [allCustomers, selectedLeadId]
   );
 
   const showListSkeleton = isLoading && data === undefined && !loadError;
@@ -486,7 +508,9 @@ function CustomersPageContent() {
         </div>
         </div>
 
-        <div className="page-lite-item flex flex-wrap gap-1.5 sm:gap-2">
+        <div className="page-lite-item md:max-lg:grid md:max-lg:grid-cols-[minmax(260px,40%)_minmax(0,1fr)] md:max-lg:items-start md:max-lg:gap-5">
+          <div className="min-w-0 space-y-4">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {(
             [
               { key: "all", label: t("customers_filterAll") },
@@ -521,16 +545,22 @@ function CustomersPageContent() {
               </button>
             );
           })}
-        </div>
+            </div>
 
-        <div className="page-lite-item">
-          <CustomersLeadList
-            customers={customers}
-            loading={showListSkeleton}
-            onStatusChange={handleStatusChange}
-            onEditLead={openEditLead}
-            onDeleteLead={(c) => setDeleteTarget(c)}
-          />
+            <CustomersLeadList
+              customers={customers}
+              loading={showListSkeleton}
+              onStatusChange={handleStatusChange}
+              onEditLead={openEditLead}
+              onDeleteLead={(c) => setDeleteTarget(c)}
+              selectedLeadId={selectedLeadId}
+              onSelectLead={onWorkspaceSelectLead}
+            />
+          </div>
+
+          <div className="hidden min-h-[min(70vh,520px)] md:max-lg:block lg:hidden">
+            <CustomerWorkspacePane customer={workspaceCustomer} onStatusChange={handleStatusChange} />
+          </div>
         </div>
       </div>
 

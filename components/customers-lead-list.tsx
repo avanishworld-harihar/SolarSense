@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Building2, IndianRupee, MapPin, MessageCircle, Pencil, Phone, PhoneCall, Send, Trash2, Users, Wifi } from "lucide-react";
+import { Building2, IndianRupee, MapPin, MessageCircle, Pencil, Phone, PhoneCall, Trash2, Users, Wifi } from "lucide-react";
 
 import type { CustomerLead } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +20,7 @@ import { formatLastFollowUpLocale } from "@/lib/time-i18n";
 import { buildLeadWhatsAppUrl } from "@/lib/whatsapp-lead";
 import { readLeadFollowUpMap, recordLeadFollowUp } from "@/lib/lead-followup-storage";
 import { normalizeSource, SOURCE_META, isLeadStale } from "@/lib/lead-source";
+import { resolveCustomerCommercialCta } from "@/lib/customer-crm-cta";
 
 export type { CustomerLead };
 
@@ -30,7 +31,7 @@ function initials(name: string) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function LeadStatusBadge({ statusKey, label }: { statusKey: LeadStatusKey; label: string }) {
+export function LeadStatusBadge({ statusKey, label }: { statusKey: LeadStatusKey; label: string }) {
   const meta = LEAD_STATUS_BADGE[statusKey];
   return (
     <span
@@ -50,7 +51,7 @@ function LeadStatusBadge({ statusKey, label }: { statusKey: LeadStatusKey; label
  * but a real `<select>` underneath, which gives free OS-native pickers on
  * mobile and full a11y/keyboard support on desktop.
  */
-function LeadStatusPillSelect({
+export function LeadStatusPillSelect({
   leadId,
   statusKey,
   label,
@@ -163,7 +164,7 @@ const CUSTOMER_STAGE_META: Record<CustomerStage, { labelKey: string; className: 
   }
 };
 
-function formatLeadLastActivity(iso: string | null | undefined, locale: string): string {
+export function formatLeadLastActivity(iso: string | null | undefined, locale: string): string {
   if (!iso) return "—";
   try {
     const d = new Date(iso);
@@ -182,7 +183,9 @@ export function CustomersLeadList({
   loading,
   onStatusChange,
   onEditLead,
-  onDeleteLead
+  onDeleteLead,
+  selectedLeadId,
+  onSelectLead
 }: {
   customers: CustomerLead[];
   loading: boolean;
@@ -194,6 +197,9 @@ export function CustomersLeadList({
   onStatusChange?: (leadId: string, next: LeadStatusKey) => void;
   onEditLead?: (customer: CustomerLead) => void;
   onDeleteLead?: (customer: CustomerLead) => void;
+  /** Tablet split-pane: highlights row and syncs right workspace. */
+  selectedLeadId?: string | null;
+  onSelectLead?: (leadId: string) => void;
 }) {
   const { locale, t } = useLanguage();
   const showHeader = !loading && customers.length > 0;
@@ -259,12 +265,7 @@ export function CustomersLeadList({
           <div className="space-y-3 px-0.5 md:hidden">
             {customers.map((customer) => {
               const statusKey = normalizeLeadStatus(customer.status);
-              const quoteLinkClass = cn(
-                "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold uppercase tracking-wide transition-colors active:scale-[0.99]",
-                statusKey === "proposal-sent"
-                  ? "border-emerald-300/90 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
-                  : "border-indigo-200/90 bg-indigo-50 text-indigo-800 dark:border-indigo-500/25 dark:bg-indigo-950/35 dark:text-indigo-200"
-              );
+              const commercialCta = resolveCustomerCommercialCta(customer);
               const bill = Number(customer.monthly_bill || 0);
               const ts = followMap[customer.id];
               const followLabel = ts != null ? formatLastFollowUpLocale(locale, ts) : t("customers_neverFollowedUp");
@@ -283,8 +284,26 @@ export function CustomersLeadList({
                   key={`m-${customer.id}`}
                   className={cn(
                     "relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#0c1017]",
-                    activeProject && "border-l-[4px] border-l-indigo-500 bg-indigo-50/25 dark:border-l-indigo-400 dark:bg-indigo-950/25"
+                    activeProject && "border-l-[4px] border-l-indigo-500 bg-indigo-50/25 dark:border-l-indigo-400 dark:bg-indigo-950/25",
+                    onSelectLead && selectedLeadId === customer.id && "ring-2 ring-brand-500/50 ring-offset-2 ring-offset-slate-50 dark:ring-offset-[#0c1017]"
                   )}
+                  onClick={(e) => {
+                    if (!onSelectLead) return;
+                    if ((e.target as HTMLElement).closest("a, button, select, label")) return;
+                    onSelectLead(customer.id);
+                  }}
+                  onKeyDown={
+                    onSelectLead
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onSelectLead(customer.id);
+                          }
+                        }
+                      : undefined
+                  }
+                  role={onSelectLead ? "button" : undefined}
+                  tabIndex={onSelectLead ? 0 : undefined}
                 >
                   {canMutateLead ? (
                     <div className="absolute right-3 top-3 z-10 flex items-center gap-1">
@@ -405,27 +424,13 @@ export function CustomersLeadList({
                           {t("customers_whatsappShort")}
                         </button>
                       ) : null}
-                      <Link
-                        href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                        className={quoteLinkClass}
-                        aria-label={
-                          statusKey === "proposal-sent"
-                            ? `Proposal sent — open or update for ${customer.name}`
-                            : `Send proposal to ${customer.name}`
-                        }
-                      >
-                        <Send className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-                        {t("customers_linkQuoteCta")}
-                      </Link>
                     </div>
-                    {activeProject ? (
-                      <Link
-                        href="/projects"
-                        className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 active:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
-                      >
-                        {t("customers_linkPipeline")}
-                      </Link>
-                    ) : null}
+                    <Link
+                      href={commercialCta.href}
+                      className="inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white shadow-md active:bg-slate-800 dark:bg-white dark:text-slate-900 dark:active:bg-slate-200"
+                    >
+                      {t(commercialCta.labelKey)}
+                    </Link>
                   </div>
                 </article>
               );
@@ -445,12 +450,7 @@ export function CustomersLeadList({
             <div>
               {customers.map((customer) => {
                 const statusKey = normalizeLeadStatus(customer.status);
-                const quoteLinkClass = cn(
-                  "inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs",
-                  statusKey === "proposal-sent"
-                    ? "border-emerald-300/90 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
-                    : "border-indigo-200/90 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:border-indigo-500/25 dark:bg-indigo-950/35 dark:text-indigo-200"
-                );
+                const commercialCta = resolveCustomerCommercialCta(customer);
                 const bill = Number(customer.monthly_bill || 0);
                 const ts = followMap[customer.id];
                 const followLabel = ts != null ? formatLastFollowUpLocale(locale, ts) : t("customers_neverFollowedUp");
@@ -470,8 +470,26 @@ export function CustomersLeadList({
                     className={cn(
                       "group/row relative border-b border-slate-200 p-4 transition-colors last:border-b-0 hover:bg-slate-50/90 dark:border-white/[0.07] dark:hover:bg-white/[0.03]",
                       "md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5",
-                      activeProject && "border-l-[3px] border-l-indigo-500 bg-indigo-50/30 dark:border-l-indigo-400 dark:bg-indigo-950/20"
+                      activeProject && "border-l-[3px] border-l-indigo-500 bg-indigo-50/30 dark:border-l-indigo-400 dark:bg-indigo-950/20",
+                      onSelectLead && selectedLeadId === customer.id && "bg-brand-50/60 ring-2 ring-inset ring-brand-400/40 dark:bg-brand-950/20"
                     )}
+                    onClick={(e) => {
+                      if (!onSelectLead) return;
+                      if ((e.target as HTMLElement).closest("a, button, select, label")) return;
+                      onSelectLead(customer.id);
+                    }}
+                    onKeyDown={
+                      onSelectLead
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              onSelectLead(customer.id);
+                            }
+                          }
+                        : undefined
+                    }
+                    role={onSelectLead ? "button" : undefined}
+                    tabIndex={onSelectLead ? 0 : undefined}
                   >
                     {canMutateLead ? (
                       <div className="absolute right-3 top-3 z-20 flex items-center gap-1">
@@ -563,49 +581,21 @@ export function CustomersLeadList({
                                 </button>
                               ) : null}
                               <Link
-                                href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                                className={quoteLinkClass}
-                                aria-label={
-                                  statusKey === "proposal-sent"
-                                    ? `Proposal sent — open or update for ${customer.name}`
-                                    : `Send proposal to ${customer.name}`
-                                }
+                                href={commercialCta.href}
+                                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 px-3 text-[11px] font-extrabold uppercase tracking-wide text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                               >
-                                <Send className="h-3.5 w-3.5" strokeWidth={2} />
-                                <span>{t("customers_linkQuoteCta")}</span>
+                                {t(commercialCta.labelKey)}
                               </Link>
-                              {activeProject ? (
-                                <Link
-                                  href="/projects"
-                                  className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
-                                >
-                                  {t("customers_linkPipeline")}
-                                </Link>
-                              ) : null}
                             </div>
                           ) : (
                             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400 sm:text-sm">
                               <p>{t("customers_noPhoneOnFile")}</p>
                               <Link
-                                href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                                className={quoteLinkClass}
-                                aria-label={
-                                  statusKey === "proposal-sent"
-                                    ? `Proposal sent — open or update for ${customer.name}`
-                                    : `Send proposal to ${customer.name}`
-                                }
+                                href={commercialCta.href}
+                                className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-3 text-[11px] font-extrabold uppercase tracking-wide text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                               >
-                                <Send className="h-3.5 w-3.5" strokeWidth={2} />
-                                <span>{t("customers_linkQuoteCta")}</span>
+                                {t(commercialCta.labelKey)}
                               </Link>
-                              {activeProject ? (
-                                <Link
-                                  href="/projects"
-                                  className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
-                                >
-                                  {t("customers_linkPipeline")}
-                                </Link>
-                              ) : null}
                             </div>
                           )}
                           {stale && (

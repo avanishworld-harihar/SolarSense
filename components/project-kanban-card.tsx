@@ -99,7 +99,7 @@ export const ProjectKanbanCard = memo(function ProjectKanbanCard({
       <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-slate-100 pt-2 dark:border-white/10">
         {project.leadId ? (
           <Link
-            href={`/proposal?leadId=${encodeURIComponent(project.leadId)}`}
+                    href={`/customers?lead=${encodeURIComponent(project.leadId)}`}
             className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-100 dark:border-white/15 dark:bg-white/[0.06] dark:text-slate-200"
             onClick={(e) => e.stopPropagation()}
           >

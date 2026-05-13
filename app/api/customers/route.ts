@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mapCustomerRow } from "@/lib/customers-map";
-import { listCustomers, listPipelineProjects } from "@/lib/supabase";
+import { listCustomers, listPipelineProjects, mapLeadIdsToLatestProposalIds } from "@/lib/supabase";
 import { processInboundLead } from "@/lib/inbound-leads";
 import type { CustomerLead } from "@/lib/types";
 import { z } from "zod";
@@ -32,9 +32,11 @@ export async function GET() {
         : "in-pipeline";
       stageByLeadId.set(p.lead_id, stage);
     }
+    const proposalByLead = await mapLeadIdsToLatestProposalIds(customers.map((c) => c.id));
     const decorated = customers.map((c) => ({
       ...c,
-      customer_stage: stageByLeadId.get(c.id) ?? "lead"
+      customer_stage: stageByLeadId.get(c.id) ?? "lead",
+      primary_proposal_id: proposalByLead[c.id] ?? null
     }));
     return NextResponse.json({ ok: true, data: decorated });
   } catch (error) {

@@ -277,6 +277,24 @@ export async function listCustomers() {
   return data ?? [];
 }
 
+/** Latest proposal id per lead (for CRM → commercial hand-off). */
+export async function mapLeadIdsToLatestProposalIds(leadIds: string[]): Promise<Record<string, string>> {
+  const uniq = [...new Set(leadIds.map((id) => id.trim()).filter(Boolean))];
+  if (uniq.length === 0) return {};
+  const client = createSupabaseAdmin() ?? supabase;
+  if (!client) return {};
+  const { data, error } = await client.from("proposals").select("id, lead_id, generated_at").in("lead_id", uniq);
+  if (error || !Array.isArray(data)) return {};
+  const rows = data as { id: string; lead_id: string | null; generated_at?: string | null }[];
+  rows.sort((a, b) => String(b.generated_at ?? "").localeCompare(String(a.generated_at ?? "")));
+  const out: Record<string, string> = {};
+  for (const r of rows) {
+    const lid = r.lead_id != null ? String(r.lead_id) : "";
+    if (lid && !out[lid]) out[lid] = String(r.id);
+  }
+  return out;
+}
+
 /**
  * Move a lead to a new pipeline status and stamp `last_touched_at = now()`.
  * Used by the proposal POST (auto bump → 'proposal-sent') and by the lead

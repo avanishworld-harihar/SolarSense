@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-center";
 import type { ProposalStatus } from "@/lib/proposal-status";
 import { cn } from "@/lib/utils";
-import { ExternalLink, FileDown, MessageCircle, MoreHorizontal, PencilLine, X } from "lucide-react";
+import { Archive, Copy, ExternalLink, FileDown, MessageCircle, MoreHorizontal, PencilLine, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export type ProposalListCardProps = {
@@ -23,6 +22,10 @@ export type ProposalListCardProps = {
     kw: string;
     editPricing: string;
     openProposal: string;
+    openWorkspace: string;
+    previewPublic: string;
+    duplicateProposal: string;
+    archiveProposal: string;
     pdfQuote: string;
     send: string;
     comingSoon: string;
@@ -63,7 +66,6 @@ export function ProposalListCard({
   status,
   labels
 }: ProposalListCardProps) {
-  const router = useRouter();
   const toast = useToast();
   const manageHref = `/proposals/${id}`;
   const publicHref = `/proposal/${id}`;
@@ -133,9 +135,9 @@ export function ProposalListCard({
 
         <div className="flex gap-2 border-t border-slate-100 px-4 pb-4 pt-3 dark:border-white/[0.06]">
           <Button asChild type="button" size="lg" variant="emeraldCta" className="min-h-12 flex-1 touch-manipulation text-base font-bold">
-            <Link href={publicHref} target="_blank" rel="noreferrer" className="gap-2">
+            <Link href={manageHref} className="gap-2">
               <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-              {labels.openProposal}
+              {labels.openWorkspace}
             </Link>
           </Button>
           <Button
@@ -154,11 +156,7 @@ export function ProposalListCard({
 
       {/* —— Desktop / tablet (md+): denser hub card —— */}
       <div className="hidden md:flex md:flex-col">
-        <button
-          type="button"
-          onClick={() => router.push(manageHref)}
-          className="flex w-full min-w-0 flex-col gap-2.5 rounded-xl p-3.5 pb-2 text-left transition hover:bg-slate-50/80 dark:hover:bg-white/[0.04]"
-        >
+        <div className="flex w-full min-w-0 flex-col gap-2.5 rounded-xl p-3.5 pb-2 text-left">
           <div className="flex items-start gap-2.5">
             <span
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-emerald-700 text-xs font-black text-white shadow-md"
@@ -201,58 +199,48 @@ export function ProposalListCard({
               </p>
             </div>
           </div>
-        </button>
+        </div>
 
         <div
-          className="mt-0 grid grid-cols-2 gap-1.5 border-t border-slate-100 px-3 pb-3 pt-2.5 dark:border-white/[0.06] lg:grid-cols-4"
+          className="mt-0 flex gap-2 border-t border-slate-100 px-3 pb-3 pt-2.5 dark:border-white/[0.06]"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <Button asChild type="button" size="sm" variant="emeraldCta" className="h-9 gap-1 text-[10px] font-bold lg:h-8">
+          <Button asChild type="button" size="sm" variant="emeraldCta" className="h-9 min-h-9 flex-1 gap-1 text-[11px] font-bold">
             <Link href={manageHref}>
-              <PencilLine className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
-              {labels.editPricing}
-            </Link>
-          </Button>
-          <Button asChild type="button" size="sm" variant="secondary" className="h-9 gap-1 text-[10px] font-bold lg:h-8">
-            <Link href={publicHref} target="_blank" rel="noreferrer">
-              <ExternalLink className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
-              {labels.openProposal}
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+              {labels.openWorkspace}
             </Link>
           </Button>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-9 gap-1 text-[10px] font-bold lg:h-8"
-            onClick={() => soon(labels.pdfQuote)}
+            className="h-9 min-w-9 shrink-0 px-0"
+            aria-label={labels.moreActions}
+            aria-expanded={sheetOpen}
+            onClick={() => setSheetOpen(true)}
           >
-            <FileDown className="h-3 w-3 shrink-0" aria-hidden />
-            {labels.pdfQuote}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-9 gap-1 text-[10px] font-bold lg:h-8"
-            onClick={() => soon(labels.send)}
-          >
-            <MessageCircle className="h-3 w-3 shrink-0" aria-hidden />
-            {labels.send}
+            <MoreHorizontal className="h-4 w-4" aria-hidden />
           </Button>
         </div>
       </div>
 
       {/* Mobile action sheet */}
       {sheetOpen ? (
-        <div className="fixed inset-0 z-[80] md:hidden" role="dialog" aria-modal="true" aria-label={labels.moreActions}>
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center md:items-center md:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={labels.moreActions}
+        >
           <button
             type="button"
             className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
             aria-label={labels.sheetClose}
             onClick={() => setSheetOpen(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[min(85dvh,520px)] overflow-y-auto rounded-t-3xl border border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_40px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#0f1419]">
+          <div className="relative max-h-[min(85dvh,560px)] w-full max-w-md overflow-y-auto rounded-t-3xl border border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_40px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#0f1419] md:max-h-[min(80vh,640px)] md:rounded-2xl md:shadow-2xl">
             <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden />
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-black text-slate-900 dark:text-slate-50">{labels.moreActions}</p>
@@ -265,11 +253,17 @@ export function ProposalListCard({
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="max-h-[min(60vh,360px)] space-y-2 overflow-y-auto md:max-h-none">
               <Button asChild variant="secondary" className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold">
                 <Link href={manageHref} onClick={() => setSheetOpen(false)}>
                   <PencilLine className="h-4 w-4 shrink-0" aria-hidden />
                   {labels.editPricing}
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold">
+                <Link href={publicHref} target="_blank" rel="noreferrer" onClick={() => setSheetOpen(false)}>
+                  <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                  {labels.previewPublic}
                 </Link>
               </Button>
               <Button
@@ -289,6 +283,24 @@ export function ProposalListCard({
               >
                 <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
                 {labels.send}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold"
+                onClick={() => soon(labels.duplicateProposal)}
+              >
+                <Copy className="h-4 w-4 shrink-0" aria-hidden />
+                {labels.duplicateProposal}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold"
+                onClick={() => soon(labels.archiveProposal)}
+              >
+                <Archive className="h-4 w-4 shrink-0" aria-hidden />
+                {labels.archiveProposal}
               </Button>
             </div>
             {savingMo != null ? (
