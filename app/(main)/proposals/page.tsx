@@ -57,7 +57,7 @@ export default function ProposalsHubPage() {
       {isLoading && !data ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-44 rounded-2xl" />
+            <Skeleton key={i} className="h-56 rounded-2xl md:h-44" />
           ))}
         </div>
       ) : rows.length === 0 ? (
@@ -90,7 +90,9 @@ export default function ProposalsHubPage() {
                 panelBrand: t("proposals_panelBrand"),
                 estSavingMo: t("proposals_estSavingMo"),
                 netPayable: t("proposals_netLabel"),
-                statusLabel: (s) => t(`proposals_status_${s}`)
+                statusLabel: (s) => t(`proposals_status_${s}`),
+                moreActions: t("proposals_cardMoreActions"),
+                sheetClose: t("proposals_sheetClose")
               }}
             />
           ))}

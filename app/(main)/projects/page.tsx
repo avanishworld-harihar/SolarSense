@@ -3,6 +3,7 @@
 import { Send } from "lucide-react";
 import type { GlassProjectSummary, ProjectCardPatch } from "@/components/glass-project-card";
 import { ProjectKanbanBoard } from "@/components/project-kanban-board";
+import { ProjectPipelineAccordion } from "@/components/project-pipeline-accordion";
 import { ProjectPipelineList } from "@/components/project-pipeline-list";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -374,11 +375,18 @@ function ProjectsBoard() {
 
         {isLoading && enriched.length === 0 ? (
           view === "active" ? (
-            <div className="page-lite-item flex gap-3 overflow-hidden pb-2">
-              {OPS_STAGE_ORDER.map((s) => (
-                <Skeleton key={s} className="h-[min(70vh,480px)] w-[min(85vw,17.5rem)] shrink-0 rounded-xl" />
-              ))}
-            </div>
+            <>
+              <div className="hidden gap-3 overflow-hidden pb-2 lg:flex">
+                {OPS_STAGE_ORDER.map((s) => (
+                  <Skeleton key={s} className="h-[min(70vh,480px)] w-[min(85vw,17.5rem)] shrink-0 rounded-xl" />
+                ))}
+              </div>
+              <div className="space-y-3 lg:hidden">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-2xl" />
+                ))}
+              </div>
+            </>
           ) : (
             <div className="page-lite-item space-y-2">
               {[1, 2, 3, 4].map((i) => (
@@ -387,12 +395,24 @@ function ProjectsBoard() {
             </div>
           )
         ) : view === "active" ? (
-          <ProjectKanbanBoard
-            items={enriched}
-            onPatch={handlePatch}
-            onEditProject={openEditProject}
-            onDeleteProject={(p) => setDeleteProjectTarget(p)}
-          />
+          <>
+            <div className="hidden lg:block">
+              <ProjectKanbanBoard
+                items={enriched}
+                onPatch={handlePatch}
+                onEditProject={openEditProject}
+                onDeleteProject={(p) => setDeleteProjectTarget(p)}
+              />
+            </div>
+            <div className="lg:hidden">
+              <ProjectPipelineAccordion
+                items={enriched}
+                onPatch={handlePatch}
+                onEditProject={openEditProject}
+                onDeleteProject={(p) => setDeleteProjectTarget(p)}
+              />
+            </div>
+          </>
         ) : (
           <ProjectPipelineList
             variant={view === "archived" ? "archived" : "hidden"}

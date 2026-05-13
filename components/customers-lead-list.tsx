@@ -91,6 +91,21 @@ function LeadStatusPillSelect({
   );
 }
 
+function LeadMobileCardSkeleton() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#0c1017]">
+      <div className="flex gap-3">
+        <Skeleton className="h-14 w-14 shrink-0 rounded-2xl bg-slate-200/80" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="h-5 w-[66%] rounded-md bg-slate-200/80" />
+          <Skeleton className="h-4 w-1/2 rounded-md bg-slate-200/60" />
+          <Skeleton className="h-10 w-full rounded-xl bg-slate-200/50" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LeadRowSkeleton() {
   return (
     <div className="border-b border-slate-100 p-4 last:border-b-0 dark:border-white/[0.06] md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5">
@@ -148,6 +163,20 @@ const CUSTOMER_STAGE_META: Record<CustomerStage, { labelKey: string; className: 
   }
 };
 
+function formatLeadLastActivity(iso: string | null | undefined, locale: string): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString(locale === "hi" ? "hi-IN" : locale === "ta" ? "ta-IN" : "en-IN", {
+      day: "numeric",
+      month: "short"
+    });
+  } catch {
+    return "—";
+  }
+}
+
 export function CustomersLeadList({
   customers,
   loading,
@@ -204,259 +233,438 @@ export function CustomersLeadList({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017]">
-      {showHeader && (
-        <div className="hidden border-b border-slate-200 bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-400 md:grid md:grid-cols-12 md:gap-4 md:px-5">
-          <div className="col-span-5 pl-14">{t("customers_tableLead")}</div>
-          <div className="col-span-3">{t("customers_tableLocation")}</div>
-          <div className="col-span-2">{t("customers_tableBill")}</div>
-          <div className="col-span-2 text-right">{t("customers_tablePipeline")}</div>
+      {!loading && customers.length === 0 ? (
+        <div className="px-0.5 py-1">
+          <CustomersLeadListEmpty t={t} />
         </div>
-      )}
+      ) : null}
 
-      <div>
-        {loading &&
-          Array.from({ length: 5 }).map((_, i) => (
-            <LeadRowSkeleton key={i} />
-          ))}
-
-        {!loading && customers.length === 0 && (
-          <div className="p-4">
-            <CustomersLeadListEmpty t={t} />
+      {loading ? (
+        <>
+          <div className="space-y-3 px-0.5 md:hidden">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <LeadMobileCardSkeleton key={`m-sk-${i}`} />
+            ))}
           </div>
-        )}
+          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017] md:block">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <LeadRowSkeleton key={i} />
+            ))}
+          </div>
+        </>
+      ) : null}
 
-        {!loading &&
-          customers.map((customer) => {
-            const statusKey = normalizeLeadStatus(customer.status);
-            const quoteLinkClass = cn(
-              "inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs",
-              statusKey === "proposal-sent"
-                ? "border-emerald-300/90 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
-                : "border-indigo-200/90 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:border-indigo-500/25 dark:bg-indigo-950/35 dark:text-indigo-200"
-            );
-            const bill = Number(customer.monthly_bill || 0);
-            const ts = followMap[customer.id];
-            const followLabel = ts != null ? formatLastFollowUpLocale(locale, ts) : t("customers_neverFollowedUp");
-            const waUrl = customer.phone ? buildLeadWhatsAppUrl(customer.phone, customer.name, installerName, locale) : null;
-            const statusLabel = t(LEAD_STATUS_I18N_KEY[statusKey]);
-            const stale = isLeadStale(customer.last_touched_at);
-            const stage = (customer.customer_stage ?? "lead") as CustomerStage;
-            const stageMeta = CUSTOMER_STAGE_META[stage];
-            const activeProject = stage === "active-project";
+      {!loading && customers.length > 0 ? (
+        <>
+          <div className="space-y-3 px-0.5 md:hidden">
+            {customers.map((customer) => {
+              const statusKey = normalizeLeadStatus(customer.status);
+              const quoteLinkClass = cn(
+                "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-3 text-sm font-bold uppercase tracking-wide transition-colors active:scale-[0.99]",
+                statusKey === "proposal-sent"
+                  ? "border-emerald-300/90 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
+                  : "border-indigo-200/90 bg-indigo-50 text-indigo-800 dark:border-indigo-500/25 dark:bg-indigo-950/35 dark:text-indigo-200"
+              );
+              const bill = Number(customer.monthly_bill || 0);
+              const ts = followMap[customer.id];
+              const followLabel = ts != null ? formatLastFollowUpLocale(locale, ts) : t("customers_neverFollowedUp");
+              const waUrl = customer.phone ? buildLeadWhatsAppUrl(customer.phone, customer.name, installerName, locale) : null;
+              const statusLabel = t(LEAD_STATUS_I18N_KEY[statusKey]);
+              const stale = isLeadStale(customer.last_touched_at);
+              const stage = (customer.customer_stage ?? "lead") as CustomerStage;
+              const stageMeta = CUSTOMER_STAGE_META[stage];
+              const activeProject = stage === "active-project";
+              const canMutateLead =
+                Boolean(onEditLead || onDeleteLead) && !customer.id.startsWith("optimistic-");
+              const lastActivityLabel = formatLeadLastActivity(customer.last_touched_at, locale);
 
-            const canMutateLead =
-              Boolean(onEditLead || onDeleteLead) && !customer.id.startsWith("optimistic-");
+              return (
+                <article
+                  key={`m-${customer.id}`}
+                  className={cn(
+                    "relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#0c1017]",
+                    activeProject && "border-l-[4px] border-l-indigo-500 bg-indigo-50/25 dark:border-l-indigo-400 dark:bg-indigo-950/25"
+                  )}
+                >
+                  {canMutateLead ? (
+                    <div className="absolute right-3 top-3 z-10 flex items-center gap-1">
+                      {onEditLead ? (
+                        <button
+                          type="button"
+                          onClick={() => onEditLead(customer)}
+                          className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border-[0.5px] border-slate-200/90 bg-white/95 text-slate-600 shadow-sm active:bg-slate-50"
+                          aria-label={t("customers_editLeadAria")}
+                        >
+                          <Pencil className="h-4 w-4" strokeWidth={2} />
+                        </button>
+                      ) : null}
+                      {onDeleteLead ? (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteLead(customer)}
+                          className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border-[0.5px] border-red-200/90 bg-white/95 text-red-600 shadow-sm active:bg-red-50"
+                          aria-label={t("customers_deleteLeadAria")}
+                        >
+                          <Trash2 className="h-4 w-4" strokeWidth={2} />
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
 
-            return (
-              <article
-                key={customer.id}
-                className={cn(
-                  "group/row relative border-b border-slate-200 p-4 transition-colors last:border-b-0 hover:bg-slate-50/90 dark:border-white/[0.07] dark:hover:bg-white/[0.03]",
-                  "md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5",
-                  activeProject && "border-l-[3px] border-l-indigo-500 bg-indigo-50/30 dark:border-l-indigo-400 dark:bg-indigo-950/20"
-                )}
-              >
-                {canMutateLead ? (
-                  <div className="absolute right-3 top-3 z-20 flex items-center gap-1">
-                    {onEditLead ? (
-                      <button
-                        type="button"
-                        onClick={() => onEditLead(customer)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border-[0.5px] border-slate-200/90 bg-white/90 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-brand-700"
-                        aria-label={t("customers_editLeadAria")}
+                  <div className={cn("flex gap-3", canMutateLead ? "pr-24" : "")}>
+                    <div className="relative shrink-0">
+                      <div
+                        className={cn(
+                          "flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-base font-extrabold text-slate-800 dark:border-white/10 dark:bg-[#1a1f28] dark:text-slate-100",
+                          stale && "border-amber-300/80 ring-2 ring-amber-400/40"
+                        )}
+                        aria-hidden
                       >
-                        <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
-                      </button>
+                        {initials(customer.name)}
+                      </div>
+                      {stale ? (
+                        <span
+                          className="absolute -right-0.5 -top-0.5 h-3 w-3 animate-pulse rounded-full bg-amber-400 ring-2 ring-white"
+                          title="No activity in 14+ days"
+                          aria-label="Stale lead"
+                        />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="pr-2 text-lg font-extrabold leading-tight text-slate-900 dark:text-slate-50">{customer.name}</h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <LeadSourceBadge sourceRaw={customer.source} />
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
+                            stageMeta.className
+                          )}
+                        >
+                          {t(stageMeta.labelKey)}
+                        </span>
+                      </div>
+                      <div className="mt-3 max-w-full">
+                        {onStatusChange ? (
+                          <LeadStatusPillSelect
+                            leadId={customer.id}
+                            statusKey={statusKey}
+                            label={statusLabel}
+                            t={t}
+                            onChange={onStatusChange}
+                          />
+                        ) : (
+                          <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <dl className="mt-4 space-y-3 rounded-2xl bg-slate-50/90 px-4 py-3.5 text-sm dark:bg-white/[0.05]">
+                    <div className="flex justify-between gap-3">
+                      <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_tableLocation")}</dt>
+                      <dd className="min-w-0 text-right font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="block truncate">{customer.city}</span>
+                        <span className="mt-0.5 block truncate text-xs font-medium text-slate-600 dark:text-slate-400">{customer.discom}</span>
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 dark:border-white/10">
+                      <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_monthlyBillShort")}</dt>
+                      <dd className="text-lg font-black tabular-nums text-slate-900 dark:text-slate-50">₹{bill.toLocaleString("en-IN")}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs dark:border-white/10">
+                      <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_mobileLastActivity")}</dt>
+                      <dd className="font-bold text-slate-800 dark:text-slate-200">{lastActivityLabel}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs dark:border-white/10">
+                      <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_lastFollowUpLabel")}</dt>
+                      <dd className="max-w-[58%] text-right font-semibold leading-snug text-slate-700 dark:text-slate-300">{followLabel}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-4 flex flex-col gap-2">
+                    {customer.phone ? (
+                      <a
+                        href={`tel:${customer.phone}`}
+                        onClick={() => handlePhoneCall(customer.id)}
+                        className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-base font-bold text-white shadow-md active:bg-indigo-700"
+                        aria-label={t("customers_mobileCall")}
+                      >
+                        <Phone className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                        {t("customers_mobileCall")}
+                      </a>
                     ) : null}
-                    {onDeleteLead ? (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteLead(customer)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-xl border-[0.5px] border-red-200/90 bg-white/90 text-red-600 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
-                        aria-label={t("customers_deleteLeadAria")}
+                    <div className={cn("grid gap-2", waUrl ? "grid-cols-2" : "grid-cols-1")}>
+                      {waUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => openWhatsApp(customer.id, waUrl)}
+                          className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50 px-3 text-sm font-bold text-emerald-800 active:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
+                          aria-label={t("customers_whatsappAria")}
+                        >
+                          <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                          {t("customers_whatsappShort")}
+                        </button>
+                      ) : null}
+                      <Link
+                        href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
+                        className={quoteLinkClass}
+                        aria-label={
+                          statusKey === "proposal-sent"
+                            ? `Proposal sent — open or update for ${customer.name}`
+                            : `Send proposal to ${customer.name}`
+                        }
                       >
-                        <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
-                      </button>
+                        <Send className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+                        {t("customers_linkQuoteCta")}
+                      </Link>
+                    </div>
+                    {activeProject ? (
+                      <Link
+                        href="/projects"
+                        className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 active:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
+                      >
+                        {t("customers_linkPipeline")}
+                      </Link>
                     ) : null}
                   </div>
-                ) : null}
+                </article>
+              );
+            })}
+          </div>
 
-                <div className="relative md:col-span-5">
-                  <div
+          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017] md:block">
+            {showHeader && (
+              <div className="border-b border-slate-200 bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-400 md:grid md:grid-cols-12 md:gap-4 md:px-5">
+                <div className="col-span-5 pl-14">{t("customers_tableLead")}</div>
+                <div className="col-span-3">{t("customers_tableLocation")}</div>
+                <div className="col-span-2">{t("customers_tableBill")}</div>
+                <div className="col-span-2 text-right">{t("customers_tablePipeline")}</div>
+              </div>
+            )}
+
+            <div>
+              {customers.map((customer) => {
+                const statusKey = normalizeLeadStatus(customer.status);
+                const quoteLinkClass = cn(
+                  "inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs",
+                  statusKey === "proposal-sent"
+                    ? "border-emerald-300/90 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
+                    : "border-indigo-200/90 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:border-indigo-500/25 dark:bg-indigo-950/35 dark:text-indigo-200"
+                );
+                const bill = Number(customer.monthly_bill || 0);
+                const ts = followMap[customer.id];
+                const followLabel = ts != null ? formatLastFollowUpLocale(locale, ts) : t("customers_neverFollowedUp");
+                const waUrl = customer.phone ? buildLeadWhatsAppUrl(customer.phone, customer.name, installerName, locale) : null;
+                const statusLabel = t(LEAD_STATUS_I18N_KEY[statusKey]);
+                const stale = isLeadStale(customer.last_touched_at);
+                const stage = (customer.customer_stage ?? "lead") as CustomerStage;
+                const stageMeta = CUSTOMER_STAGE_META[stage];
+                const activeProject = stage === "active-project";
+
+                const canMutateLead =
+                  Boolean(onEditLead || onDeleteLead) && !customer.id.startsWith("optimistic-");
+
+                return (
+                  <article
+                    key={customer.id}
                     className={cn(
-                      "relative flex items-start gap-3 md:items-center md:gap-4",
-                      canMutateLead ? "pr-14 sm:pr-16" : ""
+                      "group/row relative border-b border-slate-200 p-4 transition-colors last:border-b-0 hover:bg-slate-50/90 dark:border-white/[0.07] dark:hover:bg-white/[0.03]",
+                      "md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5",
+                      activeProject && "border-l-[3px] border-l-indigo-500 bg-indigo-50/30 dark:border-l-indigo-400 dark:bg-indigo-950/20"
                     )}
                   >
-                  <div className="relative shrink-0">
-                    <div
-                      className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-extrabold text-slate-800 shadow-sm dark:border-white/10 dark:bg-[#1a1f28] dark:text-slate-100 sm:h-14 sm:w-14 sm:text-base",
-                        stale && "border-amber-300/80 ring-2 ring-amber-400/50"
-                      )}
-                      aria-hidden
-                    >
-                      {initials(customer.name)}
-                    </div>
-                    {stale && (
-                      <span
-                        className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-amber-400 ring-2 ring-white"
-                        title="No activity in 14+ days"
-                        aria-label="Stale lead"
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <h3 className="truncate text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-50 sm:text-lg">{customer.name}</h3>
-                      <LeadSourceBadge sourceRaw={customer.source} />
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider sm:text-[10px]",
-                          stageMeta.className
-                        )}
-                      >
-                        {t(stageMeta.labelKey)}
-                      </span>
-                    </div>
-                    {customer.phone ? (
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
-                        <p className="flex min-w-0 items-center gap-1.5">
-                          <PhoneCall className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.85} aria-hidden />
-                          <span className="tabular-nums">{customer.phone}</span>
-                        </p>
-                        <a
-                          href={`tel:${customer.phone}`}
-                          onClick={() => handlePhoneCall(customer.id)}
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-indigo-200/80 bg-indigo-50/90 text-indigo-600 shadow-sm transition-colors hover:bg-indigo-100 hover:text-indigo-700"
-                          aria-label={`Call ${customer.name}`}
-                        >
-                          <Phone className="h-4 w-4" strokeWidth={1.9} />
-                        </a>
-                        {waUrl ? (
+                    {canMutateLead ? (
+                      <div className="absolute right-3 top-3 z-20 flex items-center gap-1">
+                        {onEditLead ? (
                           <button
                             type="button"
-                            onClick={() => openWhatsApp(customer.id, waUrl)}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-emerald-200/80 bg-emerald-50/90 text-emerald-600 shadow-sm transition-colors hover:bg-emerald-100 hover:text-emerald-700"
-                            aria-label={t("customers_whatsappAria")}
+                            onClick={() => onEditLead(customer)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border-[0.5px] border-slate-200/90 bg-white/90 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-brand-700"
+                            aria-label={t("customers_editLeadAria")}
                           >
-                            <MessageCircle className="h-4 w-4" strokeWidth={1.9} />
+                            <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
                           </button>
                         ) : null}
-                        <Link
-                          href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                          className={quoteLinkClass}
-                          aria-label={
-                            statusKey === "proposal-sent"
-                              ? `Proposal sent — open or update for ${customer.name}`
-                              : `Send proposal to ${customer.name}`
-                          }
-                        >
-                          <Send className="h-3.5 w-3.5" strokeWidth={2} />
-                          <span>{t("customers_linkQuoteCta")}</span>
-                        </Link>
-                        {activeProject ? (
-                          <Link
-                            href="/projects"
-                            className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
+                        {onDeleteLead ? (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteLead(customer)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border-[0.5px] border-red-200/90 bg-white/90 text-red-600 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
+                            aria-label={t("customers_deleteLeadAria")}
                           >
-                            {t("customers_linkPipeline")}
-                          </Link>
+                            <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
+                          </button>
                         ) : null}
                       </div>
-                    ) : (
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400 sm:text-sm">
-                        <p>{t("customers_noPhoneOnFile")}</p>
-                        <Link
-                          href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                          className={quoteLinkClass}
-                          aria-label={
-                            statusKey === "proposal-sent"
-                              ? `Proposal sent — open or update for ${customer.name}`
-                              : `Send proposal to ${customer.name}`
-                          }
-                        >
-                          <Send className="h-3.5 w-3.5" strokeWidth={2} />
-                          <span>{t("customers_linkQuoteCta")}</span>
-                        </Link>
-                        {activeProject ? (
-                          <Link
-                            href="/projects"
-                            className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
+                    ) : null}
+
+                    <div className="relative md:col-span-5">
+                      <div
+                        className={cn(
+                          "relative flex items-start gap-3 md:items-center md:gap-4",
+                          canMutateLead ? "pr-14 sm:pr-16" : ""
+                        )}
+                      >
+                        <div className="relative shrink-0">
+                          <div
+                            className={cn(
+                              "flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-extrabold text-slate-800 shadow-sm dark:border-white/10 dark:bg-[#1a1f28] dark:text-slate-100 sm:h-14 sm:w-14 sm:text-base",
+                              stale && "border-amber-300/80 ring-2 ring-amber-400/50"
+                            )}
+                            aria-hidden
                           >
-                            {t("customers_linkPipeline")}
-                          </Link>
-                        ) : null}
+                            {initials(customer.name)}
+                          </div>
+                          {stale && (
+                            <span
+                              className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-amber-400 ring-2 ring-white"
+                              title="No activity in 14+ days"
+                              aria-label="Stale lead"
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h3 className="truncate text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-50 sm:text-lg">
+                              {customer.name}
+                            </h3>
+                            <LeadSourceBadge sourceRaw={customer.source} />
+                            <span
+                              className={cn(
+                                "inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider sm:text-[10px]",
+                                stageMeta.className
+                              )}
+                            >
+                              {t(stageMeta.labelKey)}
+                            </span>
+                          </div>
+                          {customer.phone ? (
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
+                              <p className="flex min-w-0 items-center gap-1.5">
+                                <PhoneCall className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.85} aria-hidden />
+                                <span className="tabular-nums">{customer.phone}</span>
+                              </p>
+                              <a
+                                href={`tel:${customer.phone}`}
+                                onClick={() => handlePhoneCall(customer.id)}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-indigo-200/80 bg-indigo-50/90 text-indigo-600 shadow-sm transition-colors hover:bg-indigo-100 hover:text-indigo-700"
+                                aria-label={`Call ${customer.name}`}
+                              >
+                                <Phone className="h-4 w-4" strokeWidth={1.9} />
+                              </a>
+                              {waUrl ? (
+                                <button
+                                  type="button"
+                                  onClick={() => openWhatsApp(customer.id, waUrl)}
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border-[0.5px] border-emerald-200/80 bg-emerald-50/90 text-emerald-600 shadow-sm transition-colors hover:bg-emerald-100 hover:text-emerald-700"
+                                  aria-label={t("customers_whatsappAria")}
+                                >
+                                  <MessageCircle className="h-4 w-4" strokeWidth={1.9} />
+                                </button>
+                              ) : null}
+                              <Link
+                                href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
+                                className={quoteLinkClass}
+                                aria-label={
+                                  statusKey === "proposal-sent"
+                                    ? `Proposal sent — open or update for ${customer.name}`
+                                    : `Send proposal to ${customer.name}`
+                                }
+                              >
+                                <Send className="h-3.5 w-3.5" strokeWidth={2} />
+                                <span>{t("customers_linkQuoteCta")}</span>
+                              </Link>
+                              {activeProject ? (
+                                <Link
+                                  href="/projects"
+                                  className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
+                                >
+                                  {t("customers_linkPipeline")}
+                                </Link>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400 sm:text-sm">
+                              <p>{t("customers_noPhoneOnFile")}</p>
+                              <Link
+                                href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
+                                className={quoteLinkClass}
+                                aria-label={
+                                  statusKey === "proposal-sent"
+                                    ? `Proposal sent — open or update for ${customer.name}`
+                                    : `Send proposal to ${customer.name}`
+                                }
+                              >
+                                <Send className="h-3.5 w-3.5" strokeWidth={2} />
+                                <span>{t("customers_linkQuoteCta")}</span>
+                              </Link>
+                              {activeProject ? (
+                                <Link
+                                  href="/projects"
+                                  className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
+                                >
+                                  {t("customers_linkPipeline")}
+                                </Link>
+                              ) : null}
+                            </div>
+                          )}
+                          {stale && (
+                            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 sm:text-[10px]">
+                              No activity · 14+ days
+                            </p>
+                          )}
+                          <p className="mt-1 text-[10px] font-semibold leading-snug text-slate-500 sm:text-[11px]">
+                            <span className="text-slate-400">{t("customers_lastFollowUpLabel")}: </span>
+                            {followLabel}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                    {stale && (
-                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600 sm:text-[10px]">
-                        No activity · 14+ days
+                    </div>
+
+                    <div className="relative mt-4 flex flex-col gap-1 border-t border-slate-100 pt-3 dark:border-white/[0.06] md:col-span-3 md:mt-0 md:border-t-0 md:pt-0">
+                      <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                        <MapPin className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
+                        <span className="truncate">{customer.city}</span>
                       </p>
-                    )}
-                    <p className="mt-1 text-[10px] font-semibold leading-snug text-slate-500 sm:text-[11px]">
-                      <span className="text-slate-400">{t("customers_lastFollowUpLabel")}: </span>
-                      {followLabel}
-                    </p>
-                  </div>
-                  <div className="shrink-0 md:hidden">
-                    {onStatusChange ? (
-                      <LeadStatusPillSelect
-                        key={`${customer.id}-${statusKey}`}
-                        leadId={customer.id}
-                        statusKey={statusKey}
-                        label={statusLabel}
-                        t={t}
-                        onChange={onStatusChange}
-                      />
-                    ) : (
-                      <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
-                    )}
-                  </div>
-                  </div>
-                </div>
+                      <p className="flex items-center gap-2 pl-6 text-xs font-medium text-slate-600 sm:text-sm">
+                        <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
+                        <span className="truncate">{customer.discom}</span>
+                      </p>
+                    </div>
 
-                <div className="relative mt-4 flex flex-col gap-1 border-t border-slate-100 pt-3 dark:border-white/[0.06] md:col-span-3 md:mt-0 md:border-t-0 md:pt-0">
-                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                    <MapPin className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
-                    <span className="truncate">{customer.city}</span>
-                  </p>
-                  <p className="flex items-center gap-2 pl-6 text-xs font-medium text-slate-600 sm:text-sm">
-                    <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />
-                    <span className="truncate">{customer.discom}</span>
-                  </p>
-                </div>
+                    <div className="relative mt-3 flex items-center gap-2 md:col-span-2 md:mt-0">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-300 md:h-10 md:w-10">
+                        <IndianRupee className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                      </span>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t("customers_monthlyBillShort")}</p>
+                        <p className="text-base font-extrabold tabular-nums text-slate-900 dark:text-slate-100 sm:text-lg">
+                          ₹{bill.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="relative mt-3 flex items-center gap-2 md:col-span-2 md:mt-0">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-300 md:h-10 md:w-10">
-                    <IndianRupee className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t("customers_monthlyBillShort")}</p>
-                    <p className="text-base font-extrabold tabular-nums text-slate-900 dark:text-slate-100 sm:text-lg">₹{bill.toLocaleString("en-IN")}</p>
-                  </div>
-                </div>
-
-                <div className="relative mt-4 hidden justify-end md:col-span-2 md:mt-0 md:flex">
-                  {onStatusChange ? (
-                    <LeadStatusPillSelect
-                      key={`${customer.id}-${statusKey}`}
-                      leadId={customer.id}
-                      statusKey={statusKey}
-                      label={statusLabel}
-                      t={t}
-                      onChange={onStatusChange}
-                    />
-                  ) : (
-                    <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
-                  )}
-                </div>
-              </article>
-            );
-          })}
-      </div>
-      </div>
+                    <div className="relative mt-4 flex justify-end md:col-span-2 md:mt-0">
+                      {onStatusChange ? (
+                        <LeadStatusPillSelect
+                          key={`${customer.id}-${statusKey}`}
+                          leadId={customer.id}
+                          statusKey={statusKey}
+                          label={statusLabel}
+                          t={t}
+                          onChange={onStatusChange}
+                        />
+                      ) : (
+                        <LeadStatusBadge statusKey={statusKey} label={statusLabel} />
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

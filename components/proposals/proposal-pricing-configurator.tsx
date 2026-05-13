@@ -22,7 +22,7 @@ import { grossSubtotalInr } from "@/lib/proposal-pricing-merge";
 import type { ProposalPricingRow } from "@/lib/proposal-pricing-schema";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 export type ProposalPricingConfiguratorLabels = {
@@ -49,6 +49,7 @@ export type ProposalPricingConfiguratorLabels = {
   saving: string;
   saved: string;
   saveFailed: string;
+  removeLine: string;
 };
 
 export type ProposalPricingConfiguratorProps = {
@@ -192,7 +193,7 @@ export function ProposalPricingConfigurator({
         </div>
       </div>
 
-      <div className="overflow-x-auto border-b border-slate-100 dark:border-white/10">
+      <div className="hidden overflow-x-auto border-b border-slate-100 dark:border-white/10 lg:block">
         <table className="w-full min-w-[72rem] border-separate border-spacing-0 text-[12px]">
           <thead>
             <tr className="text-left text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -256,14 +257,14 @@ export function ProposalPricingConfigurator({
                   <td className="px-2 py-1.5 align-top">
                     <input
                       type="text"
-                      list={showPanelList ? `brands-${L.id}` : undefined}
+                      list={showPanelList ? `brands-d-${L.id}` : undefined}
                       value={L.brand}
                       onChange={(e) => updateLine(L.id, { brand: e.target.value })}
                       className="h-9 w-full min-w-[5rem] rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold dark:border-white/10 dark:bg-white/5"
                       placeholder="—"
                     />
                     {showPanelList ? (
-                      <datalist id={`brands-${L.id}`}>
+                      <datalist id={`brands-d-${L.id}`}>
                         {brandList.map((b) => (
                           <option key={b} value={b} />
                         ))}
@@ -330,14 +331,136 @@ export function ProposalPricingConfigurator({
         </table>
       </div>
 
+      <div className="divide-y divide-slate-100 border-b border-slate-100 dark:divide-white/10 dark:border-white/10 lg:hidden">
+        {lines.map((L) => {
+          const total = lineItemTotalInr(L);
+          const brandList = L.kind === "inverter" ? INVERTER_BRAND_PRESETS : PANEL_BRAND_PRESETS;
+          const showPanelList = L.kind === "panels" || L.kind === "inverter";
+          const kindLabel = t(`proposals_lineKind_${L.kind}`);
+          return (
+            <details key={`m-${L.id}`} className="group bg-white open:bg-slate-50/80 dark:bg-[#0c1017] dark:open:bg-white/[0.03]">
+              <summary className="flex cursor-pointer list-none touch-manipulation items-center justify-between gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-base font-black text-slate-900 dark:text-slate-50">{L.label || kindLabel}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">{kindLabel}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="text-right">
+                    <p className="text-lg font-black tabular-nums text-teal-800 dark:text-emerald-300">₹{total.toLocaleString("en-IN")}</p>
+                    <p className="text-[11px] font-bold tabular-nums text-slate-500 dark:text-slate-400">
+                      {L.quantity} × ₹{Number(L.unit_rate_inr).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className="h-5 w-5 shrink-0 text-slate-400 transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
+                </div>
+              </summary>
+              <div className="space-y-3 border-t border-slate-100 px-4 pb-4 pt-3 dark:border-white/10">
+                <FloatingLabelSelect
+                  label={labels.categoryCol}
+                  value={L.kind}
+                  onChange={(e) => {
+                    const k = e.target.value as PricingLineKind;
+                    updateLine(L.id, {
+                      kind: k,
+                      label: defaultLabelForKind(k),
+                      catalog_category: defaultCatalogCategoryForLineKind(k),
+                      unit: defaultUnitForKind(k)
+                    });
+                  }}
+                  className="h-11 rounded-xl border-slate-200 text-sm font-bold dark:border-white/10"
+                  aria-label={labels.categoryCol}
+                >
+                  {PRICING_LINE_KINDS.map((k) => (
+                    <option key={k} value={k}>
+                      {t(`proposals_lineKind_${k}`)}
+                    </option>
+                  ))}
+                </FloatingLabelSelect>
+                <FloatingLabelInput
+                  label={labels.itemCol}
+                  value={L.label}
+                  onChange={(e) => updateLine(L.id, { label: e.target.value })}
+                  className="h-11 rounded-xl text-sm"
+                />
+                <FloatingLabelInput
+                  label={labels.brandCol}
+                  value={L.brand}
+                  onChange={(e) => updateLine(L.id, { brand: e.target.value })}
+                  list={showPanelList ? `brands-m-${L.id}` : undefined}
+                  className="h-11 rounded-xl text-sm"
+                />
+                {showPanelList ? (
+                  <datalist id={`brands-m-${L.id}`}>
+                    {brandList.map((b) => (
+                      <option key={b} value={b} />
+                    ))}
+                  </datalist>
+                ) : null}
+                <div className="grid grid-cols-2 gap-3">
+                  <FloatingLabelInput
+                    label={labels.qtyCol}
+                    inputMode="decimal"
+                    value={String(L.quantity)}
+                    onChange={(e) => updateLine(L.id, { quantity: num(e.target.value) })}
+                    className="h-11 rounded-xl text-sm"
+                  />
+                  <FloatingLabelInput
+                    label={labels.unitCol}
+                    value={L.unit ?? defaultUnitForKind(L.kind)}
+                    onChange={(e) => updateLine(L.id, { unit: e.target.value.slice(0, 32) })}
+                    className="h-11 rounded-xl text-sm"
+                  />
+                </div>
+                <FloatingLabelInput
+                  label={labels.rateCol}
+                  inputMode="decimal"
+                  value={String(L.unit_rate_inr)}
+                  onChange={(e) => updateLine(L.id, { unit_rate_inr: num(e.target.value) })}
+                  className="h-11 rounded-xl text-sm"
+                />
+                <FloatingLabelInput
+                  label={labels.notesCol}
+                  value={L.notes ?? ""}
+                  onChange={(e) => updateLine(L.id, { notes: e.target.value.slice(0, 500) })}
+                  className="h-11 rounded-xl text-sm"
+                />
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <span className="font-bold text-slate-600 dark:text-slate-300">{t("proposals_lineCategory")}: </span>
+                  {L.catalog_category ?? "—"}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full touch-manipulation font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  disabled={lines.length <= 1}
+                  onClick={() => removeLine(L.id)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+                  {labels.removeLine}
+                </Button>
+              </div>
+            </details>
+          );
+        })}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-white/10">
-        <Button type="button" variant="outline" size="sm" className="h-8 gap-1 text-[11px] font-bold" onClick={addLine}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1 text-[11px] font-bold max-lg:min-h-11 max-lg:w-full max-lg:justify-center max-lg:text-sm"
+          onClick={addLine}
+        >
           <Plus className="h-3.5 w-3.5" />
           {labels.addLine}
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b border-slate-100 bg-slate-50/50 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
+      <div className="flex flex-col flex-wrap gap-2 border-b border-slate-100 bg-slate-50/50 px-3 py-3 sm:flex-row dark:border-white/10 dark:bg-white/[0.02]">
         <SummaryChip label={labels.summaryGross} value={`₹${gross.toLocaleString("en-IN")}`} />
         <SummaryChip
           label={labels.summarySubsidy}

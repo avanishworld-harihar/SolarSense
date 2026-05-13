@@ -81,7 +81,8 @@ export function ProposalManageClient({
       save: t("proposals_save"),
       saving: t("proposals_saving"),
       saved: t("proposals_saved"),
-      saveFailed: t("proposals_saveFailed")
+      saveFailed: t("proposals_saveFailed"),
+      removeLine: t("proposals_removeLine")
     }),
     [t]
   );
@@ -147,7 +148,7 @@ export function ProposalManageClient({
     .join(" · ");
 
   return (
-    <div className="space-y-5 pb-6">
+    <div className="space-y-5 pb-24 lg:pb-6">
       <ProposalHubHeader
         title={t("proposals_detailWorkspaceTitle")}
         subtitle={headerSub}

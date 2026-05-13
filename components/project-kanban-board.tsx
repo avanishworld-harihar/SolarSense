@@ -84,7 +84,6 @@ export function ProjectKanbanBoard({
           );
         })}
       </div>
-      <p className="mt-2 px-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 md:hidden">{t("projects_kanbanSwipeHint")}</p>
     </div>
   );
 }
