@@ -109,17 +109,17 @@ function LeadMobileCardSkeleton() {
 
 function LeadRowSkeleton() {
   return (
-    <div className="border-b border-slate-100 p-4 last:border-b-0 dark:border-white/[0.06] md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5">
-      <div className="flex items-center gap-3 md:col-span-5">
+    <div className="border-b border-slate-100 p-4 last:border-b-0 dark:border-white/[0.06] lg:grid lg:grid-cols-12 lg:items-center lg:gap-4 lg:px-5">
+      <div className="flex items-center gap-3 lg:col-span-5">
         <Skeleton className="h-12 w-12 shrink-0 rounded-2xl bg-slate-200/80" />
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-4 w-36 rounded-md bg-slate-200/80" />
           <Skeleton className="h-3 w-24 rounded-md bg-slate-200/60" />
         </div>
       </div>
-      <Skeleton className="mt-3 hidden h-10 rounded-lg bg-slate-200/60 md:col-span-3 md:mt-0 md:block" />
-      <Skeleton className="mt-2 hidden h-8 w-20 rounded-lg bg-slate-200/60 md:col-span-2 md:mt-0 md:block" />
-      <div className="mt-3 flex justify-start md:col-span-2 md:mt-0 md:justify-end">
+      <Skeleton className="mt-3 hidden h-10 rounded-lg bg-slate-200/60 lg:col-span-3 lg:mt-0 lg:block" />
+      <Skeleton className="mt-2 hidden h-8 w-20 rounded-lg bg-slate-200/60 lg:col-span-2 lg:mt-0 lg:block" />
+      <div className="mt-3 flex justify-start lg:col-span-2 lg:mt-0 lg:justify-end">
         <Skeleton className="h-7 w-28 rounded-full bg-slate-200/70" />
       </div>
     </div>
@@ -247,12 +247,12 @@ export function CustomersLeadList({
 
       {loading ? (
         <>
-          <div className="space-y-3 px-0.5 md:hidden">
+          <div className="space-y-3 px-0.5 lg:hidden">
             {Array.from({ length: 4 }).map((_, i) => (
               <LeadMobileCardSkeleton key={`m-sk-${i}`} />
             ))}
           </div>
-          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017] md:block">
+          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017] lg:block">
             {Array.from({ length: 5 }).map((_, i) => (
               <LeadRowSkeleton key={i} />
             ))}
@@ -262,7 +262,7 @@ export function CustomersLeadList({
 
       {!loading && customers.length > 0 ? (
         <>
-          <div className="space-y-3 px-0.5 md:hidden">
+          <div className="space-y-3 px-0.5 lg:hidden">
             {customers.map((customer) => {
               const statusKey = normalizeLeadStatus(customer.status);
               const commercialCta = resolveCustomerCommercialCta(customer);
@@ -437,9 +437,9 @@ export function CustomersLeadList({
             })}
           </div>
 
-          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017] md:block">
+          <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017] lg:block">
             {showHeader && (
-              <div className="border-b border-slate-200 bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-400 md:grid md:grid-cols-12 md:gap-4 md:px-5">
+              <div className="border-b border-slate-200 bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-400 lg:grid lg:grid-cols-12 lg:gap-4 lg:px-5">
                 <div className="col-span-5 pl-14">{t("customers_tableLead")}</div>
                 <div className="col-span-3">{t("customers_tableLocation")}</div>
                 <div className="col-span-2">{t("customers_tableBill")}</div>
@@ -469,7 +469,7 @@ export function CustomersLeadList({
                     key={customer.id}
                     className={cn(
                       "group/row relative border-b border-slate-200 p-4 transition-colors last:border-b-0 hover:bg-slate-50/90 dark:border-white/[0.07] dark:hover:bg-white/[0.03]",
-                      "md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5",
+                      "lg:grid lg:grid-cols-12 lg:items-center lg:gap-4 lg:px-5",
                       activeProject && "border-l-[3px] border-l-indigo-500 bg-indigo-50/30 dark:border-l-indigo-400 dark:bg-indigo-950/20",
                       onSelectLead && selectedLeadId === customer.id && "bg-brand-50/60 ring-2 ring-inset ring-brand-400/40 dark:bg-brand-950/20"
                     )}
@@ -516,10 +516,10 @@ export function CustomersLeadList({
                       </div>
                     ) : null}
 
-                    <div className="relative md:col-span-5">
+                    <div className="relative lg:col-span-5">
                       <div
                         className={cn(
-                          "relative flex items-start gap-3 md:items-center md:gap-4",
+                          "relative flex items-start gap-3 lg:items-center lg:gap-4",
                           canMutateLead ? "pr-14 sm:pr-16" : ""
                         )}
                       >
@@ -611,7 +611,7 @@ export function CustomersLeadList({
                       </div>
                     </div>
 
-                    <div className="relative mt-4 flex flex-col gap-1 border-t border-slate-100 pt-3 dark:border-white/[0.06] md:col-span-3 md:mt-0 md:border-t-0 md:pt-0">
+                    <div className="relative mt-4 flex flex-col gap-1 border-t border-slate-100 pt-3 dark:border-white/[0.06] lg:col-span-3 lg:mt-0 lg:border-t-0 lg:pt-0">
                       <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                         <MapPin className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
                         <span className="truncate">{customer.city}</span>
@@ -622,8 +622,8 @@ export function CustomersLeadList({
                       </p>
                     </div>
 
-                    <div className="relative mt-3 flex items-center gap-2 md:col-span-2 md:mt-0">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-300 md:h-10 md:w-10">
+                    <div className="relative mt-3 flex items-center gap-2 lg:col-span-2 lg:mt-0">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-300 lg:h-10 lg:w-10">
                         <IndianRupee className="h-4 w-4" strokeWidth={2.5} aria-hidden />
                       </span>
                       <div>
@@ -634,7 +634,7 @@ export function CustomersLeadList({
                       </div>
                     </div>
 
-                    <div className="relative mt-4 flex justify-end md:col-span-2 md:mt-0">
+                    <div className="relative mt-4 flex justify-end lg:col-span-2 lg:mt-0">
                       {onStatusChange ? (
                         <LeadStatusPillSelect
                           key={`${customer.id}-${statusKey}`}

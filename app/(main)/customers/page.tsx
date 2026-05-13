@@ -508,7 +508,7 @@ function CustomersPageContent() {
         </div>
         </div>
 
-        <div className="page-lite-item md:max-lg:grid md:max-lg:grid-cols-[minmax(260px,40%)_minmax(0,1fr)] md:max-lg:items-start md:max-lg:gap-5">
+        <div className="page-lite-item md:max-lg:grid md:max-lg:grid-cols-1 md:max-lg:items-start md:max-lg:gap-5 md:max-lg:landscape:grid-cols-[minmax(0,46%)_minmax(0,1fr)]">
           <div className="min-w-0 space-y-4">
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {(
