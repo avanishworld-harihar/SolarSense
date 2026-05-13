@@ -277,7 +277,13 @@ export const EN = {
   proposals_title: "Proposals",
   proposals_subtitle: "Sales hub — commercial pricing syncs to the public web proposal.",
   proposals_hubSubtitle: "Quotation workspace — manage commercial BOMs, customer links, and deal status in one place.",
-  proposals_hubSplitHint: "Commercial pipeline — pick a row for summary and workspace.",
+  proposals_hubSplitHint: "Commercial pipeline — pick a deal for summary and workspace.",
+  proposals_dealsPipelineLabel: "Deals pipeline",
+  proposals_pipelineGroupCount: "{n} deals",
+  proposals_workspaceSummaryTitle: "Commercial summary",
+  proposals_workspaceNextActionHint:
+    "Open the workspace to edit pricing, share the customer link, and advance deal status — this hub stays your pipeline view.",
+  proposals_workspaceEmpty: "Select a deal from the list.",
   proposals_newProposalCta: "New proposal",
   proposals_newBuilderTitle: "New proposal · Bill builder",
   proposals_detailWorkspaceTitle: "Proposal workspace",
@@ -564,6 +570,8 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   customers_ctaOpenProposal: "प्रस्ताव वर्कस्पेस खोलें",
   customers_ctaOpenProject: "प्रोजेक्ट पाइपलाइन खोलें",
   customers_staleHintShort: "टच नहीं",
+  customers_whatsappAria: "व्हाट्सऐप संदेश खोलें",
+  customers_whatsappPrefill:
     "नमस्ते {customerName}, मैं {installerName} से बोल रहा/रही हूँ — सोलर पूछताछ के लिए। क्या 2 मिनट बात हो सकती है?",
   customers_noPhoneOnFile: "फ़ोन दर्ज नहीं",
   customers_editLeadTitle: "लीड बदलें",

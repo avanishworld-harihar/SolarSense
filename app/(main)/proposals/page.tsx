@@ -1,13 +1,12 @@
 "use client";
 
+import { ProposalHubDealList, type ProposalHubDealRow } from "@/components/proposals/proposal-hub-deal-list";
 import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
-import { ProposalListCard } from "@/components/proposals/proposal-list-card";
-import { ProposalStatusBadge } from "@/components/proposal-status-badge";
+import { ProposalWorkspacePreview } from "@/components/proposals/proposal-workspace-preview";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/lib/language-context";
-import { normalizeProposalStatus } from "@/lib/proposal-status";
-import { cn } from "@/lib/utils";
+import type { ProposalStatus } from "@/lib/proposal-status";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
@@ -16,17 +15,7 @@ const PROPOSALS_SWR_KEY = "/api/proposals";
 
 type ListPayload = {
   ok?: boolean;
-  data?: {
-    id: string;
-    customer_name: string;
-    generated_at: string;
-    system_kw: number;
-    lead_id: string | null;
-    final_amount_inr: number | null;
-    panel_brand: string | null;
-    annual_saving_inr: number | null;
-    proposal_status: string;
-  }[];
+  data?: ProposalHubDealRow[];
 };
 
 async function fetchProposals(url: string) {
@@ -65,7 +54,7 @@ export default function ProposalsHubPage() {
       panelBrand: t("proposals_panelBrand"),
       estSavingMo: t("proposals_estSavingMo"),
       netPayable: t("proposals_netLabel"),
-      statusLabel: (s: import("@/lib/proposal-status").ProposalStatus) => t(`proposals_status_${s}`),
+      statusLabel: (s: ProposalStatus) => t(`proposals_status_${s}`),
       moreActions: t("proposals_cardMoreActions"),
       sheetClose: t("proposals_sheetClose"),
       duplicateProposal: t("proposals_cardDuplicate"),
@@ -74,13 +63,25 @@ export default function ProposalsHubPage() {
     [t]
   );
 
+  const pipelineLabels = useMemo(
+    () => ({
+      pipeline: t("proposals_dealsPipelineLabel"),
+      groupCount: (n: number) => t("proposals_pipelineGroupCount", { n }),
+      summaryTitle: t("proposals_workspaceSummaryTitle"),
+      nextAction: t("proposals_workspaceNextActionHint"),
+      empty: t("proposals_workspaceEmpty")
+    }),
+    [t]
+  );
+
   return (
     <div className="space-y-6 pb-24">
       <ProposalHubHeader
+        variant="workspace"
         title={t("proposals_title")}
         subtitle={t("proposals_hubSubtitle")}
         action={
-          <Button asChild variant="emeraldCta" size="lg" className="shadow-lg">
+          <Button asChild variant="emeraldCta" size="lg" className="shadow-md">
             <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
           </Button>
         }
@@ -93,103 +94,75 @@ export default function ProposalsHubPage() {
       )}
 
       {isLoading && !data ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-2xl md:h-44" />
-          ))}
+        <div className="hidden md:grid md:grid-cols-[minmax(260px,38%)_minmax(0,1fr)] md:items-stretch md:gap-5">
+          <Skeleton className="h-[min(72vh,640px)] rounded-xl" />
+          <Skeleton className="h-[min(72vh,640px)] rounded-xl" />
         </div>
-      ) : rows.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-300/80 bg-slate-50/60 p-10 text-center dark:border-white/15 dark:bg-white/[0.03]">
+      ) : null}
+      {isLoading && !data ? (
+        <div className="space-y-3 md:hidden">
+          <Skeleton className="h-40 rounded-xl" />
+          <Skeleton className="h-56 rounded-xl" />
+        </div>
+      ) : null}
+
+      {!isLoading && rows.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300/80 bg-slate-50/60 p-10 text-center dark:border-white/15 dark:bg-white/[0.03]">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("proposals_empty")}</p>
           <Button asChild className="mt-6" variant="emeraldCta">
             <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
           </Button>
         </div>
-      ) : (
+      ) : null}
+
+      {!isLoading && rows.length > 0 ? (
         <>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 md:max-lg:block lg:hidden">{t("proposals_hubSplitHint")}</p>
+          <p className="hidden text-xs font-medium text-slate-500 dark:text-slate-400 md:block">{t("proposals_hubSplitHint")}</p>
 
-          <div className="flex flex-col gap-3 md:hidden">
-            {rows.map((row) => (
-              <ProposalListCard
-                key={row.id}
-                id={row.id}
-                customerName={row.customer_name}
-                generatedAt={row.generated_at}
-                systemKw={row.system_kw}
-                finalInr={row.final_amount_inr}
-                panelBrand={row.panel_brand}
-                annualSavingInr={row.annual_saving_inr}
-                status={normalizeProposalStatus(row.proposal_status)}
-                labels={cardLabels}
+          <div className="flex flex-col gap-4 md:hidden">
+            <div className="max-h-[min(44vh,380px)] min-h-0 shrink-0">
+              <ProposalHubDealList
+                rows={rows}
+                focusId={focusId}
+                onSelect={setFocusId}
+                statusLabel={cardLabels.statusLabel}
+                groupCountLabel={pipelineLabels.groupCount}
+                pipelineLabel={pipelineLabels.pipeline}
+                className="max-h-full"
               />
-            ))}
+            </div>
+            <ProposalWorkspacePreview
+              row={focused}
+              labels={cardLabels}
+              summaryTitle={pipelineLabels.summaryTitle}
+              nextActionHint={pipelineLabels.nextAction}
+              emptyLabel={pipelineLabels.empty}
+            />
           </div>
 
-          <div className="hidden md:max-lg:grid md:max-lg:grid-cols-[minmax(260px,42%)_minmax(0,1fr)] md:max-lg:items-stretch md:max-lg:gap-5 lg:hidden">
-            <div className="flex max-h-[min(72vh,640px)] flex-col gap-2 overflow-y-auto rounded-2xl border border-slate-200/90 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-[#0c1017]">
-              {rows.map((row) => {
-                const active = row.id === focusId;
-                const st = normalizeProposalStatus(row.proposal_status);
-                return (
-                  <button
-                    key={row.id}
-                    type="button"
-                    onClick={() => setFocusId(row.id)}
-                    className={cn(
-                      "w-full rounded-xl border px-3 py-3 text-left transition-colors",
-                      active
-                        ? "border-teal-400/80 bg-teal-50/90 dark:border-teal-500/40 dark:bg-teal-950/35"
-                        : "border-transparent bg-slate-50/50 hover:bg-slate-100/90 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]"
-                    )}
-                  >
-                    <p className="truncate text-sm font-extrabold text-slate-900 dark:text-slate-50">{row.customer_name}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <ProposalStatusBadge status={st} label={t(`proposals_status_${st}`)} />
-                      <span className="text-[11px] font-bold tabular-nums text-slate-600 dark:text-slate-300">{row.system_kw} kW</span>
-                    </div>
-                    <p className="mt-1 text-xs font-bold tabular-nums text-teal-800 dark:text-emerald-300">
-                      {row.final_amount_inr != null ? `₹${Math.round(row.final_amount_inr).toLocaleString("en-IN")}` : "—"}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="min-h-[min(72vh,640px)] min-w-0">
-              {focused ? (
-                <ProposalListCard
-                  id={focused.id}
-                  customerName={focused.customer_name}
-                  generatedAt={focused.generated_at}
-                  systemKw={focused.system_kw}
-                  finalInr={focused.final_amount_inr}
-                  panelBrand={focused.panel_brand}
-                  annualSavingInr={focused.annual_saving_inr}
-                  status={normalizeProposalStatus(focused.proposal_status)}
-                  labels={cardLabels}
-                />
-              ) : null}
-            </div>
-          </div>
-
-          <div className="hidden gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
-            {rows.map((row) => (
-              <ProposalListCard
-                key={row.id}
-                id={row.id}
-                customerName={row.customer_name}
-                generatedAt={row.generated_at}
-                systemKw={row.system_kw}
-                finalInr={row.final_amount_inr}
-                panelBrand={row.panel_brand}
-                annualSavingInr={row.annual_saving_inr}
-                status={normalizeProposalStatus(row.proposal_status)}
-                labels={cardLabels}
+          <div className="hidden min-h-0 md:grid md:grid-cols-[minmax(260px,38%)_minmax(0,1fr)] md:items-stretch md:gap-5">
+            <div className="flex min-h-[min(72vh,640px)] max-h-[min(80vh,720px)] flex-col">
+              <ProposalHubDealList
+                rows={rows}
+                focusId={focusId}
+                onSelect={setFocusId}
+                statusLabel={cardLabels.statusLabel}
+                groupCountLabel={pipelineLabels.groupCount}
+                pipelineLabel={pipelineLabels.pipeline}
               />
-            ))}
+            </div>
+            <div className="min-h-[min(72vh,640px)] max-h-[min(80vh,720px)] min-w-0 overflow-y-auto">
+              <ProposalWorkspacePreview
+                row={focused}
+                labels={cardLabels}
+                summaryTitle={pipelineLabels.summaryTitle}
+                nextActionHint={pipelineLabels.nextAction}
+                emptyLabel={pipelineLabels.empty}
+              />
+            </div>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

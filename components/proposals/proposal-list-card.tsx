@@ -1,13 +1,13 @@
 "use client";
 
+import { ProposalHubActionsSheet } from "@/components/proposals/proposal-hub-actions-sheet";
 import { ProposalStatusBadge } from "@/components/proposal-status-badge";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast-center";
 import type { ProposalStatus } from "@/lib/proposal-status";
 import { cn } from "@/lib/utils";
-import { Archive, Copy, ExternalLink, FileDown, MessageCircle, MoreHorizontal, PencilLine, X } from "lucide-react";
+import { ExternalLink, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export type ProposalListCardProps = {
   id: string;
@@ -66,26 +66,10 @@ export function ProposalListCard({
   status,
   labels
 }: ProposalListCardProps) {
-  const toast = useToast();
   const manageHref = `/proposals/${id}`;
-  const publicHref = `/proposal/${id}`;
   const [sheetOpen, setSheetOpen] = useState(false);
   const savingMo =
     annualSavingInr != null && Number.isFinite(annualSavingInr) ? Math.round(annualSavingInr / 12) : null;
-
-  useEffect(() => {
-    if (!sheetOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [sheetOpen]);
-
-  function soon(feature: string) {
-    toast.info(labels.comingSoon, feature);
-    setSheetOpen(false);
-  }
 
   return (
     <article
@@ -226,92 +210,13 @@ export function ProposalListCard({
         </div>
       </div>
 
-      {/* Mobile action sheet */}
-      {sheetOpen ? (
-        <div
-          className="fixed inset-0 z-[80] flex items-end justify-center md:items-center md:p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label={labels.moreActions}
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
-            aria-label={labels.sheetClose}
-            onClick={() => setSheetOpen(false)}
-          />
-          <div className="relative max-h-[min(85dvh,560px)] w-full max-w-md overflow-y-auto rounded-t-3xl border border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_40px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#0f1419] md:max-h-[min(80vh,640px)] md:rounded-2xl md:shadow-2xl">
-            <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden />
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-black text-slate-900 dark:text-slate-50">{labels.moreActions}</p>
-              <button
-                type="button"
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300"
-                onClick={() => setSheetOpen(false)}
-                aria-label={labels.sheetClose}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="max-h-[min(60vh,360px)] space-y-2 overflow-y-auto md:max-h-none">
-              <Button asChild variant="secondary" className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold">
-                <Link href={manageHref} onClick={() => setSheetOpen(false)}>
-                  <PencilLine className="h-4 w-4 shrink-0" aria-hidden />
-                  {labels.editPricing}
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold">
-                <Link href={publicHref} target="_blank" rel="noreferrer" onClick={() => setSheetOpen(false)}>
-                  <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-                  {labels.previewPublic}
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold"
-                onClick={() => soon(labels.pdfQuote)}
-              >
-                <FileDown className="h-4 w-4 shrink-0" aria-hidden />
-                {labels.pdfQuote}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold"
-                onClick={() => soon(labels.send)}
-              >
-                <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
-                {labels.send}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold"
-                onClick={() => soon(labels.duplicateProposal)}
-              >
-                <Copy className="h-4 w-4 shrink-0" aria-hidden />
-                {labels.duplicateProposal}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 w-full touch-manipulation justify-start gap-3 text-base font-bold"
-                onClick={() => soon(labels.archiveProposal)}
-              >
-                <Archive className="h-4 w-4 shrink-0" aria-hidden />
-                {labels.archiveProposal}
-              </Button>
-            </div>
-            {savingMo != null ? (
-              <p className="mt-4 border-t border-slate-100 pt-4 text-center text-sm font-semibold text-slate-600 dark:border-white/10 dark:text-slate-400">
-                <span className="text-slate-500">{labels.estSavingMo}: </span>
-                <span className="font-black tabular-nums text-slate-900 dark:text-slate-100">₹{savingMo.toLocaleString("en-IN")}</span>
-              </p>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      <ProposalHubActionsSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        proposalId={id}
+        labels={labels}
+        annualSavingInr={annualSavingInr}
+      />
     </article>
   );
 }
