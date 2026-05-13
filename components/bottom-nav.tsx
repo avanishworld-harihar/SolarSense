@@ -13,7 +13,9 @@ const PORTAL_ID = "ss-bottom-nav-portal";
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
-  if (href === "/proposal") return pathname === "/proposal" || pathname.startsWith("/proposal/");
+  if (href === "/proposals") {
+    return pathname.startsWith("/proposals") || pathname.startsWith("/proposal");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

@@ -4,6 +4,7 @@ import { defaultProposalPricingFromDeck, mergeProposalPricingIntoPptInput } from
 import { ensureProposalPricingRow, getProposalPricingByProposalId } from "@/lib/proposal-pricing-store";
 import { persistProposalDeckAfterPricingChange } from "@/lib/proposal-pricing-sync";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
+import { normalizeProposalStatus } from "@/lib/proposal-status";
 import { getProposalById } from "@/lib/proposals-store";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -26,12 +27,20 @@ export default async function ProposalManagePage({ params }: PageProps) {
   }
 
   const merged = mergeProposalPricingIntoPptInput(proposal.ppt_input, pricing);
+  const liveSummary = summarizeProposalDeck(merged);
+  const annualSavingInr =
+    typeof proposal.annual_saving_inr === "number" && Number.isFinite(proposal.annual_saving_inr)
+      ? proposal.annual_saving_inr
+      : liveSummary.annualSaving;
 
   return (
     <ProposalManageClient
       proposalId={proposal.id}
       customerName={proposal.customer_name}
       generatedAt={proposal.generated_at}
+      location={proposal.location}
+      proposalStatus={normalizeProposalStatus(proposal.proposal_status)}
+      annualSavingInr={Math.max(0, annualSavingInr)}
       pptInput={merged}
       pricing={pricing}
     />

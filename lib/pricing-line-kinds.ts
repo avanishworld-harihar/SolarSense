@@ -1,10 +1,16 @@
+/** Commercial BOM line types — rollup buckets unchanged (see proposal-pricing-lines). */
 export const PRICING_LINE_KINDS = [
   "panels",
   "inverter",
   "structure",
+  "acdb_dcdb",
+  "cabling",
+  "earthing",
   "installation",
-  "battery",
+  "transportation",
+  "net_metering",
   "electricals",
+  "battery",
   "subsidy",
   "discount",
   "custom"

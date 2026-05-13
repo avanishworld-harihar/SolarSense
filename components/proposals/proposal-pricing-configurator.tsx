@@ -8,6 +8,7 @@ import { PRICING_LINE_KINDS } from "@/lib/pricing-line-kinds";
 import { defaultCatalogCategoryForLineKind } from "@/lib/epc-component-catalog";
 import {
   defaultLabelForKind,
+  defaultUnitForKind,
   effectiveNetPricePerWattInr,
   hydrateLineItems,
   INVERTER_BRAND_PRESETS,
@@ -28,18 +29,19 @@ export type ProposalPricingConfiguratorLabels = {
   title: string;
   subtitle: string;
   systemSize: string;
-  lineCategory: string;
-  lineDesc: string;
-  componentCol: string;
+  categoryCol: string;
+  itemCol: string;
   brandCol: string;
   qtyCol: string;
+  unitCol: string;
   rateCol: string;
-  totalCol: string;
+  amountCol: string;
+  notesCol: string;
   addLine: string;
-  grossTotal: string;
-  subsidyLabel: string;
-  discountLabel: string;
-  netPayable: string;
+  summaryGross: string;
+  summarySubsidy: string;
+  summaryDiscount: string;
+  summaryNet: string;
   ppwGross: string;
   ppwNet: string;
   manualFinal: string;
@@ -60,6 +62,23 @@ export type ProposalPricingConfiguratorProps = {
 function num(s: string): number {
   const n = parseFloat(String(s).replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
+}
+
+function SummaryChip({
+  label,
+  value,
+  valueClass
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="min-w-[6.5rem] flex-1 rounded-xl border border-slate-200/80 bg-white/90 px-2.5 py-2 dark:border-white/10 dark:bg-[#0f1419]/90">
+      <p className="text-[9px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+      <p className={cn("mt-0.5 text-sm font-black tabular-nums text-slate-900 dark:text-slate-50", valueClass)}>{value}</p>
+    </div>
+  );
 }
 
 export function ProposalPricingConfigurator({
@@ -146,6 +165,7 @@ export function ProposalPricingConfigurator({
         brand: "",
         quantity: 1,
         unit_rate_inr: 0,
+        unit: defaultUnitForKind("custom"),
         catalog_category: defaultCatalogCategoryForLineKind("custom")
       }
     ]);
@@ -154,34 +174,37 @@ export function ProposalPricingConfigurator({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-3xl border border-white/60 bg-gradient-to-b from-white/98 to-slate-50/90 shadow-[0_16px_48px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-white/10 dark:from-[#0c1017] dark:to-[#080b10]",
+        "overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017]/90",
         className
       )}
     >
-      <div className="border-b border-slate-200/80 bg-gradient-to-r from-teal-600/10 via-transparent to-emerald-600/10 px-5 py-4 dark:border-white/10">
-        <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-50">{labels.title}</h2>
-        <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">{labels.subtitle}</p>
-        <div className="mt-4 max-w-xs">
+      <div className="border-b border-slate-200/80 bg-gradient-to-r from-slate-900 via-slate-900 to-teal-900 px-4 py-3 text-white dark:from-[#0b1220] dark:via-[#0f172a] dark:to-emerald-950/90">
+        <h2 className="text-base font-black tracking-tight">{labels.title}</h2>
+        <p className="mt-0.5 text-xs font-medium text-teal-100/90">{labels.subtitle}</p>
+        <div className="mt-3 max-w-[11rem]">
           <FloatingLabelInput
             label={labels.systemSize}
             inputMode="decimal"
             value={String(systemKw)}
             onChange={(e) => setSystemKw(num(e.target.value))}
-            className="h-12 rounded-xl border-slate-200 bg-white/90 dark:border-white/10 dark:bg-white/5"
+            className="h-10 rounded-lg border-white/20 bg-white/10 text-white placeholder:text-white/50"
           />
         </div>
       </div>
 
-      <div className="overflow-x-auto px-2 pb-2 sm:px-4">
-        <table className="w-full min-w-[640px] border-separate border-spacing-0 text-sm">
+      <div className="overflow-x-auto border-b border-slate-100 dark:border-white/10">
+        <table className="w-full min-w-[72rem] border-separate border-spacing-0 text-[12px]">
           <thead>
             <tr className="text-left text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <th className="sticky top-0 bg-white/95 px-2 py-3 dark:bg-[#0c1017]/95">{labels.componentCol}</th>
-              <th className="sticky top-0 bg-white/95 px-2 py-3 dark:bg-[#0c1017]/95">{labels.brandCol}</th>
-              <th className="sticky top-0 w-20 bg-white/95 px-2 py-3 dark:bg-[#0c1017]/95">{labels.qtyCol}</th>
-              <th className="sticky top-0 w-28 bg-white/95 px-2 py-3 dark:bg-[#0c1017]/95">{labels.rateCol}</th>
-              <th className="sticky top-0 w-28 bg-white/95 px-2 py-3 dark:bg-[#0c1017]/95">{labels.totalCol}</th>
-              <th className="sticky top-0 w-12 bg-white/95 px-1 py-3 dark:bg-[#0c1017]/95" aria-label="Remove" />
+              <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.categoryCol}</th>
+              <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.itemCol}</th>
+              <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.brandCol}</th>
+              <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.qtyCol}</th>
+              <th className="sticky top-0 w-16 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.unitCol}</th>
+              <th className="sticky top-0 w-24 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.rateCol}</th>
+              <th className="sticky top-0 w-24 bg-slate-50 px-2 py-2.5 text-right dark:bg-[#0a0e14]">{labels.amountCol}</th>
+              <th className="sticky top-0 min-w-[7rem] bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.notesCol}</th>
+              <th className="sticky top-0 w-10 bg-slate-50 px-1 py-2.5 dark:bg-[#0a0e14]" aria-label="Remove" />
             </tr>
           </thead>
           <tbody>
@@ -193,49 +216,50 @@ export function ProposalPricingConfigurator({
                 <tr
                   key={L.id}
                   className={cn(
-                    "border-b border-slate-100/90 dark:border-white/[0.06]",
-                    idx % 2 === 0 ? "bg-white/40 dark:bg-white/[0.02]" : ""
+                    "border-b border-slate-100 dark:border-white/[0.06]",
+                    idx % 2 === 0 ? "bg-white dark:bg-[#0c1017]" : "bg-slate-50/40 dark:bg-[#080b10]/80"
                   )}
                 >
-                  <td className="px-2 py-2 align-top">
-                    <div className="flex flex-col gap-1.5">
-                      <FloatingLabelSelect
-                        label={labels.lineCategory}
-                        value={L.kind}
-                        onChange={(e) => {
-                          const k = e.target.value as PricingLineKind;
-                          updateLine(L.id, {
-                            kind: k,
-                            label: defaultLabelForKind(k),
-                            catalog_category: defaultCatalogCategoryForLineKind(k)
-                          });
-                        }}
-                        className="h-10 rounded-lg border-slate-200 text-xs font-bold dark:border-white/10"
-                        aria-label={labels.componentCol}
-                      >
-                        {PRICING_LINE_KINDS.map((k) => (
-                          <option key={k} value={k}>
-                            {t(`proposals_lineKind_${k}`)}
-                          </option>
-                        ))}
-                      </FloatingLabelSelect>
-                      <input
-                        type="text"
-                        value={L.label}
-                        onChange={(e) => updateLine(L.id, { label: e.target.value })}
-                        className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none ring-teal-500/30 focus:ring-2 dark:border-white/10 dark:bg-white/5 dark:text-slate-100"
-                        placeholder={labels.lineDesc}
-                        aria-label={labels.lineDesc}
-                      />
-                    </div>
+                  <td className="px-2 py-1.5 align-top">
+                    <FloatingLabelSelect
+                      label={labels.categoryCol}
+                      value={L.kind}
+                      onChange={(e) => {
+                        const k = e.target.value as PricingLineKind;
+                        updateLine(L.id, {
+                          kind: k,
+                          label: defaultLabelForKind(k),
+                          catalog_category: defaultCatalogCategoryForLineKind(k),
+                          unit: defaultUnitForKind(k)
+                        });
+                      }}
+                      className="h-9 rounded-md border-slate-200 text-[11px] font-bold dark:border-white/10"
+                      aria-label={labels.categoryCol}
+                    >
+                      {PRICING_LINE_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {t(`proposals_lineKind_${k}`)}
+                        </option>
+                      ))}
+                    </FloatingLabelSelect>
                   </td>
-                  <td className="px-2 py-2 align-top">
+                  <td className="px-2 py-1.5 align-top">
+                    <input
+                      type="text"
+                      value={L.label}
+                      onChange={(e) => updateLine(L.id, { label: e.target.value })}
+                      className="h-9 w-full min-w-[7rem] rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold dark:border-white/10 dark:bg-white/5"
+                      placeholder="—"
+                      aria-label={labels.itemCol}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5 align-top">
                     <input
                       type="text"
                       list={showPanelList ? `brands-${L.id}` : undefined}
                       value={L.brand}
                       onChange={(e) => updateLine(L.id, { brand: e.target.value })}
-                      className="h-10 w-full min-w-[6rem] rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold dark:border-white/10 dark:bg-white/5"
+                      className="h-9 w-full min-w-[5rem] rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold dark:border-white/10 dark:bg-white/5"
                       placeholder="—"
                     />
                     {showPanelList ? (
@@ -246,40 +270,57 @@ export function ProposalPricingConfigurator({
                       </datalist>
                     ) : null}
                   </td>
-                  <td className="px-2 py-2 align-top">
+                  <td className="px-2 py-1.5 align-top">
                     <input
                       type="text"
                       inputMode="decimal"
                       value={String(L.quantity)}
                       onChange={(e) => updateLine(L.id, { quantity: num(e.target.value) })}
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-right text-xs font-bold tabular-nums dark:border-white/10 dark:bg-white/5"
+                      className="h-9 w-full max-w-[4.5rem] rounded-md border border-slate-200 bg-white px-1.5 text-right text-[11px] font-bold tabular-nums dark:border-white/10 dark:bg-white/5"
                     />
                   </td>
-                  <td className="px-2 py-2 align-top">
+                  <td className="px-2 py-1.5 align-top">
+                    <input
+                      type="text"
+                      value={L.unit ?? defaultUnitForKind(L.kind)}
+                      onChange={(e) => updateLine(L.id, { unit: e.target.value.slice(0, 32) })}
+                      className="h-9 w-full rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold dark:border-white/10 dark:bg-white/5"
+                    />
+                  </td>
+                  <td className="px-2 py-1.5 align-top">
                     <input
                       type="text"
                       inputMode="decimal"
                       value={String(L.unit_rate_inr)}
                       onChange={(e) => updateLine(L.id, { unit_rate_inr: num(e.target.value) })}
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-right text-xs font-bold tabular-nums dark:border-white/10 dark:bg-white/5"
+                      className="h-9 w-full rounded-md border border-slate-200 bg-white px-1.5 text-right text-[11px] font-bold tabular-nums dark:border-white/10 dark:bg-white/5"
                     />
                   </td>
-                  <td className="px-2 py-2 align-middle text-right">
-                    <span className="text-sm font-black tabular-nums text-slate-900 dark:text-slate-100">
+                  <td className="px-2 py-1.5 align-middle text-right">
+                    <span className="text-[12px] font-black tabular-nums text-slate-900 dark:text-slate-100">
                       ₹{total.toLocaleString("en-IN")}
                     </span>
                   </td>
-                  <td className="px-1 py-2 align-middle">
+                  <td className="px-2 py-1.5 align-top">
+                    <input
+                      type="text"
+                      value={L.notes ?? ""}
+                      onChange={(e) => updateLine(L.id, { notes: e.target.value.slice(0, 500) })}
+                      className="h-9 w-full min-w-[6rem] rounded-md border border-slate-200 bg-white px-2 text-[11px] font-medium dark:border-white/10 dark:bg-white/5"
+                      placeholder="—"
+                    />
+                  </td>
+                  <td className="px-1 py-1.5 align-middle">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-9 text-slate-400 hover:text-rose-600"
+                      className="h-8 w-8 text-slate-400 hover:text-rose-600"
                       disabled={lines.length <= 1}
                       onClick={() => removeLine(L.id)}
                       aria-label="Remove line"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </td>
                 </tr>
@@ -289,49 +330,45 @@ export function ProposalPricingConfigurator({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-4 py-3 dark:border-white/10">
-        <Button type="button" variant="outline" size="sm" className="gap-1.5 font-bold" onClick={addLine}>
-          <Plus className="h-4 w-4" />
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-white/10">
+        <Button type="button" variant="outline" size="sm" className="h-8 gap-1 text-[11px] font-bold" onClick={addLine}>
+          <Plus className="h-3.5 w-3.5" />
           {labels.addLine}
         </Button>
       </div>
 
-      <div className="grid gap-3 border-t border-slate-100 bg-slate-50/80 px-4 py-4 dark:border-white/10 dark:bg-white/[0.03] sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-white/60 bg-white/90 p-3 shadow-sm dark:border-white/10 dark:bg-[#0f1419]/90">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">{labels.grossTotal}</p>
-          <p className="mt-1 text-lg font-black text-slate-900 dark:text-white">₹{gross.toLocaleString("en-IN")}</p>
-        </div>
-        <div className="rounded-2xl border border-white/60 bg-white/90 p-3 shadow-sm dark:border-white/10 dark:bg-[#0f1419]/90">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">{labels.subsidyLabel}</p>
-          <p className="mt-1 text-lg font-black text-emerald-700 dark:text-emerald-400">
-            −₹{Math.round(preview.subsidy_inr).toLocaleString("en-IN")}
+      <div className="flex flex-wrap gap-2 border-b border-slate-100 bg-slate-50/50 px-3 py-3 dark:border-white/10 dark:bg-white/[0.02]">
+        <SummaryChip label={labels.summaryGross} value={`₹${gross.toLocaleString("en-IN")}`} />
+        <SummaryChip
+          label={labels.summarySubsidy}
+          value={`−₹${Math.round(preview.subsidy_inr).toLocaleString("en-IN")}`}
+          valueClass="text-emerald-700 dark:text-emerald-400"
+        />
+        <SummaryChip
+          label={labels.summaryDiscount}
+          value={`−₹${Math.round(preview.discount_inr).toLocaleString("en-IN")}`}
+          valueClass="text-amber-800 dark:text-amber-300"
+        />
+        <SummaryChip
+          label={labels.summaryNet}
+          value={`₹${Math.round(net).toLocaleString("en-IN")}`}
+          valueClass="text-teal-800 dark:text-teal-200"
+        />
+        <div className="min-w-[10rem] flex-1 rounded-xl border border-teal-200/80 bg-teal-50/80 px-2.5 py-2 dark:border-teal-500/25 dark:bg-teal-950/30">
+          <p className="text-[9px] font-extrabold uppercase tracking-wide text-teal-900/80 dark:text-teal-200/90">
+            {labels.ppwGross} / {labels.ppwNet}
           </p>
-        </div>
-        <div className="rounded-2xl border border-white/60 bg-white/90 p-3 shadow-sm dark:border-white/10 dark:bg-[#0f1419]/90">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-500">{labels.discountLabel}</p>
-          <p className="mt-1 text-lg font-black text-amber-700 dark:text-amber-400">
-            −₹{Math.round(preview.discount_inr).toLocaleString("en-IN")}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50 to-white p-3 shadow-sm dark:border-teal-500/25 dark:from-teal-950/40 dark:to-[#0f1419]">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-teal-800 dark:text-teal-200">{labels.netPayable}</p>
-          <p className="mt-1 text-xl font-black text-teal-800 dark:text-teal-200">₹{Math.round(net).toLocaleString("en-IN")}</p>
-          <p className="mt-2 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-            {labels.ppwGross}{" "}
-            <span className="tabular-nums text-slate-900 dark:text-slate-100">₹{preview.price_per_watt_inr.toLocaleString("en-IN")}/W</span>
-          </p>
-          <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-            {labels.ppwNet}{" "}
-            <span className="tabular-nums text-slate-900 dark:text-slate-100">₹{ppwNet.toLocaleString("en-IN")}/W</span>
+          <p className="mt-0.5 text-[11px] font-bold tabular-nums text-slate-900 dark:text-slate-100">
+            ₹{preview.price_per_watt_inr.toLocaleString("en-IN")}/W gross · ₹{ppwNet.toLocaleString("en-IN")}/W net
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-slate-100 px-4 py-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]">
+      <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-2 dark:border-white/10 dark:bg-white/[0.04]">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+            className="h-3.5 w-3.5 rounded border-slate-300 text-teal-600"
             checked={manualFinal}
             onChange={(e) => {
               const on = e.target.checked;
@@ -346,20 +383,22 @@ export function ProposalPricingConfigurator({
               setManualFinal(on);
             }}
           />
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{labels.manualFinal}</span>
+          <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">{labels.manualFinal}</span>
         </label>
-        {manualFinal ? (
-          <FloatingLabelInput
-            label={labels.netPayable}
-            inputMode="decimal"
-            value={String(manualFinalAmt)}
-            onChange={(e) => setManualFinalAmt(num(e.target.value))}
-            className="h-12 max-w-xs rounded-xl"
-          />
-        ) : null}
-        <Button type="button" variant="emeraldCta" size="lg" className="min-w-[10rem] shrink-0 sm:ml-auto" disabled={saving} onClick={() => void save()}>
-          {saving ? labels.saving : labels.save}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          {manualFinal ? (
+            <FloatingLabelInput
+              label={labels.summaryNet}
+              inputMode="decimal"
+              value={String(manualFinalAmt)}
+              onChange={(e) => setManualFinalAmt(num(e.target.value))}
+              className="h-10 max-w-[10rem] rounded-lg text-[12px]"
+            />
+          ) : null}
+          <Button type="button" variant="emeraldCta" size="default" className="min-w-[8.5rem] font-bold" disabled={saving} onClick={() => void save()}>
+            {saving ? labels.saving : labels.save}
+          </Button>
+        </div>
       </div>
     </section>
   );

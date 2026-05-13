@@ -66,8 +66,18 @@ export function defaultCatalogCategoryForLineKind(kind: PricingLineKind): EpcCom
       return "inverters";
     case "structure":
       return "structure";
+    case "acdb_dcdb":
+      return "acdb";
+    case "cabling":
+      return "cables";
+    case "earthing":
+      return "earthing";
     case "installation":
       return "installation";
+    case "transportation":
+      return "misc_electricals";
+    case "net_metering":
+      return "net_meter";
     case "battery":
       return "battery";
     case "electricals":

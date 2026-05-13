@@ -13,6 +13,10 @@ export const pricingLineItemSchema = z.object({
   brand: z.string(),
   quantity: n,
   unit_rate_inr: n,
+  /** Display unit (nos, kW, m, set, trip, lump sum, …). */
+  unit: z.string().max(32).optional(),
+  /** Line notes for quotation / internal use. */
+  notes: z.string().max(500).optional(),
   /** EPC BOM taxonomy — optional; defaults derived from `kind` when absent. */
   catalog_category: epcComponentCategorySchema.nullable().optional()
 });
@@ -42,6 +46,8 @@ export const proposalPricingRowSchema = z.object({
       quantity: number;
       unit_rate_inr: number;
       catalog_category?: EpcComponentCategory | null;
+      unit?: string;
+      notes?: string;
     }>
   >
 });

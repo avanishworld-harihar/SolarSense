@@ -12,7 +12,8 @@ function shellTitle(pathname: string, t: (key: string) => string): string {
   if (p.startsWith("/customers")) return t("customers_title");
   if (p.startsWith("/projects")) return t("projects_title");
   if (p.startsWith("/proposals")) return t("proposals_title");
-  if (p.startsWith("/proposal")) return t("proposal_title");
+  if (p === "/proposal") return t("proposals_newBuilderTitle");
+  if (p.startsWith("/proposal/")) return t("proposals_title");
   if (p.startsWith("/more")) return t("more_title");
   return t("dashboard_title");
 }

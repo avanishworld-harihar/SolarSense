@@ -17,6 +17,9 @@ export type PricingLineItem = {
   brand: string;
   quantity: number;
   unit_rate_inr: number;
+  /** Quotation unit (nos, m, set, job, kWp, …). */
+  unit?: string;
+  notes?: string;
   /** EPC master catalog — drives future BOM / marketplace SKUs. */
   catalog_category?: EpcComponentCategory | null;
 };
@@ -39,12 +42,22 @@ export function defaultLabelForKind(kind: PricingLineKind): string {
       return "Inverter";
     case "structure":
       return "Structure";
+    case "acdb_dcdb":
+      return "ACDB / DCDB";
+    case "cabling":
+      return "Cabling";
+    case "earthing":
+      return "Earthing";
     case "installation":
       return "Installation";
+    case "transportation":
+      return "Transportation";
+    case "net_metering":
+      return "Net metering";
     case "battery":
       return "Battery";
     case "electricals":
-      return "Electricals";
+      return "Miscellaneous";
     case "subsidy":
       return "Subsidy";
     case "discount":
@@ -54,13 +67,40 @@ export function defaultLabelForKind(kind: PricingLineKind): string {
   }
 }
 
+export function defaultUnitForKind(kind: PricingLineKind): string {
+  switch (kind) {
+    case "cabling":
+      return "m";
+    case "installation":
+      return "job";
+    case "transportation":
+      return "trip";
+    case "subsidy":
+    case "discount":
+      return "lump";
+    default:
+      return "nos";
+  }
+}
+
 export function lineItemTotalInr(item: PricingLineItem): number {
   const q = Math.max(0, Number(item.quantity) || 0);
   const r = Math.max(0, Number(item.unit_rate_inr) || 0);
   return Math.round(q * r);
 }
 
-const HARDWARE_KINDS = new Set<PricingLineKind>(["panels", "inverter", "battery", "electricals", "custom"]);
+const HARDWARE_KINDS = new Set<PricingLineKind>([
+  "panels",
+  "inverter",
+  "battery",
+  "electricals",
+  "custom",
+  "acdb_dcdb",
+  "cabling",
+  "earthing",
+  "transportation",
+  "net_metering"
+]);
 
 export function rollupLineItemsToBuckets(lines: PricingLineItem[]): {
   hardware_inr: number;
@@ -135,7 +175,7 @@ export function defaultLineItemsFromSeed(opts: {
   const b = (opts.panelBrandHint ?? "").trim();
   const seed = (
     kind: PricingLineKind,
-    extra: Partial<Pick<PricingLineItem, "brand" | "unit_rate_inr">>
+    extra: Partial<Pick<PricingLineItem, "brand" | "unit_rate_inr" | "unit">>
   ): PricingLineItem => ({
     id: newPricingLineId(),
     kind,
@@ -143,15 +183,21 @@ export function defaultLineItemsFromSeed(opts: {
     brand: extra.brand ?? "",
     quantity: 1,
     unit_rate_inr: extra.unit_rate_inr ?? 0,
+    unit: extra.unit ?? defaultUnitForKind(kind),
     catalog_category: defaultCatalogCategoryForLineKind(kind)
   });
   return [
-    seed("panels", { brand: b, unit_rate_inr: Math.max(0, Math.round(opts.hardware_inr)) }),
+    seed("panels", { brand: b, unit_rate_inr: Math.max(0, Math.round(opts.hardware_inr)), unit: "system" }),
     seed("inverter", {}),
     seed("structure", { unit_rate_inr: Math.max(0, Math.round(opts.structure_inr)) }),
+    seed("acdb_dcdb", {}),
+    seed("cabling", {}),
+    seed("earthing", {}),
     seed("installation", { unit_rate_inr: Math.max(0, Math.round(opts.installation_inr)) }),
-    seed("battery", {}),
+    seed("transportation", {}),
+    seed("net_metering", {}),
     seed("electricals", {}),
+    seed("battery", {}),
     seed("subsidy", { unit_rate_inr: Math.max(0, Math.round(opts.subsidy_inr)) }),
     seed("discount", { unit_rate_inr: Math.max(0, Math.round(opts.discount_inr)) })
   ];
@@ -197,7 +243,14 @@ export function normalizeLineItems(raw: unknown[]): PricingLineItem[] {
     if (catalog_category === undefined) {
       catalog_category = defaultCatalogCategoryForLineKind(kind as PricingLineKind);
     }
-    out.push({ id, kind: kind as PricingLineKind, label, brand, quantity, unit_rate_inr, catalog_category });
+    const unitRaw = o.unit;
+    const unit =
+      typeof unitRaw === "string" && unitRaw.trim()
+        ? unitRaw.trim().slice(0, 32)
+        : defaultUnitForKind(kind as PricingLineKind);
+    const notesRaw = o.notes;
+    const notes = typeof notesRaw === "string" ? notesRaw.slice(0, 500) : undefined;
+    out.push({ id, kind: kind as PricingLineKind, label, brand, quantity, unit_rate_inr, unit, notes, catalog_category });
   }
   return out.length > 0 ? out : defaultLineItemsFromSeed({ hardware_inr: 0, installation_inr: 0, structure_inr: 0, subsidy_inr: 0, discount_inr: 0 });
 }

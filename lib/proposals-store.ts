@@ -9,6 +9,8 @@ import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PremiumProposalPptInput, ProposalDeckSummary } from "@/lib/proposal-ppt";
+import type { ProposalStatus } from "@/lib/proposal-status";
+import { normalizeProposalStatus } from "@/lib/proposal-status";
 
 type Row = Record<string, unknown>;
 
@@ -123,6 +125,10 @@ export async function createProposal(input: CreateProposalInput): Promise<Stored
 export type ProposalRecord = StoredProposal & {
   /** Linked CRM lead — used to read live `survey_status` for the web proposal. */
   lead_id?: string | null;
+  location?: string | null;
+  panel_brand?: string | null;
+  annual_saving_inr?: number | null;
+  proposal_status?: string | null;
   ppt_input: PremiumProposalPptInput;
   summary: ProposalDeckSummary;
   generated_at: string;
@@ -182,59 +188,80 @@ export type ProposalListItem = {
   system_kw: number;
   lead_id: string | null;
   final_amount_inr: number | null;
+  panel_brand: string | null;
+  annual_saving_inr: number | null;
+  proposal_status: ProposalStatus;
 };
 
 /**
  * Recent proposals for the `/proposals` hub (includes nested pricing when present).
  */
+function mapProposalListRow(r: Record<string, unknown>): ProposalListItem {
+  const nested = r.proposal_pricing;
+  let final_amount_inr: number | null = null;
+  if (Array.isArray(nested) && nested[0] && typeof nested[0] === "object") {
+    const v = (nested[0] as { final_amount_inr?: unknown }).final_amount_inr;
+    if (typeof v === "number" && Number.isFinite(v)) final_amount_inr = v;
+  }
+  const brand = r.panel_brand;
+  const saving = r.annual_saving_inr;
+  return {
+    id: String(r.id),
+    customer_name: String(r.customer_name ?? ""),
+    generated_at: String(r.generated_at ?? ""),
+    system_kw: Number(r.system_kw) || 0,
+    lead_id: r.lead_id != null ? String(r.lead_id) : null,
+    final_amount_inr,
+    panel_brand: typeof brand === "string" && brand.trim() ? brand.trim() : null,
+    annual_saving_inr: typeof saving === "number" && Number.isFinite(saving) ? saving : null,
+    proposal_status: normalizeProposalStatus(typeof r.proposal_status === "string" ? r.proposal_status : "draft")
+  };
+}
+
 export async function listRecentProposals(limit = 50): Promise<ProposalListItem[]> {
   const client = rwClient();
   if (!client) return [];
   const { data, error } = await client
     .from("proposals")
-    .select("id, customer_name, generated_at, system_kw, lead_id, proposal_pricing(final_amount_inr)")
+    .select(
+      "id, customer_name, generated_at, system_kw, lead_id, panel_brand, annual_saving_inr, proposal_status, proposal_pricing(final_amount_inr)"
+    )
     .order("generated_at", { ascending: false })
     .limit(limit);
   if (error) {
     const { data: fallback, error: err2 } = await client
       .from("proposals")
-      .select("id, customer_name, generated_at, system_kw, lead_id")
+      .select(
+        "id, customer_name, generated_at, system_kw, lead_id, panel_brand, annual_saving_inr, proposal_pricing(final_amount_inr)"
+      )
       .order("generated_at", { ascending: false })
       .limit(limit);
     if (err2 || !fallback) {
       console.warn("[proposals-store] listRecentProposals:", error.message);
       return [];
     }
-    return (fallback as Record<string, unknown>[]).map((r) => ({
-      id: String(r.id),
-      customer_name: String(r.customer_name ?? ""),
-      generated_at: String(r.generated_at ?? ""),
-      system_kw: Number(r.system_kw) || 0,
-      lead_id: r.lead_id != null ? String(r.lead_id) : null,
-      final_amount_inr: null
-    }));
+    return (fallback as Record<string, unknown>[]).map((r) =>
+      mapProposalListRow({ ...r, proposal_status: "draft" })
+    );
   }
-  return (data as Record<string, unknown>[]).map((r) => {
-    const nested = r.proposal_pricing;
-    let final_amount_inr: number | null = null;
-    if (Array.isArray(nested) && nested[0] && typeof nested[0] === "object") {
-      const v = (nested[0] as { final_amount_inr?: unknown }).final_amount_inr;
-      if (typeof v === "number" && Number.isFinite(v)) final_amount_inr = v;
-    }
-    return {
-      id: String(r.id),
-      customer_name: String(r.customer_name ?? ""),
-      generated_at: String(r.generated_at ?? ""),
-      system_kw: Number(r.system_kw) || 0,
-      lead_id: r.lead_id != null ? String(r.lead_id) : null,
-      final_amount_inr
-    };
-  });
+  return (data as Record<string, unknown>[]).map((r) => mapProposalListRow(r));
+}
+
+export async function updateProposalStatus(proposalId: string, status: ProposalStatus): Promise<boolean> {
+  const client = rwClient();
+  if (!client) return false;
+  const { error } = await client.from("proposals").update({ proposal_status: status }).eq("id", proposalId);
+  if (error) {
+    console.warn("[proposals-store] updateProposalStatus:", error.message);
+    return false;
+  }
+  return true;
 }
 
 export async function trackProposalView(id: string): Promise<void> {
   const client = rwClient();
   if (!client) return;
+  const now = new Date().toISOString();
   try {
     await client.rpc("increment_proposal_view", { p_id: id }).single();
   } catch {
@@ -242,9 +269,18 @@ export async function trackProposalView(id: string): Promise<void> {
     try {
       const { data } = await client.from("proposals").select("view_count").eq("id", id).single();
       const next = ((data as { view_count?: number } | null)?.view_count ?? 0) + 1;
-      await client.from("proposals").update({ view_count: next, last_viewed_at: new Date().toISOString() }).eq("id", id);
+      await client.from("proposals").update({ view_count: next, last_viewed_at: now }).eq("id", id);
     } catch {
       /* ignore */
     }
+  }
+  try {
+    await client
+      .from("proposals")
+      .update({ proposal_status: "viewed", last_viewed_at: now })
+      .eq("id", id)
+      .eq("proposal_status", "sent");
+  } catch {
+    /* ignore */
   }
 }
