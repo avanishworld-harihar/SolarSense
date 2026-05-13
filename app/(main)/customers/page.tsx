@@ -464,13 +464,13 @@ function CustomersPageContent() {
           </div>
         )}
 
-        <div className="page-lite-item ss-page-backdrop">
-          <div className="ss-card p-4 sm:p-5 md:p-6">
+        <div className="page-lite-item overflow-hidden rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-slate-50 shadow-sm dark:border-indigo-500/25 dark:from-indigo-950/35 dark:via-[#0c1017] dark:to-[#080b10]">
+          <div className="border-b border-indigo-200/50 p-4 sm:p-5 md:p-6 dark:border-indigo-500/15">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 sm:text-xs">{t("customers_sectionLabel")}</p>
-              <h2 className="ss-section-headline mt-1 font-display">{t("customers_heading")}</h2>
-              <p className="ss-section-subline max-w-xl">{t("customers_sub")}</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700 dark:text-indigo-300">{t("customers_sectionLabel")}</p>
+              <h2 className="ss-section-headline mt-1 font-display text-slate-900 dark:text-slate-50">{t("customers_heading")}</h2>
+              <p className="ss-section-subline max-w-xl text-slate-600 dark:text-slate-400">{t("customers_sub")}</p>
             </div>
             <button
               type="button"
@@ -523,7 +523,7 @@ function CustomersPageContent() {
           })}
         </div>
 
-        <div className="page-lite-item ss-card-subtle p-3 sm:p-4 md:p-5">
+        <div className="page-lite-item">
           <CustomersLeadList
             customers={customers}
             loading={showListSkeleton}

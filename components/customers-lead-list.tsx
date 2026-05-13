@@ -93,7 +93,7 @@ function LeadStatusPillSelect({
 
 function LeadRowSkeleton() {
   return (
-    <div className="rounded-2xl border-[0.5px] border-white/50 bg-white/30 p-4 shadow-[0_12px_36px_rgba(11,34,64,0.08)] md:grid md:grid-cols-12 md:items-center md:gap-4 md:p-4">
+    <div className="border-b border-slate-100 p-4 last:border-b-0 dark:border-white/[0.06] md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5">
       <div className="flex items-center gap-3 md:col-span-5">
         <Skeleton className="h-12 w-12 shrink-0 rounded-2xl bg-slate-200/80" />
         <div className="min-w-0 flex-1 space-y-2">
@@ -204,8 +204,9 @@ export function CustomersLeadList({
 
   return (
     <div className="space-y-4">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017]">
       {showHeader && (
-        <div className="hidden rounded-xl px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 md:grid md:grid-cols-12 md:gap-4 md:px-5">
+        <div className="hidden border-b border-slate-200 bg-slate-100 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-400 md:grid md:grid-cols-12 md:gap-4 md:px-5">
           <div className="col-span-5 pl-14">{t("customers_tableLead")}</div>
           <div className="col-span-3">{t("customers_tableLocation")}</div>
           <div className="col-span-2">{t("customers_tableBill")}</div>
@@ -213,22 +214,26 @@ export function CustomersLeadList({
         </div>
       )}
 
-      <div className="space-y-3 md:space-y-2">
+      <div>
         {loading &&
           Array.from({ length: 5 }).map((_, i) => (
             <LeadRowSkeleton key={i} />
           ))}
 
-        {!loading && customers.length === 0 && <CustomersLeadListEmpty t={t} />}
+        {!loading && customers.length === 0 && (
+          <div className="p-4">
+            <CustomersLeadListEmpty t={t} />
+          </div>
+        )}
 
         {!loading &&
           customers.map((customer) => {
             const statusKey = normalizeLeadStatus(customer.status);
-            const proposalLinkClass = cn(
-              "inline-flex h-8 items-center justify-center gap-1 rounded-xl border-[0.5px] px-2.5 text-[11px] font-bold uppercase tracking-wide shadow-sm transition-colors sm:text-xs",
+            const quoteLinkClass = cn(
+              "inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-xs",
               statusKey === "proposal-sent"
-                ? "border-emerald-300/90 bg-emerald-50/95 text-emerald-800 hover:bg-emerald-100 hover:text-emerald-900"
-                : "border-brand-200/80 bg-brand-50/90 text-brand-700 hover:bg-brand-100 hover:text-brand-800"
+                ? "border-emerald-300/90 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
+                : "border-indigo-200/90 bg-indigo-50 text-indigo-800 hover:bg-indigo-100 dark:border-indigo-500/25 dark:bg-indigo-950/35 dark:text-indigo-200"
             );
             const bill = Number(customer.monthly_bill || 0);
             const ts = followMap[customer.id];
@@ -247,16 +252,11 @@ export function CustomersLeadList({
               <article
                 key={customer.id}
                 className={cn(
-                  "group/card ss-card relative overflow-hidden p-4",
-                  "backdrop-blur-xl backdrop-saturate-150 transition-[box-shadow,transform] duration-200",
-                  "hover:border-white/75 hover:shadow-[0_16px_48px_rgba(11,34,64,0.12)] active:scale-[0.998] md:grid md:grid-cols-12 md:items-center md:gap-4 md:p-4 md:px-5",
-                  activeProject && "border-emerald-200/80 bg-emerald-50/40 shadow-[0_0_0_1px_rgba(16,185,129,0.14),0_16px_38px_rgba(5,150,105,0.08)]"
+                  "group/row relative border-b border-slate-200 p-4 transition-colors last:border-b-0 hover:bg-slate-50/90 dark:border-white/[0.07] dark:hover:bg-white/[0.03]",
+                  "md:grid md:grid-cols-12 md:items-center md:gap-4 md:px-5",
+                  activeProject && "border-l-[3px] border-l-indigo-500 bg-indigo-50/30 dark:border-l-indigo-400 dark:bg-indigo-950/20"
                 )}
               >
-                <div
-                  className="pointer-events-none absolute -right-6 -top-10 h-28 w-28 rounded-full bg-gradient-to-br from-indigo-400/10 to-solar-400/10 blur-2xl"
-                  aria-hidden
-                />
                 {canMutateLead ? (
                   <div className="absolute right-3 top-3 z-20 flex items-center gap-1">
                     {onEditLead ? (
@@ -292,8 +292,8 @@ export function CustomersLeadList({
                   <div className="relative shrink-0">
                     <div
                       className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-600 text-sm font-extrabold text-white shadow-md shadow-brand-900/20 ring-2 sm:h-14 sm:w-14 sm:text-base",
-                        stale ? "ring-amber-400" : "ring-white/60"
+                        "flex h-12 w-12 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-sm font-extrabold text-slate-800 shadow-sm dark:border-white/10 dark:bg-[#1a1f28] dark:text-slate-100 sm:h-14 sm:w-14 sm:text-base",
+                        stale && "border-amber-300/80 ring-2 ring-amber-400/50"
                       )}
                       aria-hidden
                     >
@@ -309,7 +309,7 @@ export function CustomersLeadList({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <h3 className="truncate text-base font-extrabold tracking-tight text-brand-900 sm:text-lg">{customer.name}</h3>
+                      <h3 className="truncate text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-50 sm:text-lg">{customer.name}</h3>
                       <LeadSourceBadge sourceRaw={customer.source} />
                       <span
                         className={cn(
@@ -346,7 +346,7 @@ export function CustomersLeadList({
                         ) : null}
                         <Link
                           href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                          className={proposalLinkClass}
+                          className={quoteLinkClass}
                           aria-label={
                             statusKey === "proposal-sent"
                               ? `Proposal sent — open or update for ${customer.name}`
@@ -354,15 +354,23 @@ export function CustomersLeadList({
                           }
                         >
                           <Send className="h-3.5 w-3.5" strokeWidth={2} />
-                          <span>Proposal</span>
+                          <span>{t("customers_linkQuoteCta")}</span>
                         </Link>
+                        {activeProject ? (
+                          <Link
+                            href="/projects"
+                            className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
+                          >
+                            {t("customers_linkPipeline")}
+                          </Link>
+                        ) : null}
                       </div>
                     ) : (
                       <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400 sm:text-sm">
                         <p>{t("customers_noPhoneOnFile")}</p>
                         <Link
                           href={`/proposal?leadId=${encodeURIComponent(customer.id)}`}
-                          className={proposalLinkClass}
+                          className={quoteLinkClass}
                           aria-label={
                             statusKey === "proposal-sent"
                               ? `Proposal sent — open or update for ${customer.name}`
@@ -370,8 +378,16 @@ export function CustomersLeadList({
                           }
                         >
                           <Send className="h-3.5 w-3.5" strokeWidth={2} />
-                          <span>Proposal</span>
+                          <span>{t("customers_linkQuoteCta")}</span>
                         </Link>
+                        {activeProject ? (
+                          <Link
+                            href="/projects"
+                            className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50 dark:border-white/15 dark:bg-[#141a22] dark:text-slate-200"
+                          >
+                            {t("customers_linkPipeline")}
+                          </Link>
+                        ) : null}
                       </div>
                     )}
                     {stale && (
@@ -401,7 +417,7 @@ export function CustomersLeadList({
                   </div>
                 </div>
 
-                <div className="relative mt-4 flex flex-col gap-1 border-t border-white/45 pt-3 md:col-span-3 md:mt-0 md:border-t-0 md:border-none md:pt-0">
+                <div className="relative mt-4 flex flex-col gap-1 border-t border-slate-100 pt-3 dark:border-white/[0.06] md:col-span-3 md:mt-0 md:border-t-0 md:pt-0">
                   <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <MapPin className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
                     <span className="truncate">{customer.city}</span>
@@ -413,12 +429,12 @@ export function CustomersLeadList({
                 </div>
 
                 <div className="relative mt-3 flex items-center gap-2 md:col-span-2 md:mt-0">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl border-[0.5px] border-white/50 bg-white/60 text-solar-600 shadow-inner md:h-10 md:w-10">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 dark:border-white/10 dark:bg-[#141a22] dark:text-slate-300 md:h-10 md:w-10">
                     <IndianRupee className="h-4 w-4" strokeWidth={2.5} aria-hidden />
                   </span>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t("customers_monthlyBillShort")}</p>
-                    <p className="text-base font-extrabold tabular-nums text-brand-800 sm:text-lg">₹{bill.toLocaleString("en-IN")}</p>
+                    <p className="text-base font-extrabold tabular-nums text-slate-900 dark:text-slate-100 sm:text-lg">₹{bill.toLocaleString("en-IN")}</p>
                   </div>
                 </div>
 
@@ -439,6 +455,7 @@ export function CustomersLeadList({
               </article>
             );
           })}
+      </div>
       </div>
     </div>
   );

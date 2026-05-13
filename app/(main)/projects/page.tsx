@@ -1,7 +1,9 @@
 "use client";
 
 import { Send } from "lucide-react";
-import { GlassProjectCard, type GlassProjectSummary, type ProjectCardPatch } from "@/components/glass-project-card";
+import type { GlassProjectSummary, ProjectCardPatch } from "@/components/glass-project-card";
+import { ProjectKanbanBoard } from "@/components/project-kanban-board";
+import { ProjectPipelineList } from "@/components/project-pipeline-list";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +11,7 @@ import { useToast } from "@/components/ui/toast-center";
 import { useLanguage } from "@/lib/language-context";
 import { formatPipelineDisplayName, type PipelineProjectRow } from "@/lib/supabase";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
+import { OPS_STAGE_ORDER } from "@/lib/project-pipeline-stage";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -128,7 +131,7 @@ function ProjectsBoard() {
     };
   }, [data]);
 
-  const cards = useMemo(() => partitions[view].map(rowToGlass), [partitions, view]);
+  const enriched = useMemo(() => partitions[view].map((row) => ({ row, glass: rowToGlass(row) })), [partitions, view]);
 
   function setView(next: ProjectsView) {
     const params = new URLSearchParams(searchParams.toString());
@@ -298,10 +301,15 @@ function ProjectsBoard() {
   return (
     <>
       <div className="ss-page-shell">
-        <Card className="page-lite-item ss-page-backdrop border-white/55 p-0">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="ss-section-headline text-lg sm:text-xl">{t("projects_pipeline")}</CardTitle>
-            <CardDescription className="ss-section-subline text-sm">{t("projects_pipelineSub")}</CardDescription>
+        <Card className="page-lite-item overflow-hidden border-amber-200/50 bg-gradient-to-br from-amber-50/90 via-white to-slate-50 p-0 dark:border-amber-500/20 dark:from-amber-950/40 dark:via-[#0c1017] dark:to-[#080b10]">
+          <CardHeader className="border-b border-amber-200/40 p-4 sm:p-5 dark:border-amber-500/15">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-800 dark:text-amber-300">{t("projects_opsModuleTag")}</p>
+            <CardTitle className="mt-1 ss-section-headline text-lg text-slate-900 sm:text-xl dark:text-slate-50">
+              {t("projects_opsPipelineTitle")}
+            </CardTitle>
+            <CardDescription className="ss-section-subline mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {t("projects_opsPipelineSub")}
+            </CardDescription>
           </CardHeader>
         </Card>
 
@@ -343,7 +351,7 @@ function ProjectsBoard() {
         </div>
 
         <p className="page-lite-item -mt-1 px-1 text-xs font-semibold text-slate-500 dark:text-slate-400 sm:text-sm">
-          {activeTabDef.description}
+          {view === "active" ? t("projects_opsBoardHint") : activeTabDef.description}
         </p>
 
         {error && (
@@ -352,38 +360,48 @@ function ProjectsBoard() {
           </Card>
         )}
 
-        {!isLoading && !error && cards.length === 0 && (
-          <Card className="page-lite-item ss-card-subtle border-brand-100 bg-brand-50/50">
-            <CardContent className="p-4 text-sm font-semibold text-slate-700">
+        {!isLoading && !error && enriched.length === 0 && (
+          <Card className="page-lite-item border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/[0.03]">
+            <CardContent className="p-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
               {view === "active"
                 ? t("projects_pipelineEmpty")
                 : view === "hidden"
-                  ? "No projects are hidden from the dashboard right now."
-                  : "Archive is empty. Old projects will land here once you archive them."}
+                  ? t("projects_hiddenEmpty")
+                  : t("projects_archivedEmpty")}
             </CardContent>
           </Card>
         )}
 
-        <div className="page-lite-sequence grid grid-cols-1 gap-2.5 sm:gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {isLoading && !cards.length
-            ? [1, 2, 3].map((i) => (
-                <Card key={i} className="min-h-[8rem] border-brand-100 bg-brand-50/30 p-4">
-                  <Skeleton className="h-5 w-1/2 rounded-md" />
-                  <Skeleton className="mt-3 h-3 w-4/5 rounded-md" />
-                  <Skeleton className="mt-2 h-3 w-2/3 rounded-md" />
-                  <Skeleton className="mt-6 h-2 w-full rounded-full" />
-                </Card>
-              ))
-            : cards.map((project) => (
-                <GlassProjectCard
-                  key={project.id}
-                  project={project}
-                  onPatch={handlePatch}
-                  onEditProject={openEditProject}
-                  onDeleteProject={(p) => setDeleteProjectTarget(p)}
-                />
+        {isLoading && enriched.length === 0 ? (
+          view === "active" ? (
+            <div className="page-lite-item flex gap-3 overflow-hidden pb-2">
+              {OPS_STAGE_ORDER.map((s) => (
+                <Skeleton key={s} className="h-[min(70vh,480px)] w-[min(85vw,17.5rem)] shrink-0 rounded-xl" />
               ))}
-        </div>
+            </div>
+          ) : (
+            <div className="page-lite-item space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+              ))}
+            </div>
+          )
+        ) : view === "active" ? (
+          <ProjectKanbanBoard
+            items={enriched}
+            onPatch={handlePatch}
+            onEditProject={openEditProject}
+            onDeleteProject={(p) => setDeleteProjectTarget(p)}
+          />
+        ) : (
+          <ProjectPipelineList
+            variant={view === "archived" ? "archived" : "hidden"}
+            items={enriched}
+            onPatch={handlePatch}
+            onEditProject={openEditProject}
+            onDeleteProject={(p) => setDeleteProjectTarget(p)}
+          />
+        )}
       </div>
 
       {projectModal === "edit" && editProjectId && (
