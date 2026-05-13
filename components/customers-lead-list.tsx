@@ -247,7 +247,7 @@ export function CustomersLeadList({
 
       {loading ? (
         <>
-          <div className="space-y-3 px-0.5 lg:hidden">
+          <div className="space-y-3 px-0.5 md:max-lg:space-y-2 lg:hidden">
             {Array.from({ length: 4 }).map((_, i) => (
               <LeadMobileCardSkeleton key={`m-sk-${i}`} />
             ))}
@@ -262,7 +262,7 @@ export function CustomersLeadList({
 
       {!loading && customers.length > 0 ? (
         <>
-          <div className="space-y-3 px-0.5 lg:hidden">
+          <div className="space-y-3 px-0.5 md:max-lg:space-y-2 lg:hidden">
             {customers.map((customer) => {
               const statusKey = normalizeLeadStatus(customer.status);
               const commercialCta = resolveCustomerCommercialCta(customer);
@@ -284,6 +284,7 @@ export function CustomersLeadList({
                   key={`m-${customer.id}`}
                   className={cn(
                     "relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#0c1017]",
+                    "md:max-lg:rounded-xl md:max-lg:p-3 md:max-lg:shadow-sm",
                     activeProject && "border-l-[4px] border-l-indigo-500 bg-indigo-50/25 dark:border-l-indigo-400 dark:bg-indigo-950/25",
                     onSelectLead && selectedLeadId === customer.id && "ring-2 ring-brand-500/50 ring-offset-2 ring-offset-slate-50 dark:ring-offset-[#0c1017]"
                   )}
@@ -306,35 +307,36 @@ export function CustomersLeadList({
                   tabIndex={onSelectLead ? 0 : undefined}
                 >
                   {canMutateLead ? (
-                    <div className="absolute right-3 top-3 z-10 flex items-center gap-1">
+                    <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
                       {onEditLead ? (
                         <button
                           type="button"
                           onClick={() => onEditLead(customer)}
-                          className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border-[0.5px] border-slate-200/90 bg-white/95 text-slate-600 shadow-sm active:bg-slate-50"
+                          className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border-[0.5px] border-slate-200/90 bg-white/95 text-slate-600 shadow-sm active:bg-slate-50 md:max-lg:h-9 md:max-lg:w-9 md:max-lg:rounded-lg"
                           aria-label={t("customers_editLeadAria")}
                         >
-                          <Pencil className="h-4 w-4" strokeWidth={2} />
+                          <Pencil className="h-4 w-4 md:max-lg:h-3.5 md:max-lg:w-3.5" strokeWidth={2} />
                         </button>
                       ) : null}
                       {onDeleteLead ? (
                         <button
                           type="button"
                           onClick={() => onDeleteLead(customer)}
-                          className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border-[0.5px] border-red-200/90 bg-white/95 text-red-600 shadow-sm active:bg-red-50"
+                          className="inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl border-[0.5px] border-red-200/90 bg-white/95 text-red-600 shadow-sm active:bg-red-50 md:max-lg:h-9 md:max-lg:w-9 md:max-lg:rounded-lg"
                           aria-label={t("customers_deleteLeadAria")}
                         >
-                          <Trash2 className="h-4 w-4" strokeWidth={2} />
+                          <Trash2 className="h-4 w-4 md:max-lg:h-3.5 md:max-lg:w-3.5" strokeWidth={2} />
                         </button>
                       ) : null}
                     </div>
                   ) : null}
 
-                  <div className={cn("flex gap-3", canMutateLead ? "pr-24" : "")}>
+                  <div className={cn("flex gap-3", canMutateLead ? "pr-24 md:max-lg:pr-[4.5rem]" : "")}>
                     <div className="relative shrink-0">
                       <div
                         className={cn(
                           "flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-base font-extrabold text-slate-800 dark:border-white/10 dark:bg-[#1a1f28] dark:text-slate-100",
+                          "md:max-lg:h-11 md:max-lg:w-11 md:max-lg:rounded-xl md:max-lg:text-sm",
                           stale && "border-amber-300/80 ring-2 ring-amber-400/40"
                         )}
                         aria-hidden
@@ -350,19 +352,22 @@ export function CustomersLeadList({
                       ) : null}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="pr-2 text-lg font-extrabold leading-tight text-slate-900 dark:text-slate-50">{customer.name}</h3>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <h3 className="pr-2 text-lg font-extrabold leading-tight text-slate-900 dark:text-slate-50 md:max-lg:text-base">
+                        {customer.name}
+                      </h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 md:max-lg:mt-1 md:max-lg:gap-1.5">
                         <LeadSourceBadge sourceRaw={customer.source} />
                         <span
                           className={cn(
                             "inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
+                            "md:max-lg:px-2 md:max-lg:py-0.5 md:max-lg:text-[9px]",
                             stageMeta.className
                           )}
                         >
                           {t(stageMeta.labelKey)}
                         </span>
                       </div>
-                      <div className="mt-3 max-w-full">
+                      <div className="mt-3 max-w-full md:max-lg:mt-2">
                         {onStatusChange ? (
                           <LeadStatusPillSelect
                             leadId={customer.id}
@@ -378,56 +383,65 @@ export function CustomersLeadList({
                     </div>
                   </div>
 
-                  <dl className="mt-4 space-y-3 rounded-2xl bg-slate-50/90 px-4 py-3.5 text-sm dark:bg-white/[0.05]">
+                  <dl className="mt-4 space-y-3 rounded-2xl bg-slate-50/90 px-4 py-3.5 text-sm dark:bg-white/[0.05] md:max-lg:mt-2 md:max-lg:space-y-2 md:max-lg:rounded-xl md:max-lg:px-3 md:max-lg:py-2.5 md:max-lg:text-[13px]">
                     <div className="flex justify-between gap-3">
                       <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_tableLocation")}</dt>
                       <dd className="min-w-0 text-right font-semibold text-slate-900 dark:text-slate-100">
                         <span className="block truncate">{customer.city}</span>
-                        <span className="mt-0.5 block truncate text-xs font-medium text-slate-600 dark:text-slate-400">{customer.discom}</span>
+                        <span className="mt-0.5 block truncate text-xs font-medium text-slate-600 dark:text-slate-400 md:max-lg:text-[11px]">
+                          {customer.discom}
+                        </span>
                       </dd>
                     </div>
-                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 dark:border-white/10">
+                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 dark:border-white/10 md:max-lg:pt-2">
                       <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_monthlyBillShort")}</dt>
-                      <dd className="text-lg font-black tabular-nums text-slate-900 dark:text-slate-50">₹{bill.toLocaleString("en-IN")}</dd>
+                      <dd className="text-lg font-black tabular-nums text-slate-900 dark:text-slate-50 md:max-lg:text-base">
+                        ₹{bill.toLocaleString("en-IN")}
+                      </dd>
                     </div>
-                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs dark:border-white/10">
+                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs dark:border-white/10 md:max-lg:pt-2 md:max-lg:text-[11px]">
                       <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_mobileLastActivity")}</dt>
                       <dd className="font-bold text-slate-800 dark:text-slate-200">{lastActivityLabel}</dd>
                     </div>
-                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs dark:border-white/10">
+                    <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs dark:border-white/10 md:max-lg:pt-2 md:max-lg:text-[11px]">
                       <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_lastFollowUpLabel")}</dt>
                       <dd className="max-w-[58%] text-right font-semibold leading-snug text-slate-700 dark:text-slate-300">{followLabel}</dd>
                     </div>
                   </dl>
 
-                  <div className="mt-4 flex flex-col gap-2">
-                    {customer.phone ? (
-                      <a
-                        href={`tel:${customer.phone}`}
-                        onClick={() => handlePhoneCall(customer.id)}
-                        className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-base font-bold text-white shadow-md active:bg-indigo-700"
-                        aria-label={t("customers_mobileCall")}
-                      >
-                        <Phone className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-                        {t("customers_mobileCall")}
-                      </a>
-                    ) : null}
-                    <div className={cn("grid gap-2", waUrl ? "grid-cols-2" : "grid-cols-1")}>
+                  <div className="mt-4 flex flex-col gap-2 md:max-lg:mt-2.5 md:max-lg:gap-1.5">
+                    <div
+                      className={cn(
+                        "grid gap-2",
+                        customer.phone && waUrl ? "grid-cols-2" : "grid-cols-1"
+                      )}
+                    >
+                      {customer.phone ? (
+                        <a
+                          href={`tel:${customer.phone}`}
+                          onClick={() => handlePhoneCall(customer.id)}
+                          className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 text-base font-bold text-white shadow-md active:bg-indigo-700 md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-sm"
+                          aria-label={t("customers_mobileCall")}
+                        >
+                          <Phone className="h-5 w-5 shrink-0 md:max-lg:h-4 md:max-lg:w-4" strokeWidth={2} aria-hidden />
+                          {t("customers_mobileCall")}
+                        </a>
+                      ) : null}
                       {waUrl ? (
                         <button
                           type="button"
                           onClick={() => openWhatsApp(customer.id, waUrl)}
-                          className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50 px-3 text-sm font-bold text-emerald-800 active:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200"
+                          className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50 px-3 text-sm font-bold text-emerald-800 active:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200 md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-xs"
                           aria-label={t("customers_whatsappAria")}
                         >
-                          <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+                          <MessageCircle className="h-5 w-5 shrink-0 md:max-lg:h-4 md:max-lg:w-4" strokeWidth={2} aria-hidden />
                           {t("customers_whatsappShort")}
                         </button>
                       ) : null}
                     </div>
                     <Link
                       href={commercialCta.href}
-                      className="inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white shadow-md active:bg-slate-800 dark:bg-white dark:text-slate-900 dark:active:bg-slate-200"
+                      className="inline-flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-extrabold text-white shadow-md active:bg-slate-800 dark:bg-white dark:text-slate-900 dark:active:bg-slate-200 md:max-lg:min-h-10 md:max-lg:rounded-lg md:max-lg:text-xs"
                     >
                       {t(commercialCta.labelKey)}
                     </Link>
