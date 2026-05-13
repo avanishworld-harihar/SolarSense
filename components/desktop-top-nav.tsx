@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
+  /** `/proposals` must not activate `/proposal` (prefix collision). */
+  if (href === "/proposal") return pathname === "/proposal" || pathname.startsWith("/proposal/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

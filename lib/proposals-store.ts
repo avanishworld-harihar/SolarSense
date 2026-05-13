@@ -175,6 +175,63 @@ export async function getProposalByShareToken(token: string): Promise<ProposalRe
   return getProposalById(token);
 }
 
+export type ProposalListItem = {
+  id: string;
+  customer_name: string;
+  generated_at: string;
+  system_kw: number;
+  lead_id: string | null;
+  final_amount_inr: number | null;
+};
+
+/**
+ * Recent proposals for the `/proposals` hub (includes nested pricing when present).
+ */
+export async function listRecentProposals(limit = 50): Promise<ProposalListItem[]> {
+  const client = rwClient();
+  if (!client) return [];
+  const { data, error } = await client
+    .from("proposals")
+    .select("id, customer_name, generated_at, system_kw, lead_id, proposal_pricing(final_amount_inr)")
+    .order("generated_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    const { data: fallback, error: err2 } = await client
+      .from("proposals")
+      .select("id, customer_name, generated_at, system_kw, lead_id")
+      .order("generated_at", { ascending: false })
+      .limit(limit);
+    if (err2 || !fallback) {
+      console.warn("[proposals-store] listRecentProposals:", error.message);
+      return [];
+    }
+    return (fallback as Record<string, unknown>[]).map((r) => ({
+      id: String(r.id),
+      customer_name: String(r.customer_name ?? ""),
+      generated_at: String(r.generated_at ?? ""),
+      system_kw: Number(r.system_kw) || 0,
+      lead_id: r.lead_id != null ? String(r.lead_id) : null,
+      final_amount_inr: null
+    }));
+  }
+  return (data as Record<string, unknown>[]).map((r) => {
+    const nested = r.proposal_pricing;
+    let final_amount_inr: number | null = null;
+    if (Array.isArray(nested) && nested[0] && typeof nested[0] === "object") {
+      const v = (nested[0] as { final_amount_inr?: unknown }).final_amount_inr;
+      if (typeof v === "number" && Number.isFinite(v)) final_amount_inr = v;
+    }
+    return {
+      id: String(r.id),
+      customer_name: String(r.customer_name ?? ""),
+      generated_at: String(r.generated_at ?? ""),
+      system_kw: Number(r.system_kw) || 0,
+      lead_id: r.lead_id != null ? String(r.lead_id) : null,
+      final_amount_inr
+    };
+  });
+}
+
 export async function trackProposalView(id: string): Promise<void> {
   const client = rwClient();
   if (!client) return;

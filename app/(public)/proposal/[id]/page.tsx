@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLeadSurveyCompleteForProposal } from "@/lib/proposal-survey-gate";
 import { getLeadSurveyStatus } from "@/lib/supabase";
+import { mergeProposalPricingIntoPptInput } from "@/lib/proposal-pricing-merge";
+import { getProposalPricingByProposalId } from "@/lib/proposal-pricing-store";
 import { getProposalById, trackProposalView } from "@/lib/proposals-store";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import ProposalView from "./proposal-view";
@@ -15,7 +17,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const proposal = await getProposalById(id);
   if (!proposal) return { title: "Solar Proposal" };
   const installer = proposal.installer_name ?? "Harihar Solar";
-  const summary = proposal.summary;
+  const pricing = await getProposalPricingByProposalId(proposal.id);
+  const merged = mergeProposalPricingIntoPptInput(proposal.ppt_input, pricing);
+  const summary = summarizeProposalDeck(merged);
   const saving = summary?.annualSaving ?? 0;
   return {
     title: `${proposal.customer_name} — Solar Proposal · ${installer}`,
@@ -33,8 +37,9 @@ export default async function PublicProposalPage({ params }: PageProps) {
   const proposal = await getProposalById(id);
   if (!proposal) notFound();
 
-  // Live recompute so any tariff engine improvements are reflected.
-  const liveSummary = summarizeProposalDeck(proposal.ppt_input);
+  const pricing = await getProposalPricingByProposalId(proposal.id);
+  const mergedInput = mergeProposalPricingIntoPptInput(proposal.ppt_input, pricing);
+  const liveSummary = summarizeProposalDeck(mergedInput);
 
   void trackProposalView(id).catch(() => undefined);
 

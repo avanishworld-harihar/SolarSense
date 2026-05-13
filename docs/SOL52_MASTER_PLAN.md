@@ -3,6 +3,8 @@
 **Owner:** Avanish Gupta | Harihar Solar | Satna, MP | 9993322267  
 **Vision:** Solar ka Zomato — App → Platform → Data → Marketplace → Finance
 
+> **Architecture source of truth:** Multi-tenancy, RBAC levels, marketplace governance, org ownership, and phased scaling are defined in **[`MASTERPLAN.md`](../MASTERPLAN.md)** at the repo root. Update that file when platform or permission model changes; keep this document for product narrative, brand, and screen-level history.
+
 ---
 
 ## 1. BRAND STRUCTURE

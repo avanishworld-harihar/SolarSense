@@ -27,6 +27,7 @@ import {
   type EmiRow,
   type PaymentMilestone
 } from "@/lib/proposal-deck-helpers";
+import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
 import { ATAL_GRIHA_JYOTI } from "@/lib/mp-tariff-2025-26";
 
@@ -90,6 +91,12 @@ export type PremiumProposalPptInput = {
 
   grossSystemCostInr?: number;
   pmSuryaGharSubsidyInr?: number;
+  /**
+   * When set (non-negative), used as **net customer payable** for summary payback / EMI / lifetime profit,
+   * while `grossSystemCostInr` and `pmSuryaGharSubsidyInr` still drive commercial gross + subsidy slides.
+   * Synced from `proposal_pricing.final_amount_inr` by the pricing merge layer.
+   */
+  commercialNetPayableInr?: number | null;
   /** @deprecated Deck summary always uses `gross − subsidy`; kept on payload for older rows only. */
   netCostInr?: number;
   panelBrand?: DeckBrand;
@@ -132,6 +139,12 @@ export type PremiumProposalPptInput = {
   /** Public web proposal URL — embedded as QR fallback on slide 11 when
    *  no site photos are uploaded ("Scan to view this proposal"). */
   webProposalUrl?: string;
+
+  /**
+   * Modular proposal: section order + on/off. See `lib/proposal-block-registry.ts`.
+   * Omitted = defaults applied by `getProposalLayout()` when needed.
+   */
+  proposalLayout?: ProposalTemplateV1;
 };
 
 export type ProposalDeckSummary = {
@@ -452,8 +465,11 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
   /** Default matches `computeGrossSystemCostInr` in `lib/solar-engine.ts`. Override via `grossSystemCostInr`. */
   const grossSystemCost = n(input.grossSystemCostInr ?? computeGrossSystemCostInr(input.systemKw));
   const pmSubsidy = n(input.pmSuryaGharSubsidyInr ?? computePmSuryaGharSubsidy(input.systemKw));
-  /** Always gross − subsidy — never trust persisted `netCostInr` alone (it can drift vs. gross/subsidy). */
-  const netCost = n(Math.max(0, grossSystemCost - pmSubsidy));
+  /** Default gross − subsidy; optional `commercialNetPayableInr` from `proposal_pricing` overrides net. */
+  const computedNet = n(Math.max(0, grossSystemCost - pmSubsidy));
+  const overrideNet = input.commercialNetPayableInr;
+  const netCost =
+    overrideNet != null && Number.isFinite(overrideNet) && overrideNet >= 0 ? n(overrideNet) : computedNet;
   const paybackYears = honestPaybackYears({ paybackHint: input.paybackYears, netCostInr: netCost, annualSavingInr: annualSaving });
   const lifetime25Profit = n(annualSaving * 25 - netCost);
   const solarVsGrid = computeSolarVsGrid({ yearlyBill, netCostInr: netCost });

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { fetchMpAuditOverridesByRef } from "@/lib/mp-bill-audit-fetch";
+import { defaultProposalPricingFromDeck, mergeProposalPricingIntoPptInput } from "@/lib/proposal-pricing-merge";
+import { ensureProposalPricingRow, getProposalPricingByProposalId } from "@/lib/proposal-pricing-store";
+import { persistProposalDeckAfterPricingChange } from "@/lib/proposal-pricing-sync";
 import { summarizeProposalDeck, type PremiumProposalPptInput } from "@/lib/proposal-ppt";
-import { createProposal } from "@/lib/proposals-store";
+import { createProposal, listRecentProposals } from "@/lib/proposals-store";
 import { proposalExtrasShape } from "@/lib/proposal-extras-schema";
 import { bumpLeadStatus, upsertPipelineProject } from "@/lib/supabase";
 import type { MonthlyUnits } from "@/lib/types";
@@ -91,6 +94,16 @@ function looksLikeMp(state?: string, discom?: string): boolean {
   return /madhya pradesh|mppkv|mppgvv|mpmkvv|mppakvv|mpcz|mpez|mpwz/i.test(`${state ?? ""} ${discom ?? ""}`);
 }
 
+export async function GET() {
+  try {
+    const data = await listRecentProposals(60);
+    return NextResponse.json({ ok: true, data }, { status: 200, headers: { "Cache-Control": "no-store" } });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "list_failed";
+    return NextResponse.json({ ok: false, error: message, data: [] }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = bodySchema.parse(await req.json());
@@ -135,6 +148,18 @@ export async function POST(req: NextRequest) {
         { ok: true, persisted: false, summary, id: null, shareUrl: null },
         { status: 200 }
       );
+    }
+
+    let responseSummary = summary;
+    try {
+      await ensureProposalPricingRow(defaultProposalPricingFromDeck(created.id, pptInput, summary));
+      await persistProposalDeckAfterPricingChange(created.id);
+      const pr = await getProposalPricingByProposalId(created.id);
+      if (pr) {
+        responseSummary = summarizeProposalDeck(mergeProposalPricingIntoPptInput(pptInput, pr));
+      }
+    } catch (err) {
+      console.warn("[proposals POST] proposal_pricing seed / sync:", err);
     }
 
     /**
@@ -184,7 +209,7 @@ export async function POST(req: NextRequest) {
         customerName: created.customer_name,
         generatedAt: created.generated_at,
         shareUrl,
-        summary,
+        summary: responseSummary,
         projectId,
         leadStatus: payload.leadId ? "proposal-sent" : null
       },

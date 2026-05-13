@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { proposalTemplateV1Schema } from "@/lib/proposal-template-schema";
 
 /**
  * Sol.52 — shared zod fragment for the extra fields introduced by the
@@ -93,5 +94,10 @@ export const proposalExtrasShape = {
   bomOverrides: bomOverridesSchema,
   /** Optional public web URL of this proposal — used by the PPT to render
    *  a "Scan to view this proposal" QR fallback when no site photos exist. */
-  webProposalUrl: z.string().max(600).optional()
+  webProposalUrl: z.string().max(600).optional(),
+  /**
+   * Modular proposal engine: ordered blocks, each toggleable. Stored in `ppt_input` JSONB.
+   * Renderers (web / future quote PDF) consume this; Phase 1 deck generation unchanged if omitted.
+   */
+  proposalLayout: proposalTemplateV1Schema.optional()
 } as const;
