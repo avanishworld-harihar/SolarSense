@@ -1,10 +1,12 @@
 "use client";
 
-import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
-import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
+import { ProposalCommercialSnapshotBar } from "@/components/proposals/proposal-commercial-snapshot-bar";
+import { ProposalDetailActionsSheet } from "@/components/proposals/proposal-detail-actions-sheet";
 import { ProposalDetailSection } from "@/components/proposals/proposal-detail-section";
+import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
 import { ProposalModulesStrip } from "@/components/proposals/proposal-modules-strip";
 import { ProposalPricingConfigurator, type ProposalPricingConfiguratorLabels } from "@/components/proposals/proposal-pricing-configurator";
+import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-center";
 import { useLanguage } from "@/lib/language-context";
@@ -16,7 +18,7 @@ import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
 import type { ProposalStatus } from "@/lib/proposal-status";
 import { PROPOSAL_STATUS_ORDER } from "@/lib/proposal-status";
-import { ExternalLink, FileDown, MessageCircle } from "lucide-react";
+import { ExternalLink, MessageCircle, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -53,6 +55,7 @@ export function ProposalManageClient({
   const [pptInput, setPptInput] = useState(initialPpt);
   const [pricing, setPricing] = useState<ProposalPricingRow | null>(initialPricing);
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus>(initialStatus);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     setProposalStatus(initialStatus);
@@ -97,6 +100,39 @@ export function ProposalManageClient({
     return Math.round(a / 12);
   }, [annualSavingInr, summary.annualSaving]);
 
+  const primaryIsSend = proposalStatus === "draft";
+
+  const nextStepText = useMemo(() => t(`proposals_detail_next_${proposalStatus}`), [t, proposalStatus]);
+  const commsText = useMemo(() => t(`proposals_detail_comms_${proposalStatus}`), [t, proposalStatus]);
+
+  const snapshotLabels = useMemo(
+    () => ({
+      snapshotAria: t("proposals_detail_snapshotAria"),
+      system: t("proposals_detail_metricSystem"),
+      netPayable: t("proposals_detail_metricNet"),
+      monthlySaving: t("proposals_detail_metricSavingMo"),
+      subsidy: t("proposals_detail_metricSubsidy"),
+      payback: t("proposals_detail_metricPayback"),
+      kWUnit: t("proposals_kwLabel")
+    }),
+    [t]
+  );
+
+  const sheetLabels = useMemo(
+    () => ({
+      moreActions: t("proposals_detail_moreActions"),
+      sheetClose: t("proposals_sheetClose"),
+      openPublic: t("proposals_openWeb"),
+      pdfQuote: t("proposals_cardPdfQuote"),
+      send: t("proposals_cardSend"),
+      duplicate: t("proposals_cardDuplicate"),
+      archive: t("proposals_cardArchive"),
+      jumpToPricing: t("proposals_detail_jumpToPricing"),
+      comingSoon: t("proposals_comingSoon")
+    }),
+    [t]
+  );
+
   const onPricingSaved = useCallback((row: ProposalPricingRow) => {
     setPricing(row);
     setPptInput((prev) => mergeProposalPricingIntoPptInput(prev, row));
@@ -125,23 +161,24 @@ export function ProposalManageClient({
 
   if (!pricing) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto max-w-5xl space-y-5 pb-6">
         <ProposalHubHeader
+          variant="workspace"
           title={t("proposals_title")}
           subtitle={t("proposals_pricingSub")}
           backHref="/proposals"
           backLabel={t("proposals_backToHub")}
         />
-        <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 dark:border-white/10 dark:bg-[#0c1017]">
           <WorkflowLifecycleStrip surface="proposal-detail" proposalStatus={initialStatus} />
+          <p className="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+            Pricing is not available. Apply migrations <code className="font-mono text-xs">018_proposal_pricing.sql</code> and{" "}
+            <code className="font-mono text-xs">019_proposal_pricing_line_items.sql</code>, then generate a proposal from the bill builder.
+          </p>
+          <Button asChild variant="default" className="mt-4 font-semibold">
+            <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
+          </Button>
         </div>
-        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 text-sm font-semibold text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100">
-          Pricing is not available. Apply migrations <code className="font-mono text-xs">018_proposal_pricing.sql</code> and{" "}
-          <code className="font-mono text-xs">019_proposal_pricing_line_items.sql</code>, then generate a proposal from the bill builder.
-        </p>
-        <Button asChild variant="outline">
-          <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
-        </Button>
       </div>
     );
   }
@@ -151,45 +188,85 @@ export function ProposalManageClient({
     .filter(Boolean)
     .join(" · ");
 
+  const annualRounded = Math.round(Math.max(0, annualSavingInr || summary.annualSaving));
+
   return (
-    <div className="space-y-5 pb-4 lg:pb-6">
+    <div className="mx-auto max-w-5xl space-y-8 pb-8 pt-1 lg:pb-10">
       <ProposalHubHeader
+        variant="workspace"
         title={t("proposals_detailWorkspaceTitle")}
         subtitle={headerSub}
         backHref="/proposals"
         backLabel={t("proposals_backToHub")}
         action={
-          <Button asChild variant="secondary" className="gap-2 bg-white/10 text-white hover:bg-white/20">
-            <Link href={`/proposal/${proposalId}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2">
-              <ExternalLink className="h-4 w-4" aria-hidden />
-              {t("proposals_openWeb")}
-            </Link>
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-stretch">
+            {primaryIsSend ? (
+              <Button
+                type="button"
+                variant="default"
+                size="lg"
+                className="min-h-11 w-full gap-2 font-semibold sm:w-auto sm:min-w-[12rem]"
+                onClick={() => toast.info(t("proposals_comingSoon"), t("proposals_cardSend"))}
+              >
+                <MessageCircle className="h-4 w-4" aria-hidden />
+                {t("proposals_detail_primarySend")}
+              </Button>
+            ) : (
+              <Button asChild variant="default" size="lg" className="min-h-11 w-full font-semibold sm:w-auto sm:min-w-[12rem]">
+                <Link href={`/proposal/${proposalId}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2">
+                  <ExternalLink className="h-4 w-4" aria-hidden />
+                  {t("proposals_detail_primaryOpenPublic")}
+                </Link>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="min-h-11 w-full gap-2 font-medium sm:w-auto"
+              onClick={() => setMoreOpen(true)}
+            >
+              <MoreHorizontal className="h-4 w-4" aria-hidden />
+              {t("proposals_detail_moreActions")}
+            </Button>
+          </div>
         }
       />
 
-      <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
-        <WorkflowLifecycleStrip surface="proposal-detail" proposalStatus={proposalStatus} />
-      </div>
+      <ProposalDetailActionsSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        proposalId={proposalId}
+        labels={sheetLabels}
+        primaryIsSend={primaryIsSend}
+      />
 
-      <ProposalDetailSection id="customer" title={t("proposals_section_customer")} subtitle={t("proposals_section_customerSub")}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#0c1017] sm:p-7">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          {t("proposals_detail_workspaceEyebrow")}
+        </p>
+
+        <div className="mt-4 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
+          <div className="flex min-w-0 items-start gap-4">
             <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-700 text-sm font-black text-white shadow-lg"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
               aria-hidden
             >
               {customerInitials(customerName)}
             </span>
-            <div className="min-w-0">
-              <p className="truncate text-lg font-black text-slate-900 dark:text-slate-50">{customerName}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <label className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {t("proposals_statusLabel")}
+            <div className="min-w-0 space-y-1">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-2xl">{customerName}</h2>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-medium text-slate-800 dark:text-slate-200">{t(`proposals_status_${proposalStatus}`)}</span>
+                <span className="text-slate-300 dark:text-slate-600" aria-hidden>
+                  ·
+                </span>
+                <label className="inline-flex items-center gap-2">
+                  <span className="sr-only">{t("proposals_statusLabel")}</span>
                   <select
                     value={proposalStatus}
                     onChange={(e) => void onStatusChange(e.target.value as ProposalStatus)}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[12px] font-bold normal-case text-slate-900 dark:border-white/15 dark:bg-[#0f1419] dark:text-slate-100"
+                    className="max-w-full rounded-lg border-0 bg-slate-100 px-2 py-1.5 text-sm font-medium text-slate-900 ring-1 ring-slate-200/80 dark:bg-white/5 dark:text-slate-100 dark:ring-white/10"
                   >
                     {PROPOSAL_STATUS_ORDER.map((s) => (
                       <option key={s} value={s}>
@@ -202,105 +279,73 @@ export function ProposalManageClient({
             </div>
           </div>
         </div>
-      </ProposalDetailSection>
 
-      <ProposalDetailSection
-        id="commercial"
-        title={t("proposals_section_commercial")}
-        subtitle={t("proposals_section_commercialSub")}
-      >
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 dark:border-white/10 dark:bg-white/[0.04]">
-            <p className="text-[9px] font-extrabold uppercase text-slate-500">{t("proposals_metricGross")}</p>
-            <p className="mt-0.5 text-sm font-black tabular-nums">₹{summary.grossSystemCost.toLocaleString("en-IN")}</p>
+        <div className="mt-6 border-t border-slate-100 pt-5 dark:border-white/10">
+          <WorkflowLifecycleStrip surface="proposal-detail" proposalStatus={proposalStatus} />
+        </div>
+
+        <div className="mt-6 space-y-2 border-t border-slate-100 pt-6 dark:border-white/10">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("proposals_detail_nextLabel")}</p>
+          <p className="text-sm leading-relaxed text-slate-800 dark:text-slate-200">{nextStepText}</p>
+        </div>
+
+        <div className="mt-5 space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("proposals_detail_commsLabel")}</p>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{commsText}</p>
+        </div>
+
+        <p className="mt-5 text-xs leading-relaxed text-slate-500 dark:text-slate-500">{t("proposals_detail_healthLine")}</p>
+
+        <div className="mt-6 space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("proposals_detail_snapshotEyebrow")}</p>
+          <ProposalCommercialSnapshotBar
+            systemKw={summary.systemKw}
+            netInr={summary.netCost}
+            monthlySavingInr={savingMonthly}
+            subsidyInr={summary.pmSubsidy}
+            paybackYears={summary.paybackYears}
+            labels={snapshotLabels}
+          />
+        </div>
+
+        <div className="mt-6 grid gap-6 border-t border-slate-100 pt-6 sm:grid-cols-2 dark:border-white/10">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("proposals_detail_roiAnnual")}</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-50">₹{annualRounded.toLocaleString("en-IN")}</p>
           </div>
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 dark:border-white/10 dark:bg-white/[0.04]">
-            <p className="text-[9px] font-extrabold uppercase text-slate-500">{t("proposals_metricSubsidy")}</p>
-            <p className="mt-0.5 text-sm font-black tabular-nums">₹{summary.pmSubsidy.toLocaleString("en-IN")}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 dark:border-white/10 dark:bg-white/[0.04]">
-            <p className="text-[9px] font-extrabold uppercase text-slate-500">{t("proposals_metricNet")}</p>
-            <p className="mt-0.5 text-sm font-black tabular-nums text-teal-700 dark:text-emerald-300">
-              ₹{summary.netCost.toLocaleString("en-IN")}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("proposals_detail_roiLifetime")}</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-50">
+              ₹{summary.lifetime25Profit.toLocaleString("en-IN")}
             </p>
           </div>
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 dark:border-white/10 dark:bg-white/[0.04]">
-            <p className="text-[9px] font-extrabold uppercase text-slate-500">{t("proposals_estSavingMo")}</p>
-            <p className="mt-0.5 text-sm font-black tabular-nums">₹{savingMonthly.toLocaleString("en-IN")}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 dark:border-white/10 dark:bg-white/[0.04]">
-            <p className="text-[9px] font-extrabold uppercase text-slate-500">{t("proposals_metricPayback")}</p>
-            <p className="mt-0.5 text-sm font-black">{summary.paybackYears} yrs</p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-2 dark:border-white/10 dark:bg-white/[0.04]">
-            <p className="text-[9px] font-extrabold uppercase text-slate-500">{t("proposals_panelBrand")}</p>
-            <p className="mt-0.5 truncate text-sm font-bold">{summary.panelBrand ?? "—"}</p>
-          </div>
         </div>
-      </ProposalDetailSection>
+      </div>
 
-      <ProposalDetailSection id="bom" title={t("proposals_section_bom")} subtitle={t("proposals_section_bomSub")}>
-        <ProposalPricingConfigurator proposalId={proposalId} initial={pricing} labels={configuratorLabels} onSaved={onPricingSaved} />
-      </ProposalDetailSection>
-
-      <ProposalDetailSection id="savings" title={t("proposals_section_savings")} subtitle={t("proposals_section_savingsSub")}>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/50 px-3 py-2.5 dark:border-emerald-500/20 dark:bg-emerald-950/25">
-            <p className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-200">{t("proposals_annualSaving")}</p>
-            <p className="text-lg font-black tabular-nums text-emerald-950 dark:text-emerald-100">
-              ₹{Math.round(Math.max(0, annualSavingInr || summary.annualSaving)).toLocaleString("en-IN")}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-[#0f1419]">
-            <p className="text-[10px] font-extrabold uppercase text-slate-500">{t("proposals_estSavingMo")}</p>
-            <p className="text-lg font-black tabular-nums">₹{savingMonthly.toLocaleString("en-IN")}</p>
-          </div>
-          <div className="rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-[#0f1419]">
-            <p className="text-[10px] font-extrabold uppercase text-slate-500">{t("proposals_lifetimeHint")}</p>
-            <p className="text-lg font-black tabular-nums">₹{summary.lifetime25Profit.toLocaleString("en-IN")}</p>
-            <p className="text-[10px] font-medium text-slate-500">25 yr · {t("proposals_lifetimeHintSub")}</p>
-          </div>
-        </div>
-      </ProposalDetailSection>
-
-      <ProposalDetailSection id="sections" title={t("proposals_section_modules")} subtitle={t("proposals_section_modulesSub")}>
-        <ProposalModulesStrip
+      <ProposalDetailSection id="bom" variant="workspace" title={t("proposals_section_bom")} subtitle={t("proposals_section_bomSub")}>
+        <ProposalPricingConfigurator
           proposalId={proposalId}
-          initialLayout={proposalLayout}
-          onSaved={onModulesSaved}
-          className="border-0 bg-transparent shadow-none dark:bg-transparent"
+          initial={pricing}
+          labels={configuratorLabels}
+          onSaved={onPricingSaved}
+          chrome="workspace"
         />
       </ProposalDetailSection>
 
-      <ProposalDetailSection id="attachments" title={t("proposals_section_attachments")} subtitle={t("proposals_section_attachmentsSub")}>
-        <p className="rounded-xl border border-dashed border-slate-300/80 bg-slate-50/50 px-3 py-6 text-center text-xs font-semibold text-slate-500 dark:border-white/15 dark:bg-white/[0.03] dark:text-slate-400">
+      <ProposalDetailSection id="sections" variant="workspace" title={t("proposals_section_modules")} subtitle={t("proposals_section_modulesSub")}>
+        <ProposalModulesStrip proposalId={proposalId} initialLayout={proposalLayout} onSaved={onModulesSaved} tone="embedded" />
+      </ProposalDetailSection>
+
+      <ProposalDetailSection id="attachments" variant="workspace" title={t("proposals_section_attachments")} subtitle={t("proposals_section_attachmentsSub")}>
+        <p className="rounded-lg bg-slate-50 px-4 py-8 text-center text-sm text-slate-500 dark:bg-white/[0.03] dark:text-slate-400">
           {t("proposals_attachmentsPlaceholder")}
         </p>
       </ProposalDetailSection>
 
-      <ProposalDetailSection id="notes" title={t("proposals_section_notes")} subtitle={t("proposals_section_notesSub")}>
-        <p className="rounded-xl border border-dashed border-slate-300/80 bg-slate-50/50 px-3 py-6 text-center text-xs font-semibold text-slate-500 dark:border-white/15 dark:bg-white/[0.03] dark:text-slate-400">
+      <ProposalDetailSection id="notes" variant="workspace" title={t("proposals_section_notes")} subtitle={t("proposals_section_notesSub")}>
+        <p className="rounded-lg bg-slate-50 px-4 py-8 text-center text-sm text-slate-500 dark:bg-white/[0.03] dark:text-slate-400">
           {t("proposals_notesPlaceholder")}
         </p>
-      </ProposalDetailSection>
-
-      <ProposalDetailSection id="export" title={t("proposals_section_export")} subtitle={t("proposals_section_exportSub")}>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="emeraldCta" size="sm" className="gap-2 font-bold">
-            <Link href={`/proposal/${proposalId}`} target="_blank" rel="noreferrer">
-              <ExternalLink className="h-4 w-4" aria-hidden />
-              {t("proposals_openWeb")}
-            </Link>
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="gap-2 font-bold" onClick={() => toast.info(t("proposals_comingSoon"), t("proposals_cardGenerateQuote"))}>
-            <FileDown className="h-4 w-4" aria-hidden />
-            {t("proposals_cardGenerateQuote")}
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="gap-2 font-bold" onClick={() => toast.info(t("proposals_comingSoon"), t("proposals_cardSend"))}>
-            <MessageCircle className="h-4 w-4" aria-hidden />
-            {t("proposals_cardSend")}
-          </Button>
-        </div>
       </ProposalDetailSection>
     </div>
   );

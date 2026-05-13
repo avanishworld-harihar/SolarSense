@@ -16,9 +16,11 @@ export type ProposalModulesStripProps = {
   initialLayout: ProposalTemplateV1;
   className?: string;
   onSaved?: (layout: ProposalTemplateV1) => void;
+  /** Flatter chrome when nested in proposal detail workspace. */
+  tone?: "default" | "embedded";
 };
 
-export function ProposalModulesStrip({ proposalId, initialLayout, className, onSaved }: ProposalModulesStripProps) {
+export function ProposalModulesStrip({ proposalId, initialLayout, className, onSaved, tone = "default" }: ProposalModulesStripProps) {
   const { t } = useLanguage();
   const toast = useToast();
   const [blocks, setBlocks] = useState<ProposalTemplateBlock[]>(() => initialLayout.blocks);
@@ -67,22 +69,36 @@ export function ProposalModulesStrip({ proposalId, initialLayout, className, onS
     }
   }
 
+  const embedded = tone === "embedded";
+
   return (
     <section
       className={cn(
-        "rounded-3xl border border-white/60 bg-gradient-to-b from-white/98 to-slate-50/90 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-white/10 dark:from-[#0c1017] dark:to-[#080b10]",
+        embedded
+          ? "rounded-xl border border-slate-200/70 bg-slate-50/40 p-4 dark:border-white/10 dark:bg-white/[0.02]"
+          : "rounded-3xl border border-white/60 bg-gradient-to-b from-white/98 to-slate-50/90 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] backdrop-blur-sm dark:border-white/10 dark:from-[#0c1017] dark:to-[#080b10]",
         className
       )}
     >
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-50">{t("proposals_modules_title")}</h2>
-          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-400">{t("proposals_modules_sub")}</p>
+          <h2
+            className={cn(
+              "tracking-tight text-slate-900 dark:text-slate-50",
+              embedded ? "text-base font-semibold" : "text-lg font-black"
+            )}
+          >
+            {t("proposals_modules_title")}
+          </h2>
+          <p className={cn("mt-1 text-sm", embedded ? "text-slate-500 dark:text-slate-400" : "font-medium text-slate-600 dark:text-slate-400")}>
+            {t("proposals_modules_sub")}
+          </p>
         </div>
         <Button
           type="button"
           size="sm"
-          className="mt-3 shrink-0 font-bold sm:mt-0"
+          variant={embedded ? "secondary" : "default"}
+          className={cn("mt-3 shrink-0 font-semibold sm:mt-0", embedded && "font-semibold")}
           disabled={saving}
           onClick={() => void save()}
         >
@@ -90,7 +106,14 @@ export function ProposalModulesStrip({ proposalId, initialLayout, className, onS
         </Button>
       </div>
 
-      <ul className="mt-4 divide-y divide-slate-200/80 rounded-2xl border border-slate-200/80 bg-white/60 dark:divide-white/10 dark:border-white/10 dark:bg-white/[0.03]">
+      <ul
+        className={cn(
+          "mt-4 divide-y divide-slate-200/80 dark:divide-white/10",
+          embedded
+            ? "rounded-lg border border-slate-200/60 bg-white dark:border-white/10 dark:bg-[#0c1017]"
+            : "rounded-2xl border border-slate-200/80 bg-white/60 dark:border-white/10 dark:bg-white/[0.03]"
+        )}
+      >
         {blocks.map((b, idx) => (
           <li key={b.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:flex-nowrap">
             <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
@@ -107,7 +130,7 @@ export function ProposalModulesStrip({ proposalId, initialLayout, className, onS
             <div className="ml-auto flex gap-1">
               <Button
                 type="button"
-                variant="outline"
+                variant={embedded ? "ghost" : "outline"}
                 size="icon"
                 className="h-8 w-8"
                 disabled={idx === 0}
@@ -118,7 +141,7 @@ export function ProposalModulesStrip({ proposalId, initialLayout, className, onS
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant={embedded ? "ghost" : "outline"}
                 size="icon"
                 className="h-8 w-8"
                 disabled={idx === blocks.length - 1}
