@@ -3,6 +3,7 @@
 import { ProposalHubDealList, type ProposalHubDealRow } from "@/components/proposals/proposal-hub-deal-list";
 import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
 import { ProposalWorkspacePreview } from "@/components/proposals/proposal-workspace-preview";
+import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/lib/language-context";
@@ -69,7 +70,9 @@ export default function ProposalsHubPage() {
       groupCount: (n: number) => t("proposals_pipelineGroupCount", { n }),
       summaryTitle: t("proposals_workspaceSummaryTitle"),
       nextAction: t("proposals_workspaceNextActionHint"),
-      empty: t("proposals_workspaceEmpty")
+      empty: t("proposals_workspaceEmpty"),
+      paneEyebrow: t("proposals_workspacePaneEyebrow"),
+      nextStep: t("proposals_workspaceNextStepLabel")
     }),
     [t]
   );
@@ -86,6 +89,10 @@ export default function ProposalsHubPage() {
           </Button>
         }
       />
+
+      <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
+        <WorkflowLifecycleStrip surface="proposals-hub" />
+      </div>
 
       {error && (
         <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 p-4 text-sm font-semibold text-rose-900 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-100">
@@ -137,6 +144,8 @@ export default function ProposalsHubPage() {
               summaryTitle={pipelineLabels.summaryTitle}
               nextActionHint={pipelineLabels.nextAction}
               emptyLabel={pipelineLabels.empty}
+              paneEyebrow={pipelineLabels.paneEyebrow}
+              nextStepLabel={pipelineLabels.nextStep}
             />
           </div>
 
@@ -151,13 +160,15 @@ export default function ProposalsHubPage() {
                 pipelineLabel={pipelineLabels.pipeline}
               />
             </div>
-            <div className="min-h-[min(72vh,640px)] max-h-[min(80vh,720px)] min-w-0 overflow-y-auto">
+            <div className="min-h-[min(72vh,640px)] max-h-[min(80vh,720px)] min-w-0 overflow-y-auto rounded-xl border border-slate-200/70 bg-slate-50/50 p-2 shadow-inner dark:border-white/10 dark:bg-[#080c12]/90 md:p-2.5">
               <ProposalWorkspacePreview
                 row={focused}
                 labels={cardLabels}
                 summaryTitle={pipelineLabels.summaryTitle}
                 nextActionHint={pipelineLabels.nextAction}
                 emptyLabel={pipelineLabels.empty}
+                paneEyebrow={pipelineLabels.paneEyebrow}
+                nextStepLabel={pipelineLabels.nextStep}
               />
             </div>
           </div>

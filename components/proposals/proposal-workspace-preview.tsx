@@ -5,6 +5,7 @@ import type { ProposalListCardProps } from "@/components/proposals/proposal-list
 import { ProposalStatusBadge } from "@/components/proposal-status-badge";
 import { Button } from "@/components/ui/button";
 import { normalizeProposalStatus } from "@/lib/proposal-status";
+import { cn } from "@/lib/utils";
 import { ExternalLink, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -25,13 +26,19 @@ export function ProposalWorkspacePreview({
   labels,
   summaryTitle,
   nextActionHint,
-  emptyLabel
+  emptyLabel,
+  paneEyebrow,
+  nextStepLabel
 }: {
   row: ProposalHubDealRow | null;
   labels: ProposalListCardProps["labels"];
   summaryTitle: string;
   nextActionHint: string;
   emptyLabel: string;
+  /** Shown above customer name in hub split / desktop pane (workflow focus). */
+  paneEyebrow?: string;
+  /** Label above the next-action copy. */
+  nextStepLabel?: string;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -52,16 +59,21 @@ export function ProposalWorkspacePreview({
 
   return (
     <>
-      <section className="flex min-h-0 flex-col rounded-xl border border-slate-200/80 bg-white p-4 dark:border-white/10 dark:bg-[#0c1017] sm:p-5">
-        <div className="min-w-0 border-b border-slate-100 pb-4 dark:border-white/[0.06]">
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-xl">{row.customer_name}</h2>
+      <section className="flex min-h-0 flex-col rounded-xl border border-slate-200/80 border-l-[3px] border-l-teal-500/75 bg-white p-4 shadow-sm dark:border-white/10 dark:border-l-teal-400/50 dark:bg-[#0c1017] sm:p-5">
+        <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 border-b border-slate-100 bg-white/95 px-4 pb-3 pt-4 backdrop-blur-md dark:border-white/[0.06] dark:bg-[#0c1017]/95 sm:-mx-5 sm:px-5 sm:pb-4 sm:pt-5">
+          {paneEyebrow ? (
+            <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">{paneEyebrow}</p>
+          ) : null}
+          <h2 className={cn("text-lg font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-xl", paneEyebrow && "mt-1")}>
+            {row.customer_name}
+          </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <ProposalStatusBadge status={st} label={labels.statusLabel(st)} />
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{formatShortDate(row.generated_at)}</span>
           </div>
         </div>
 
-        <p className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{summaryTitle}</p>
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{summaryTitle}</p>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
           <div>
             <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{labels.kw}</dt>
@@ -85,7 +97,12 @@ export function ProposalWorkspacePreview({
           ) : null}
         </dl>
 
-        <p className="mt-5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{nextActionHint}</p>
+        {nextStepLabel ? (
+          <p className="mt-5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{nextStepLabel}</p>
+        ) : null}
+        <p className={cn("text-xs leading-relaxed text-slate-600 dark:text-slate-400", nextStepLabel ? "mt-1.5" : "mt-5")}>
+          {nextActionHint}
+        </p>
 
         <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-white/[0.06]">
           <Button asChild type="button" size="lg" variant="emeraldCta" className="min-h-11 flex-1 touch-manipulation gap-2 font-semibold sm:flex-none sm:px-6">

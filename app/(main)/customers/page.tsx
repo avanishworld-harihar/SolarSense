@@ -2,6 +2,7 @@
 
 import { CustomersLeadList } from "@/components/customers-lead-list";
 import { CustomerWorkspacePane } from "@/components/customer-workspace-pane";
+import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { useToast } from "@/components/ui/toast-center";
 import {
@@ -521,6 +522,10 @@ function CustomersPageContent() {
             </button>
           </div>
         </div>
+        </div>
+
+        <div className="page-lite-item rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
+          <WorkflowLifecycleStrip surface="crm" />
         </div>
 
         <div className="page-lite-item md:max-lg:grid md:max-lg:grid-cols-1 md:max-lg:items-start md:max-lg:gap-5 md:max-lg:landscape:grid-cols-[minmax(0,46%)_minmax(0,1fr)]">

@@ -5,6 +5,7 @@ import type { GlassProjectSummary, ProjectCardPatch } from "@/components/glass-p
 import { ProjectKanbanBoard } from "@/components/project-kanban-board";
 import { ProjectPipelineAccordion } from "@/components/project-pipeline-accordion";
 import { ProjectPipelineList } from "@/components/project-pipeline-list";
+import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -311,6 +312,9 @@ function ProjectsBoard() {
             <CardDescription className="ss-section-subline mt-1 text-sm text-slate-600 dark:text-slate-400">
               {t("projects_opsPipelineSub")}
             </CardDescription>
+            <div className="mt-4 rounded-lg border border-amber-200/50 bg-white/80 px-2 py-2 dark:border-amber-500/20 dark:bg-[#0c1017]/80">
+              <WorkflowLifecycleStrip surface="projects" />
+            </div>
           </CardHeader>
         </Card>
 

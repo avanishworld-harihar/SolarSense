@@ -1,6 +1,7 @@
 "use client";
 
 import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
+import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { ProposalDetailSection } from "@/components/proposals/proposal-detail-section";
 import { ProposalModulesStrip } from "@/components/proposals/proposal-modules-strip";
 import { ProposalPricingConfigurator, type ProposalPricingConfiguratorLabels } from "@/components/proposals/proposal-pricing-configurator";
@@ -131,6 +132,9 @@ export function ProposalManageClient({
           backHref="/proposals"
           backLabel={t("proposals_backToHub")}
         />
+        <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
+          <WorkflowLifecycleStrip surface="proposal-detail" proposalStatus={initialStatus} />
+        </div>
         <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 text-sm font-semibold text-amber-950 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100">
           Pricing is not available. Apply migrations <code className="font-mono text-xs">018_proposal_pricing.sql</code> and{" "}
           <code className="font-mono text-xs">019_proposal_pricing_line_items.sql</code>, then generate a proposal from the bill builder.
@@ -163,6 +167,10 @@ export function ProposalManageClient({
           </Button>
         }
       />
+
+      <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
+        <WorkflowLifecycleStrip surface="proposal-detail" proposalStatus={proposalStatus} />
+      </div>
 
       <ProposalDetailSection id="customer" title={t("proposals_section_customer")} subtitle={t("proposals_section_customerSub")}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

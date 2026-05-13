@@ -274,6 +274,14 @@ export const EN = {
   projects_resumeProposal: "Open in CRM",
   projects_formBoardStatus: "Card status",
 
+  workflow_lifecycle_navAria: "Deal lifecycle — where you are in the journey",
+  workflow_lifecycle_lead: "Lead",
+  workflow_lifecycle_proposalDraft: "Proposal draft",
+  workflow_lifecycle_proposalSent: "Proposal sent",
+  workflow_lifecycle_approved: "Approved",
+  workflow_lifecycle_installation: "Installation",
+  workflow_lifecycle_service: "Service",
+
   proposals_title: "Proposals",
   proposals_subtitle: "Sales hub — commercial pricing syncs to the public web proposal.",
   proposals_hubSubtitle: "Quotation workspace — manage commercial BOMs, customer links, and deal status in one place.",
@@ -284,6 +292,8 @@ export const EN = {
   proposals_workspaceNextActionHint:
     "Open the workspace to edit pricing, share the customer link, and advance deal status — this hub stays your pipeline view.",
   proposals_workspaceEmpty: "Select a deal from the list.",
+  proposals_workspacePaneEyebrow: "Active workspace",
+  proposals_workspaceNextStepLabel: "Next step",
   proposals_newProposalCta: "New proposal",
   proposals_newBuilderTitle: "New proposal · Bill builder",
   proposals_detailWorkspaceTitle: "Proposal workspace",

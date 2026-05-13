@@ -97,8 +97,8 @@ export function CustomerWorkspacePane({
   const lastActivityLabel = formatLeadLastActivity(customer.last_touched_at, locale);
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-white/10 dark:bg-[#0c1017]">
-      <div className="border-b border-slate-100 px-4 py-3 dark:border-white/10">
+    <div className="flex h-full min-h-0 flex-col rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-200/40 dark:border-white/10 dark:bg-[#0c1017] dark:ring-white/[0.06]">
+      <div className="sticky top-0 z-10 shrink-0 border-b border-slate-100 bg-white/95 px-4 py-3 backdrop-blur-md dark:border-white/10 dark:bg-[#0c1017]/95">
         <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">{t("customers_workspaceTitle")}</p>
         <h3 className="mt-1 text-lg font-extrabold text-slate-900 dark:text-slate-50">{customer.name}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -186,7 +186,7 @@ export function CustomerWorkspacePane({
           ) : null}
           <Link
             href={commercialCta.href}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-slate-900 px-3 text-center text-sm font-extrabold text-white shadow-sm active:bg-slate-800 dark:bg-white dark:text-slate-900 dark:active:bg-slate-200"
+            className="ss-cta-primary min-h-11 w-full text-center text-sm"
           >
             {t(commercialCta.labelKey)}
           </Link>

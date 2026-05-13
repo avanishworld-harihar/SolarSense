@@ -482,7 +482,8 @@ export function CustomersLeadList({
                       "group/row relative border-b border-slate-200 p-4 transition-colors last:border-b-0 hover:bg-slate-50/90 dark:border-white/[0.07] dark:hover:bg-white/[0.03]",
                       "lg:grid lg:grid-cols-12 lg:items-center lg:gap-4 lg:px-5",
                       activeProject && "border-l-[3px] border-l-indigo-500 bg-indigo-50/30 dark:border-l-indigo-400 dark:bg-indigo-950/20",
-                      onSelectLead && selectedLeadId === customer.id && "bg-brand-50/60 ring-2 ring-inset ring-brand-400/40 dark:bg-brand-950/20"
+                      onSelectLead && selectedLeadId === customer.id &&
+                        "border-l-[3px] border-l-teal-500 bg-teal-50/55 ring-1 ring-inset ring-teal-400/35 dark:border-l-teal-400 dark:bg-teal-950/30 dark:ring-teal-400/25"
                     )}
                     onClick={(e) => {
                       if (!onSelectLead) return;
