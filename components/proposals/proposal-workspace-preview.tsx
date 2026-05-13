@@ -2,11 +2,10 @@
 
 import { ProposalHubActionsSheet } from "@/components/proposals/proposal-hub-actions-sheet";
 import type { ProposalListCardProps } from "@/components/proposals/proposal-list-card";
-import { ProposalStatusBadge } from "@/components/proposal-status-badge";
 import { Button } from "@/components/ui/button";
 import { normalizeProposalStatus } from "@/lib/proposal-status";
 import { cn } from "@/lib/utils";
-import { ExternalLink, MoreHorizontal } from "lucide-react";
+import { ArrowRight, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { ProposalHubDealRow } from "./proposal-hub-deal-list";
@@ -44,7 +43,7 @@ export function ProposalWorkspacePreview({
 
   if (!row) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200/90 bg-slate-50/40 px-4 py-10 text-center text-sm font-medium text-slate-600 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-400">
+      <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-dashed border-slate-200/80 bg-slate-50/30 px-6 py-16 text-center text-sm text-slate-500 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-400">
         {emptyLabel}
       </div>
     );
@@ -59,72 +58,82 @@ export function ProposalWorkspacePreview({
 
   return (
     <>
-      <section className="flex min-h-0 flex-col rounded-xl border border-slate-200/80 border-l-[3px] border-l-teal-500/75 bg-white p-4 shadow-sm dark:border-white/10 dark:border-l-teal-400/50 dark:bg-[#0c1017] sm:p-5">
-        <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 border-b border-slate-100 bg-white/95 px-4 pb-3 pt-4 backdrop-blur-md dark:border-white/[0.06] dark:bg-[#0c1017]/95 sm:-mx-5 sm:px-5 sm:pb-4 sm:pt-5">
+      <div className="flex min-h-0 flex-col">
+        <header className="sticky top-0 z-10 -mx-1 border-b border-slate-200/60 bg-white/90 pb-6 pt-1 backdrop-blur-md dark:border-white/[0.07] dark:bg-[#0c1017]/90">
           {paneEyebrow ? (
-            <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">{paneEyebrow}</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{paneEyebrow}</p>
           ) : null}
-          <h2 className={cn("text-lg font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-xl", paneEyebrow && "mt-1")}>
+          <h2 className={cn("text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl", paneEyebrow && "mt-2")}>
             {row.customer_name}
           </h2>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <ProposalStatusBadge status={st} label={labels.statusLabel(st)} />
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{formatShortDate(row.generated_at)}</span>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+            <span className="font-medium text-slate-700 dark:text-slate-300">{labels.statusLabel(st)}</span>
+            <span className="text-slate-300 dark:text-slate-600" aria-hidden>
+              ·
+            </span>
+            <span>{formatShortDate(row.generated_at)}</span>
           </div>
-        </div>
+        </header>
 
-        <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{summaryTitle}</p>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
-          <div>
-            <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{labels.kw}</dt>
-            <dd className="mt-0.5 font-semibold tabular-nums text-slate-900 dark:text-slate-100">{row.system_kw}</dd>
-          </div>
-          <div className="min-w-0 sm:col-span-2">
-            <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{labels.panelBrand}</dt>
-            <dd className="mt-0.5 truncate font-semibold text-slate-900 dark:text-slate-100">{row.panel_brand ?? "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{labels.netPayable}</dt>
-            <dd className="mt-0.5 font-semibold tabular-nums text-teal-800 dark:text-emerald-300">
-              {row.final_amount_inr != null ? `₹${Math.round(row.final_amount_inr).toLocaleString("en-IN")}` : "—"}
-            </dd>
-          </div>
-          {savingMo != null ? (
+        <section className="mt-8" aria-labelledby="hub-commercial-heading">
+          <h3 id="hub-commercial-heading" className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            {summaryTitle}
+          </h3>
+          <div className="mt-4 flex flex-wrap gap-x-10 gap-y-6 border-b border-slate-100 pb-8 dark:border-white/[0.06]">
             <div>
-              <dt className="text-xs font-medium text-slate-500 dark:text-slate-400">{labels.estSavingMo}</dt>
-              <dd className="mt-0.5 font-semibold tabular-nums text-slate-900 dark:text-slate-100">₹{savingMo.toLocaleString("en-IN")}</dd>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{labels.kw}</p>
+              <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-slate-50">{row.system_kw}</p>
             </div>
+            <div className="min-w-0 max-w-[14rem]">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{labels.panelBrand}</p>
+              <p className="mt-1.5 truncate text-xl font-semibold text-slate-900 dark:text-slate-50">{row.panel_brand ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{labels.netPayable}</p>
+              <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight text-teal-800 dark:text-teal-200">
+                {row.final_amount_inr != null ? `₹${Math.round(row.final_amount_inr).toLocaleString("en-IN")}` : "—"}
+              </p>
+            </div>
+            {savingMo != null ? (
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{labels.estSavingMo}</p>
+                <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-slate-50">
+                  ₹{savingMo.toLocaleString("en-IN")}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="mt-8">
+          {nextStepLabel ? (
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{nextStepLabel}</p>
           ) : null}
-        </dl>
+          <p className={cn("max-w-prose text-sm leading-relaxed text-slate-600 dark:text-slate-400", nextStepLabel && "mt-2")}>
+            {nextActionHint}
+          </p>
+        </section>
 
-        {nextStepLabel ? (
-          <p className="mt-5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{nextStepLabel}</p>
-        ) : null}
-        <p className={cn("text-xs leading-relaxed text-slate-600 dark:text-slate-400", nextStepLabel ? "mt-1.5" : "mt-5")}>
-          {nextActionHint}
-        </p>
-
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-white/[0.06]">
-          <Button asChild type="button" size="lg" variant="emeraldCta" className="min-h-11 flex-1 touch-manipulation gap-2 font-semibold sm:flex-none sm:px-6">
+        <div className="mt-10 flex flex-wrap items-center gap-2">
+          <Button asChild type="button" size="lg" variant="default" className="min-h-11 flex-1 gap-2 font-semibold sm:flex-none sm:min-w-[200px]">
             <Link href={manageHref}>
-              <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
               {labels.openWorkspace}
+              <ArrowRight className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
             </Link>
           </Button>
           <Button
             type="button"
-            size="lg"
-            variant="outline"
-            className="min-h-11 shrink-0 touch-manipulation px-4 font-semibold"
+            size="icon"
+            variant="ghost"
+            className="h-11 w-11 shrink-0 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.06]"
             aria-label={labels.moreActions}
             aria-expanded={sheetOpen}
             onClick={() => setSheetOpen(true)}
           >
-            <MoreHorizontal className="h-5 w-5 sm:mr-1" aria-hidden />
-            <span className="hidden sm:inline">{labels.moreActions}</span>
+            <MoreHorizontal className="h-5 w-5" aria-hidden />
           </Button>
         </div>
-      </section>
+      </div>
 
       <ProposalHubActionsSheet
         open={sheetOpen}

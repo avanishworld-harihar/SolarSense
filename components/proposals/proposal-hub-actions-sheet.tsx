@@ -59,7 +59,7 @@ export function ProposalHubActionsSheet({
       />
       <div className="relative max-h-[min(85dvh,560px)] w-full max-w-md overflow-y-auto rounded-t-2xl border border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-lg dark:border-white/10 dark:bg-[#0f1419] md:max-h-[min(80vh,640px)] md:rounded-2xl md:shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-bold text-slate-900 dark:text-slate-50">{labels.moreActions}</p>
+          <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{labels.moreActions}</p>
           <button
             type="button"
             className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10"
@@ -69,53 +69,53 @@ export function ProposalHubActionsSheet({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="space-y-1.5">
-          <Button asChild variant="secondary" className="h-11 w-full justify-start gap-3 text-sm font-semibold">
+        <div className="space-y-1">
+          <Button asChild variant="ghost" className="h-11 w-full justify-start gap-3 px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.06]">
             <Link href={manageHref} onClick={onClose}>
-              <PencilLine className="h-4 w-4 shrink-0" aria-hidden />
+              <PencilLine className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
               {labels.editPricing}
             </Link>
           </Button>
-          <Button asChild variant="outline" className="h-11 w-full justify-start gap-3 text-sm font-semibold">
+          <Button asChild variant="ghost" className="h-11 w-full justify-start gap-3 px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.06]">
             <Link href={publicHref} target="_blank" rel="noreferrer" onClick={onClose}>
-              <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+              <ExternalLink className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
               {labels.previewPublic}
             </Link>
           </Button>
           <Button
             type="button"
-            variant="outline"
-            className="h-11 w-full justify-start gap-3 text-sm font-semibold"
+            variant="ghost"
+            className="h-11 w-full justify-start gap-3 px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.06]"
             onClick={() => soon(labels.pdfQuote)}
           >
-            <FileDown className="h-4 w-4 shrink-0" aria-hidden />
+            <FileDown className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
             {labels.pdfQuote}
           </Button>
           <Button
             type="button"
-            variant="outline"
-            className="h-11 w-full justify-start gap-3 text-sm font-semibold"
+            variant="ghost"
+            className="h-11 w-full justify-start gap-3 px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.06]"
             onClick={() => soon(labels.send)}
           >
-            <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
+            <MessageCircle className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
             {labels.send}
           </Button>
           <Button
             type="button"
-            variant="outline"
-            className="h-11 w-full justify-start gap-3 text-sm font-semibold"
+            variant="ghost"
+            className="h-11 w-full justify-start gap-3 px-3 text-sm font-medium text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-white/[0.06]"
             onClick={() => soon(labels.duplicateProposal)}
           >
-            <Copy className="h-4 w-4 shrink-0" aria-hidden />
+            <Copy className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
             {labels.duplicateProposal}
           </Button>
           <Button
             type="button"
-            variant="outline"
-            className="h-11 w-full justify-start gap-3 text-sm font-semibold"
+            variant="ghost"
+            className="h-11 w-full justify-start gap-3 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
             onClick={() => soon(labels.archiveProposal)}
           >
-            <Archive className="h-4 w-4 shrink-0" aria-hidden />
+            <Archive className="h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" aria-hidden />
             {labels.archiveProposal}
           </Button>
         </div>

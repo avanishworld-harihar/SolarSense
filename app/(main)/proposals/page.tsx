@@ -78,19 +78,19 @@ export default function ProposalsHubPage() {
   );
 
   return (
-    <div className="space-y-6 pb-2 md:pb-4">
+    <div className="space-y-8 pb-4 md:pb-6">
       <ProposalHubHeader
         variant="workspace"
         title={t("proposals_title")}
         subtitle={t("proposals_hubSubtitle")}
         action={
-          <Button asChild variant="emeraldCta" size="lg" className="shadow-md">
+          <Button asChild variant="default" size="default" className="font-semibold">
             <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
           </Button>
         }
       />
 
-      <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
+      <div className="border-b border-slate-200/70 pb-4 dark:border-white/[0.08]">
         <WorkflowLifecycleStrip surface="proposals-hub" />
       </div>
 
@@ -101,9 +101,9 @@ export default function ProposalsHubPage() {
       )}
 
       {isLoading && !data ? (
-        <div className="hidden md:grid md:grid-cols-[minmax(260px,38%)_minmax(0,1fr)] md:items-stretch md:gap-5">
-          <Skeleton className="h-[min(72vh,640px)] rounded-xl" />
-          <Skeleton className="h-[min(72vh,640px)] rounded-xl" />
+        <div className="hidden min-h-[min(76vh,680px)] md:grid md:grid-cols-[minmax(240px,0.34fr)_1fr] md:divide-x md:divide-slate-200/60 dark:md:divide-white/[0.08]">
+          <Skeleton className="h-[min(76vh,680px)] rounded-none bg-slate-100/80 dark:bg-white/[0.04]" />
+          <Skeleton className="h-[min(76vh,680px)] rounded-none bg-slate-50/50 dark:bg-white/[0.02]" />
         </div>
       ) : null}
       {isLoading && !data ? (
@@ -114,9 +114,9 @@ export default function ProposalsHubPage() {
       ) : null}
 
       {!isLoading && rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300/80 bg-slate-50/60 p-10 text-center dark:border-white/15 dark:bg-white/[0.03]">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("proposals_empty")}</p>
-          <Button asChild className="mt-6" variant="emeraldCta">
+        <div className="rounded-xl border border-dashed border-slate-200/90 bg-slate-50/40 px-6 py-14 text-center dark:border-white/10 dark:bg-white/[0.02]">
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t("proposals_empty")}</p>
+          <Button asChild className="mt-8 font-semibold" variant="default">
             <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
           </Button>
         </div>
@@ -124,9 +124,9 @@ export default function ProposalsHubPage() {
 
       {!isLoading && rows.length > 0 ? (
         <>
-          <p className="hidden text-xs font-medium text-slate-500 dark:text-slate-400 md:block">{t("proposals_hubSplitHint")}</p>
+          <p className="hidden text-xs leading-relaxed text-slate-500 dark:text-slate-500 md:block">{t("proposals_hubSplitHint")}</p>
 
-          <div className="flex flex-col gap-4 md:hidden">
+          <div className="flex flex-col gap-5 md:hidden">
             <div className="max-h-[min(44vh,380px)] min-h-0 shrink-0">
               <ProposalHubDealList
                 rows={rows}
@@ -149,8 +149,8 @@ export default function ProposalsHubPage() {
             />
           </div>
 
-          <div className="hidden min-h-0 md:grid md:grid-cols-[minmax(260px,38%)_minmax(0,1fr)] md:items-stretch md:gap-5">
-            <div className="flex min-h-[min(72vh,640px)] max-h-[min(80vh,720px)] flex-col">
+          <div className="hidden min-h-0 md:grid md:min-h-[min(76vh,680px)] md:max-h-[min(84vh,760px)] md:grid-cols-[minmax(240px,0.34fr)_1fr] md:divide-x md:divide-slate-200/60 dark:md:divide-white/[0.08]">
+            <div className="flex min-h-0 flex-col pr-5">
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
@@ -160,7 +160,7 @@ export default function ProposalsHubPage() {
                 pipelineLabel={pipelineLabels.pipeline}
               />
             </div>
-            <div className="min-h-[min(72vh,640px)] max-h-[min(80vh,720px)] min-w-0 overflow-y-auto rounded-xl border border-slate-200/70 bg-slate-50/50 p-2 shadow-inner dark:border-white/10 dark:bg-[#080c12]/90 md:p-2.5">
+            <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pl-6 md:pl-8">
               <ProposalWorkspacePreview
                 row={focused}
                 labels={cardLabels}

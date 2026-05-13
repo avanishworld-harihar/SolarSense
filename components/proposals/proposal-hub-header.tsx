@@ -30,7 +30,7 @@ export function ProposalHubHeader({
     <header
       className={cn(
         isWorkspace
-          ? "relative rounded-2xl border border-slate-200/90 bg-slate-50/80 p-5 text-slate-900 shadow-sm dark:border-white/10 dark:bg-[#0c1017] dark:text-slate-100"
+          ? "relative rounded-xl border border-slate-200/60 bg-white p-5 text-slate-900 dark:border-white/[0.08] dark:bg-[#0c1017] dark:text-slate-100"
           : "relative overflow-hidden rounded-3xl border border-white/50 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-900/90 p-6 text-white shadow-[0_20px_60px_rgba(15,23,42,0.35)] dark:border-white/10 dark:from-[#0b1220] dark:via-[#0f172a] dark:to-emerald-950/80",
         className
       )}
@@ -49,7 +49,7 @@ export function ProposalHubHeader({
               className={cn(
                 "inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide transition",
                 isWorkspace
-                  ? "text-teal-700 hover:text-teal-900 dark:text-teal-300 dark:hover:text-teal-200"
+                  ? "font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                   : "text-teal-200/90 hover:text-white"
               )}
             >
@@ -60,20 +60,20 @@ export function ProposalHubHeader({
             <span
               className={cn(
                 "inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em]",
-                isWorkspace ? "text-slate-500 dark:text-slate-400" : "text-teal-200/90"
+                isWorkspace ? "text-slate-400 dark:text-slate-500" : "text-teal-200/90"
               )}
             >
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
               Sol.52
             </span>
           )}
-          <h1 className={cn("tracking-tight", isWorkspace ? "text-2xl font-bold sm:text-3xl" : "text-2xl font-black sm:text-3xl")}>
+          <h1 className={cn("tracking-tight", isWorkspace ? "text-2xl font-semibold sm:text-[1.75rem]" : "text-2xl font-black sm:text-3xl")}>
             {title}
           </h1>
           <p
             className={cn(
-              "max-w-xl text-sm font-medium leading-relaxed",
-              isWorkspace ? "text-slate-600 dark:text-slate-400" : "text-slate-200/90"
+              "max-w-xl leading-relaxed",
+              isWorkspace ? "text-sm text-slate-500 dark:text-slate-400" : "text-sm font-medium text-slate-200/90"
             )}
           >
             {subtitle}
