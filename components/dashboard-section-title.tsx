@@ -13,7 +13,7 @@ export function DashboardSectionTitle({
   tier?: "default" | "quiet";
 }) {
   return (
-    <div className={cn("mb-3 flex items-center gap-2.5 px-0.5 sm:mb-3.5", className)}>
+    <div className={cn("mb-3 flex items-center gap-2.5 px-0.5 sm:mb-4", tier === "quiet" && "mb-2.5 sm:mb-3", className)}>
       <span
         className={cn(
           "h-4 w-0.5 shrink-0 rounded-full",

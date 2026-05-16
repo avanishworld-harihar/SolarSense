@@ -46,7 +46,7 @@ function InsightPanel({
   className?: string;
 }) {
   return (
-    <article className={cn("glass-panel-quiet flex flex-col p-4 sm:p-5", className)}>
+    <article className={cn("glass-panel-premium flex flex-col p-4 sm:p-5", className)}>
       <div className="mb-3 flex items-center gap-2">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/70 text-brand-700 shadow-sm ring-1 ring-white/80 dark:bg-white/10 dark:text-teal-200 dark:ring-white/10">
           <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
@@ -67,7 +67,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
     return (
       <div className={cn("grid gap-4 sm:gap-5 lg:grid-cols-2", className)}>
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-44 rounded-[1.2rem] bg-slate-200/70 dark:bg-slate-800/80" />
+          <Skeleton key={i} className="ws-shimmer h-44 rounded-[1.2rem] border border-white/40" />
         ))}
       </div>
     );

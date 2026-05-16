@@ -196,9 +196,11 @@ function GlassProjectCardInner({
       </CardHeader>
       <CardContent className="relative z-[2] space-y-4 border-t border-white/40 bg-white/25 px-3 py-3 backdrop-blur-sm dark:border-white/10 dark:bg-[#161B22]/55 sm:px-4 sm:py-3.5">
         {project.nextAction?.trim() ? (
-          <p className="text-[11px] font-bold leading-snug text-indigo-600 dark:text-indigo-200 sm:text-xs">
-            <span className="text-slate-500 dark:text-[#8B949E]">{t("projects_nextActionAboveProgress")}: </span>
-            <span className="text-indigo-700 dark:text-indigo-200">{project.nextAction.trim()}</span>
+          <p className="glass-project-next-action dark:border-indigo-500/25 dark:bg-indigo-950/30 dark:text-indigo-200">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-600/80 dark:text-indigo-300/80">
+              {t("projects_nextActionAboveProgress")}
+            </span>
+            <span className="mt-0.5 block text-indigo-900 dark:text-indigo-100">{project.nextAction.trim()}</span>
           </p>
         ) : null}
         <div className="space-y-2.5">
@@ -211,7 +213,7 @@ function GlassProjectCardInner({
             </span>
           </div>
           <div
-            className="h-2 overflow-hidden rounded-full border-[0.5px] border-white/40 bg-slate-200/80 shadow-inner dark:border-white/10 dark:bg-slate-800/90"
+            className="h-2.5 overflow-hidden rounded-full border border-white/50 bg-slate-200/70 shadow-[inset_0_1px_2px_rgba(11,34,64,0.08)] dark:border-white/10 dark:bg-slate-800/90"
             role="progressbar"
             aria-valuenow={pct}
             aria-valuemin={0}

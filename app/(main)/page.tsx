@@ -2,6 +2,7 @@
 
 import { DashboardCommandCenter } from "@/components/dashboard-command-center";
 import { DashboardOperationalInsights } from "@/components/dashboard-operational-insights";
+import { DashboardQuickActions } from "@/components/dashboard-quick-actions";
 import { DashboardSectionTitle } from "@/components/dashboard-section-title";
 import { OfflineDataNotice } from "@/components/offline-data-notice";
 import { GlassProjectCard, type GlassProjectSummary } from "@/components/glass-project-card";
@@ -30,7 +31,7 @@ import {
   resolveDiscomCode,
   writeInstallerRegion
 } from "@/lib/installer-region-storage";
-import { FileText, FolderPlus, MapPin, Upload, UserPlus } from "lucide-react";
+import { MapPin, UserPlus } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { buildMetricTrendLines, writeTrendBaseline, type MetricTrendLines } from "@/lib/dashboard-trends";
 import { useLanguage } from "@/lib/language-context";
@@ -265,7 +266,7 @@ function DashboardPageContent() {
   return (
     <div className="workspace-dashboard">
     <DashboardStaggerRoot animate={shouldAnimateDashboard}>
-        <DashboardItem animate={shouldAnimateDashboard}>
+        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-command">
           <DashboardCommandCenter name="Avanish" stats={stats} loading={showMetricSkeleton} />
         </DashboardItem>
 
@@ -419,85 +420,14 @@ function DashboardPageContent() {
           )}
         </DashboardItem>
 
-        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-secondary">
-          <Card className="glass-surface border-white/55">
-            <CardHeader className="space-y-1.5 p-4 pb-2 sm:p-6 sm:pb-3">
-                <div className="flex items-start gap-2">
-                <span
-                  className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/35 dark:bg-[#94A3B8] dark:shadow-none"
-                  aria-hidden
-                />
-                <div className="min-w-0 space-y-1">
-                  <CardTitle className="text-sm font-semibold text-slate-900 dark:text-[#94A3B8] sm:text-base">
-                    {t("dashboard_quickActions")}
-                  </CardTitle>
-                  <CardDescription className="text-xs font-medium leading-snug text-slate-600 dark:text-muted-foreground sm:text-sm">
-                    {t("dashboard_quickActionsSub")}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="grid min-w-0 grid-cols-1 gap-2 overflow-x-hidden p-4 pt-0 sm:gap-3 sm:p-5 sm:pt-0 md:grid-cols-4 md:items-stretch md:gap-2 md:p-3 md:pt-0 lg:grid-cols-2 lg:gap-4 lg:p-6 lg:pt-0 [&>*]:min-w-0">
-              <Link
-                href="/customers?add=1"
-                className="group relative flex min-h-[5.25rem] flex-col justify-center gap-0.5 overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-indigo-600 via-brand-600 to-sky-600 bg-[length:200%_200%] bg-[position:0%_50%] p-3 text-white shadow-[0_16px_48px_rgba(37,99,235,0.35),0_4px_16px_rgba(11,34,64,0.12),inset_0_1px_0_rgba(255,255,255,0.25)] transition-[transform,box-shadow,background-position] duration-700 ease-out motion-reduce:transition-none hover:bg-[position:100%_50%] hover:-translate-y-0.5 hover:shadow-[0_20px_56px_rgba(37,99,235,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 sm:min-h-[5.5rem] sm:gap-1 sm:p-4 md:min-h-[6.5rem] md:rounded-xl md:p-2.5 lg:min-h-[5.75rem] lg:rounded-3xl lg:p-5"
-              >
-                <span
-                  className="pointer-events-none absolute -right-4 -top-8 h-24 w-24 rounded-full bg-white/15 blur-2xl transition-opacity group-hover:opacity-90"
-                  aria-hidden
-                />
-                <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-inner ring-1 ring-white/30 backdrop-blur-sm sm:h-10 sm:w-10 md:h-8 md:w-8 lg:h-11 lg:w-11 lg:rounded-2xl">
-                  <UserPlus
-                    className="h-5 w-5 transition-transform duration-500 ease-out motion-reduce:transition-none group-hover:rotate-[18deg] group-hover:scale-105 sm:h-[1.35rem] sm:w-[1.35rem] md:h-4 md:w-4 lg:h-6 lg:w-6"
-                    strokeWidth={2.25}
-                    aria-hidden
-                  />
-                </span>
-                <span className="relative mt-1.5 line-clamp-2 text-left text-sm font-extrabold leading-tight tracking-tight sm:text-base md:text-[13px] lg:mt-2 lg:text-lg">
-                  {t("dashboard_addCustomerCta")}
-                </span>
-                <span className="relative line-clamp-2 text-left text-[10px] font-semibold leading-snug text-white/85 sm:text-xs md:text-[10px] lg:text-sm">
-                  {t("dashboard_addCustomerSub")}
-                </span>
-              </Link>
-              <Link
-                href="/proposal"
-                className="group relative flex min-h-[5.25rem] flex-col justify-center gap-0.5 overflow-hidden rounded-2xl border border-emerald-400/30 bg-gradient-to-br from-emerald-600 via-solar-500 to-teal-600 bg-[length:200%_200%] bg-[position:0%_50%] p-3 text-white shadow-[0_16px_48px_rgba(5,150,105,0.32),0_4px_16px_rgba(11,34,64,0.1),inset_0_1px_0_rgba(255,255,255,0.22)] transition-[transform,box-shadow,background-position] duration-700 ease-out motion-reduce:transition-none hover:bg-[position:100%_50%] hover:-translate-y-0.5 hover:shadow-[0_20px_56px_rgba(5,150,105,0.38)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 sm:min-h-[5.5rem] sm:gap-1 sm:p-4 md:min-h-[6.5rem] md:rounded-xl md:p-2.5 lg:min-h-[5.75rem] lg:rounded-3xl lg:p-5"
-              >
-                <span
-                  className="pointer-events-none absolute -right-6 top-1/2 h-28 w-28 -translate-y-1/2 rounded-full bg-amber-300/20 blur-2xl"
-                  aria-hidden
-                />
-                <span className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-inner ring-1 ring-white/30 backdrop-blur-sm sm:h-10 sm:w-10 md:h-8 md:w-8 lg:h-11 lg:w-11 lg:rounded-2xl">
-                  <FileText
-                    className="h-5 w-5 transition-transform duration-500 ease-out motion-reduce:transition-none group-hover:-translate-y-0.5 group-hover:rotate-3 sm:h-[1.35rem] sm:w-[1.35rem] md:h-4 md:w-4 lg:h-6 lg:w-6"
-                    strokeWidth={2.25}
-                    aria-hidden
-                  />
-                </span>
-                <span className="relative mt-1.5 line-clamp-2 text-left text-sm font-extrabold leading-tight tracking-tight sm:text-base md:text-[13px] lg:mt-2 lg:text-lg">
-                  {t("actions_newProposal")}
-                </span>
-                <span className="relative line-clamp-2 text-left text-[10px] font-semibold leading-snug text-white/90 sm:text-xs md:text-[10px] lg:text-sm">
-                  {t("dashboard_newProposalSub")}
-                </span>
-              </Link>
-              <Link
-                href="/proposal"
-                className="inline-flex h-11 w-full min-h-[2.75rem] items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 px-3 text-xs font-semibold text-white shadow-md ring-1 ring-white/15 transition-[filter,transform] hover:brightness-[1.05] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 focus-visible:ring-offset-2 dark:border-emerald-500/30 dark:from-emerald-500 dark:via-teal-500 dark:to-cyan-600 dark:ring-white/10 sm:h-12 sm:text-sm md:h-full md:min-h-[6.25rem] md:max-w-[10.5rem] md:justify-self-center md:flex-col md:gap-1.5 md:py-2 md:text-[11px] lg:h-12 lg:min-h-12 lg:max-w-none lg:flex-row lg:text-base"
-              >
-                <Upload className="h-4 w-4 shrink-0 text-white sm:h-5 sm:w-5 md:h-4 md:w-4 lg:h-5 lg:w-5" aria-hidden />
-                {t("actions_uploadBill")}
-              </Link>
-              <Link
-                href="/projects"
-                className="inline-flex h-11 w-full min-h-[2.75rem] items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 px-3 text-xs font-semibold text-white shadow-md ring-1 ring-white/15 transition-[filter,transform] hover:brightness-[1.05] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 dark:border-emerald-500/30 dark:from-emerald-500 dark:via-teal-600 dark:to-cyan-700 dark:ring-white/10 sm:h-12 sm:text-sm md:h-full md:min-h-[6.25rem] md:max-w-[10.5rem] md:justify-self-center md:flex-col md:gap-1.5 md:py-2 md:text-[11px] lg:h-12 lg:min-h-12 lg:max-w-none lg:flex-row lg:text-base"
-              >
-                <FolderPlus className="h-4 w-4 shrink-0 text-white sm:h-5 sm:w-5 md:h-4 md:w-4 lg:h-5 lg:w-5" aria-hidden />
-                {t("actions_createProject")}
-              </Link>
-            </CardContent>
-          </Card>
+        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-tertiary">
+          <div className="glass-panel-premium p-4 sm:p-5 md:p-6">
+            <DashboardSectionTitle tier="quiet">{t("dashboard_quickActions")}</DashboardSectionTitle>
+            <p className="mb-4 -mt-1 text-xs font-medium text-slate-500 dark:text-[#8B949E] sm:text-sm">
+              {t("dashboard_quickActionsSub")}
+            </p>
+            <DashboardQuickActions />
+          </div>
         </DashboardItem>
       </DashboardStaggerRoot>
     </div>
