@@ -128,6 +128,7 @@ export const EN = {
   customers_monthlyBillShort: "Monthly bill",
   customers_noPhoneOnFile: "No phone on file",
   customers_tableLead: "Lead",
+  customers_tablePhone: "Phone",
   customers_tableLocation: "Location & DISCOM",
   customers_tableBill: "Est. bill",
   customers_tablePipeline: "Pipeline",

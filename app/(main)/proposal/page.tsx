@@ -28,6 +28,7 @@ import {
   getBillingUploadRequirement,
   isBillMonthAlignedForOffset
 } from "@/lib/discom-billing-rules";
+import { pickProposalLeadPhone, patchLeadPhoneIfProvided } from "@/lib/lead-phone";
 import { mergeCustomerForProposal, type ManualProposalCustomer } from "@/lib/merge-proposal-customer";
 import { swrDiscomsWithOfflineCache, swrTariffWithOfflineCache } from "@/lib/proposal-swr-fetchers";
 import { CUSTOMERS_SWR_KEY, fetchCustomersLoose } from "@/lib/customers-client";
@@ -1270,6 +1271,8 @@ export default function ProposalPage() {
        * projects all reflect the new state without a hard refresh.
        */
       if (selectedLeadId) {
+        const proposalPhone = pickProposalLeadPhone(manual.leadPhone, manual.billPhone);
+        if (proposalPhone) void patchLeadPhoneIfProvided(selectedLeadId, proposalPhone);
         void mutateGlobal(PIPELINE_SWR_KEY);
         void mutateGlobal(CUSTOMERS_SWR_KEY, undefined, { revalidate: true });
         void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
@@ -1286,6 +1289,7 @@ export default function ProposalPage() {
     setIsSavingPipeline(true);
     try {
       const customerName = manual.officialBillName || manual.leadContactName || "Customer";
+      const proposalPhone = pickProposalLeadPhone(manual.leadPhone, manual.billPhone);
       let leadId = selectedLeadId;
       if (!leadId) {
         const createLeadResp = await fetch("/api/customers", {
@@ -1297,7 +1301,7 @@ export default function ProposalPage() {
             state: manual.state.trim() || undefined,
             discom: manual.discom.trim() || installerDiscom || "Unknown",
             monthly_bill: Math.max(0, Math.round(effectiveResult.currentMonthlyBill || 0)),
-            phone: manual.leadPhone.trim() || manual.billPhone.trim() || undefined
+            phone: proposalPhone || undefined
           })
         });
         if (!createLeadResp.ok) {
@@ -1308,6 +1312,8 @@ export default function ProposalPage() {
         leadId = j.data?.id ?? "";
         if (!leadId) throw new Error("Lead create response missing id");
         setSelectedLeadId(leadId);
+      } else if (proposalPhone) {
+        await patchLeadPhoneIfProvided(leadId, proposalPhone);
       }
       const resp = await fetch("/api/pipeline", {
         method: "POST",

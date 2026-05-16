@@ -402,6 +402,7 @@ export async function refreshLeadFromInbound(
   if (patch.discom) updateRow.discom = patch.discom;
   if (patch.email) updateRow.email = patch.email;
   if (patch.monthly_bill && patch.monthly_bill > 0) updateRow.monthly_bill = patch.monthly_bill;
+  if (patch.phone && String(patch.phone).trim()) updateRow.phone = String(patch.phone).trim();
   if (patch.source && patch.source !== "manual") updateRow.source = patch.source;
   if (patch.source_meta) updateRow.source_meta = patch.source_meta;
   if (patch.consumer_id !== undefined) {
@@ -425,6 +426,7 @@ export async function refreshLeadFromInbound(
     if (patch.city) fallback.city = patch.city;
     if (patch.discom) fallback.discom = patch.discom;
     if (patch.monthly_bill && patch.monthly_bill > 0) fallback.monthly_bill = patch.monthly_bill;
+    if (patch.phone && String(patch.phone).trim()) fallback.phone = String(patch.phone).trim();
     if (patch.consumer_id !== undefined) {
       const c = patch.consumer_id != null ? String(patch.consumer_id).trim() : "";
       fallback.consumer_id = c.length > 0 ? c : null;

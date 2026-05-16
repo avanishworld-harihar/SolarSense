@@ -14,6 +14,7 @@ import { LEAD_STATUS_I18N_KEY, normalizeLeadStatus, type LeadStatusKey } from "@
 import { getInstallerBrandName } from "@/lib/installer-brand";
 import { useLanguage } from "@/lib/language-context";
 import { formatLastFollowUpLocale } from "@/lib/time-i18n";
+import { formatLeadPhoneForDisplay } from "@/lib/lead-phone";
 import { buildLeadWhatsAppUrl } from "@/lib/whatsapp-lead";
 import { readLeadFollowUpMap, recordLeadFollowUp } from "@/lib/lead-followup-storage";
 import { isLeadStale } from "@/lib/lead-source";
@@ -128,7 +129,7 @@ export function CustomerWorkspacePane({
         {customer.phone ? (
           <p className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
             <PhoneCall className="h-4 w-4 shrink-0 text-slate-400" strokeWidth={1.85} aria-hidden />
-            <span className="tabular-nums">{customer.phone}</span>
+            <span className="min-w-0 break-all tabular-nums leading-snug">{formatLeadPhoneForDisplay(customer.phone)}</span>
           </p>
         ) : (
           <p className="text-sm font-medium text-slate-400">{t("customers_noPhoneOnFile")}</p>

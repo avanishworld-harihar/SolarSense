@@ -17,6 +17,7 @@ import {
 import { getInstallerBrandName } from "@/lib/installer-brand";
 import { useLanguage } from "@/lib/language-context";
 import { formatLastFollowUpLocale } from "@/lib/time-i18n";
+import { formatLeadPhoneForDisplay } from "@/lib/lead-phone";
 import { buildLeadWhatsAppUrl } from "@/lib/whatsapp-lead";
 import { readLeadFollowUpMap, recordLeadFollowUp } from "@/lib/lead-followup-storage";
 import { normalizeSource, SOURCE_META, isLeadStale } from "@/lib/lead-source";
@@ -407,6 +408,20 @@ export function CustomersLeadList({
                       <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_lastFollowUpLabel")}</dt>
                       <dd className="max-w-[58%] text-right font-semibold leading-snug text-slate-700 dark:text-slate-300">{followLabel}</dd>
                     </div>
+                    {customer.phone ? (
+                      <div className="flex justify-between gap-3 border-t border-slate-200/80 pt-3 dark:border-white/10 md:max-lg:pt-2">
+                        <dt className="shrink-0 font-semibold text-slate-500 dark:text-slate-400">{t("customers_tablePhone")}</dt>
+                        <dd className="min-w-0 max-w-[70%] text-right">
+                          <a
+                            href={`tel:${customer.phone}`}
+                            onClick={() => handlePhoneCall(customer.id)}
+                            className="block break-all text-sm font-bold tabular-nums leading-snug text-indigo-700 underline-offset-2 hover:underline dark:text-indigo-300"
+                          >
+                            {formatLeadPhoneForDisplay(customer.phone)}
+                          </a>
+                        </dd>
+                      </div>
+                    ) : null}
                   </dl>
 
                   <div className="mt-4 flex flex-col gap-2 md:max-lg:mt-2.5 md:max-lg:gap-1.5">
@@ -569,11 +584,16 @@ export function CustomersLeadList({
                             </span>
                           </div>
                           {customer.phone ? (
-                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
-                              <p className="flex min-w-0 items-center gap-1.5">
-                                <PhoneCall className="h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.85} aria-hidden />
-                                <span className="tabular-nums">{customer.phone}</span>
-                              </p>
+                            <div className="mt-1 space-y-2">
+                              <a
+                                href={`tel:${customer.phone}`}
+                                onClick={() => handlePhoneCall(customer.id)}
+                                className="flex w-full min-w-0 items-start gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200"
+                              >
+                                <PhoneCall className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" strokeWidth={1.85} aria-hidden />
+                                <span className="min-w-0 break-all tabular-nums leading-snug">{formatLeadPhoneForDisplay(customer.phone)}</span>
+                              </a>
+                              <div className="flex flex-wrap items-center gap-2">
                               <a
                                 href={`tel:${customer.phone}`}
                                 onClick={() => handlePhoneCall(customer.id)}
@@ -594,10 +614,11 @@ export function CustomersLeadList({
                               ) : null}
                               <Link
                                 href={commercialCta.href}
-                                className="inline-flex h-9 max-w-full shrink-0 items-center justify-center rounded-lg border border-teal-600/75 bg-gradient-to-r from-teal-50 to-indigo-50 px-3 text-[11px] font-extrabold uppercase tracking-wide text-teal-900 shadow-sm transition hover:brightness-105 dark:border-teal-400/45 dark:from-teal-950/50 dark:to-indigo-950/40 dark:text-teal-50"
+                                className="inline-flex h-9 items-center justify-center rounded-lg border border-teal-600/75 bg-gradient-to-r from-teal-50 to-indigo-50 px-3 text-[11px] font-extrabold uppercase tracking-wide text-teal-900 shadow-sm transition hover:brightness-105 dark:border-teal-400/45 dark:from-teal-950/50 dark:to-indigo-950/40 dark:text-teal-50"
                               >
                                 {t(commercialCta.labelKey)}
                               </Link>
+                              </div>
                             </div>
                           ) : (
                             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400 sm:text-sm">

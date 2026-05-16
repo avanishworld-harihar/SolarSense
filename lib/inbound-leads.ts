@@ -1,3 +1,4 @@
+import { normalizeLeadPhoneForStorage } from "@/lib/lead-phone";
 import {
   createCustomer,
   findLeadByPhone,
@@ -37,7 +38,7 @@ export type InboundLeadResult = {
  *   - The unique-phone race fallback (Postgres 23505) is handled once.
  */
 export async function processInboundLead(input: InboundLeadInput): Promise<InboundLeadResult> {
-  const phone = input.phone.replace(/[^\d+]/g, "");
+  const phone = normalizeLeadPhoneForStorage(input.phone);
   const consumerTrim =
     input.consumer_id != null && String(input.consumer_id).trim().length > 0
       ? String(input.consumer_id).trim()
