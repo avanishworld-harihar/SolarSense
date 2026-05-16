@@ -1,24 +1,18 @@
 import Image from "next/image";
-import {
-  INTELLIGENCE_ENGINE_LINE,
-  PLATFORM_LOGO_SRC,
-  PLATFORM_NAME,
-  POWERED_BY_LINE,
-  type PlatformBrandSurface
-} from "@/lib/platform-branding";
+import { PLATFORM_LOGO_SRC, PLATFORM_NAME, POWERED_BY_LINE, type PlatformBrandSurface } from "@/lib/platform-branding";
 import { cn } from "@/lib/utils";
 
 type PlatformBrandBadgeProps = {
   surface?: PlatformBrandSurface;
-  /** `footer` — default acquisition footer; `inline` — compact row; `engine` — Intelligence Engine line only. */
+  /** `footer` — quiet line under the page; `inline` — compact row by the calculator; `engine` — legacy alias, same as inline. */
   variant?: "footer" | "inline" | "engine";
   className?: string;
   showLogo?: boolean;
 };
 
 /**
- * Reusable platform credit for acquisition surfaces. Local brand stays primary in page chrome;
- * this component only attributes calculators, forms, and results to SOL.52.
+ * Reusable platform credit for acquisition surfaces. Harihar stays the hero;
+ * this is a single, plain-English line so SOL.52 reads as infrastructure — not marketing noise.
  */
 export function PlatformBrandBadge({
   surface = "acquisition_calculator",
@@ -26,8 +20,8 @@ export function PlatformBrandBadge({
   className,
   showLogo
 }: PlatformBrandBadgeProps) {
-  const line = variant === "engine" ? INTELLIGENCE_ENGINE_LINE : POWERED_BY_LINE;
-  const withLogo = showLogo ?? variant === "inline";
+  /** Inline stays text-first so SOL.52 reads quiet; opt in with `showLogo` when space allows. */
+  const withLogo = showLogo ?? variant === "engine";
 
   if (variant === "footer") {
     return (
@@ -36,31 +30,28 @@ export function PlatformBrandBadge({
         data-platform-surface={surface}
         aria-label={`${PLATFORM_NAME} platform attribution`}
       >
-        <p className="text-[11px] text-slate-500">
-          Calculator engine{" "}
-          <span className="font-medium text-slate-400">{POWERED_BY_LINE}</span>
+        <p className="text-[11px] leading-relaxed text-slate-500">
+          <span className="text-slate-400">{POWERED_BY_LINE}</span>
+          <span className="mx-1.5 text-slate-600">·</span>
+          <span className="text-slate-500">Same engine we use for tariffs and customer proposals.</span>
         </p>
-        <p className="mt-0.5 text-[10px] text-slate-600">{INTELLIGENCE_ENGINE_LINE}</p>
       </footer>
     );
   }
 
   return (
-    <div
-      className={cn("inline-flex items-center gap-2", className)}
-      data-platform-surface={surface}
-    >
+    <div className={cn("inline-flex items-center gap-2", className)} data-platform-surface={surface}>
       {withLogo ? (
         <Image
           src={PLATFORM_LOGO_SRC}
           alt=""
           width={72}
           height={20}
-          className="h-4 w-auto opacity-80"
+          className="h-3.5 w-auto opacity-70"
           unoptimized
         />
       ) : null}
-      <span className="text-[11px] font-medium tracking-wide text-slate-400">{line}</span>
+      <span className="text-[11px] font-medium text-slate-500">{POWERED_BY_LINE}</span>
     </div>
   );
 }

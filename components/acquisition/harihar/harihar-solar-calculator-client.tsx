@@ -14,7 +14,6 @@ import {
   Phone,
   ShieldCheck,
   Sparkles,
-  SunMedium,
   Zap
 } from "lucide-react";
 
@@ -194,7 +193,7 @@ export function HariharSolarCalculatorClient() {
     <div className="relative isolate min-h-[100dvh] pb-20 pt-0 sm:pb-24">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_110%_70%_at_50%_-15%,rgba(56,189,248,0.18),transparent_58%),radial-gradient(ellipse_85%_55%_at_100%_0%,rgba(99,102,241,0.14),transparent_48%),radial-gradient(ellipse_65%_45%_at_0%_100%,rgba(45,212,191,0.1),transparent_52%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_65%_at_50%_-18%,rgba(16,185,129,0.16),transparent_55%),radial-gradient(ellipse_80%_50%_at_100%_8%,rgba(251,191,36,0.08),transparent_45%),radial-gradient(ellipse_70%_50%_at_0%_100%,rgba(5,150,105,0.1),transparent_50%)]"
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
@@ -202,8 +201,13 @@ export function HariharSolarCalculatorClient() {
       <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-[#030508]/80 backdrop-blur-xl supports-[backdrop-filter]:bg-[#030508]/70">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/12 bg-gradient-to-br from-white/12 to-white/[0.04] shadow-lg shadow-cyan-500/10">
-              <SunMedium className="h-6 w-6 text-amber-300" strokeWidth={1.5} />
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center gap-0.5 rounded-2xl border border-white/12 bg-slate-950/60 shadow-inner shadow-black/40"
+              aria-hidden
+            >
+              <span className="h-6 w-1 rounded-full bg-amber-400/95" />
+              <span className="h-6 w-1 rounded-full bg-emerald-500" />
+              <span className="h-6 w-1 rounded-full bg-sky-500/90" />
             </div>
             <div className="min-w-0 leading-tight">
               <p className="truncate font-semibold text-white">{HARIHAR_BRAND.displayName}</p>
@@ -242,49 +246,51 @@ export function HariharSolarCalculatorClient() {
       <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6">
         {/* Hero — one clear story, then push to calculator */}
         <div className="mx-auto max-w-3xl pt-8 text-center sm:pt-10 lg:mx-0 lg:max-w-2xl lg:pt-12 lg:text-left">
-          <p className="text-xs font-medium uppercase tracking-[0.12em] text-emerald-400/90 sm:text-sm">
-            Rooftop solar for homes in Madhya Pradesh
+          <p className="text-xs font-medium uppercase tracking-[0.14em] text-emerald-400/95 sm:text-[13px]">
+            Trusted rooftop solar · Satna &amp; Madhya Pradesh
           </p>
-          <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.35rem] lg:leading-[1.15]">
-            Save money with smart rooftop solar — installed by local experts you can trust.
+          <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[2.35rem] lg:leading-[1.18]">
+            Cut your power bill with rooftop solar — from a local team you can call after the switch is on.
           </h1>
           <p className="mt-4 text-pretty text-base leading-relaxed text-slate-300 sm:text-lg">
-            Simple solar. Honest pricing. Complete support. Move your monthly bill slider — we show likely savings,
-            subsidy, and payback using live DISCOM rules (same engine as our customer proposals).
+            Move the bill slider below. We use your DISCOM tariff, MNRE subsidy rules, and your bill — the same numbers
+            we put in real customer proposals. No pressure. One clear path when you are ready.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
             <button
               type="button"
               onClick={scrollToCalculator}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-500 via-cyan-500 to-sky-500 px-6 py-3.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-900/25 transition hover:brightness-110 active:scale-[0.99]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/40 transition hover:brightness-110 active:scale-[0.99]"
             >
               <Calculator className="h-5 w-5" />
-              Check your savings
-              <ArrowRight className="h-4 w-4 opacity-80" />
+              See your savings
+              <ArrowRight className="h-4 w-4 opacity-90" />
             </button>
             <a
               href={waQuickQuestion}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.06] px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/25 hover:bg-white/[0.1]"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.04] px-6 py-3.5 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/[0.07]"
             >
-              <MessageCircle className="h-5 w-5 text-emerald-400" />
-              WhatsApp a question
+              <MessageCircle className="h-5 w-5 text-emerald-400/95" />
+              WhatsApp us
             </a>
           </div>
-          <p className="mt-4 text-xs text-slate-500">Takes about 30 seconds · No signup to see numbers</p>
+          <p className="mt-3 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+            No hidden surprises · Complete support · Built for MP homes · About 30 seconds, no signup
+          </p>
         </div>
 
-        <div className="mt-12 grid gap-10 lg:mt-14 lg:grid-cols-12 lg:items-start lg:gap-12">
+        <div className="mt-14 grid gap-12 border-t border-white/[0.06] pt-14 lg:grid-cols-12 lg:items-start lg:gap-12">
           <aside className="order-2 space-y-5 lg:order-1 lg:col-span-5">
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] shadow-xl shadow-black/30 backdrop-blur-xl">
               <RooftopIllustration className="w-full opacity-95" />
             </div>
-            <ul className="space-y-3 text-left text-sm text-slate-300">
+            <ul className="space-y-3.5 text-left text-[15px] leading-snug text-slate-300">
               {[
                 "We design and install grid-connected solar for homes, shops, and small businesses.",
-                "100% local team based in Satna — site survey through net meter, plus aftercare.",
-                "Subsidy and tariff math are built in — not rough guesses."
+                "Engineering-first team in Satna — survey, paperwork, install, net meter, and after-sales.",
+                "Subsidy and DISCOM rules are built in. You see how we got the number."
               ].map((line) => (
                 <li key={line} className="flex gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400/90" aria-hidden />
@@ -294,12 +300,12 @@ export function HariharSolarCalculatorClient() {
             </ul>
             <div className="flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-slate-400">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                DISCOM-aware
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400/90" />
+                DISCOM + net meter help
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] text-slate-400">
                 <Sparkles className="h-3.5 w-3.5 text-amber-300/90" />
-                Subsidy included
+                Subsidy guidance
               </span>
             </div>
           </aside>
@@ -312,11 +318,11 @@ export function HariharSolarCalculatorClient() {
           <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/30 backdrop-blur-2xl sm:p-7">
             <div className="mb-5 flex flex-col gap-3 border-b border-white/[0.06] pb-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="flex items-center gap-2 text-base font-semibold text-white">
-                  <Calculator className="h-5 w-5 text-cyan-400" />
+                <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
+                  <Calculator className="h-5 w-5 text-emerald-400/95" />
                   Savings calculator
                 </h2>
-                <p className="mt-1 text-sm text-slate-400">Enter your bill — see your estimate instantly.</p>
+                <p className="mt-1 text-sm text-slate-400">Your bill → your estimate. Plain numbers.</p>
               </div>
               <span className="self-start rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[10px] font-medium text-slate-400">
                 Free · No obligation
@@ -333,7 +339,7 @@ export function HariharSolarCalculatorClient() {
                   <label htmlFor="bill" className="text-sm font-medium text-slate-200">
                     Monthly electricity bill
                   </label>
-                  <span className="font-mono text-lg font-semibold text-cyan-200">
+                  <span className="font-mono text-lg font-semibold text-white tabular-nums">
                     ₹<AnimatedInr value={monthlyBill} />
                   </span>
                 </div>
@@ -417,8 +423,8 @@ export function HariharSolarCalculatorClient() {
                       className={cn(
                         "rounded-2xl border px-3 py-3 text-left text-xs transition-all duration-200",
                         roofType === r.id
-                          ? "border-cyan-400/50 bg-cyan-500/15 text-white shadow-lg shadow-cyan-500/10"
-                          : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/20 hover:bg-white/[0.06]"
+                          ? "border-emerald-400/45 bg-emerald-500/12 text-white shadow-md shadow-emerald-950/30"
+                          : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/18 hover:bg-white/[0.06]"
                       )}
                     >
                       <span className="block font-semibold text-slate-100">{r.label}</span>
@@ -432,7 +438,7 @@ export function HariharSolarCalculatorClient() {
                 type="button"
                 disabled={!canSubmit || isMutating}
                 onClick={() => void runEstimate()}
-                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-teal-500 via-cyan-500 to-sky-500 py-4 text-sm font-semibold text-slate-950 shadow-xl shadow-cyan-500/25 transition hover:brightness-110 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40"
+                className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 py-4 text-sm font-semibold text-white shadow-xl shadow-emerald-950/35 transition hover:brightness-110 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40"
               >
                 {isMutating ? (
                   <>
@@ -508,38 +514,38 @@ export function HariharSolarCalculatorClient() {
                       value={estimates.recommendedSystemKw}
                       suffix=" kW"
                       decimals={1}
-                      accent="from-cyan-400 to-teal-500"
+                      emphasis={false}
                     />
                     <MetricCard
                       label="Est. units per year"
                       value={estimates.estimatedAnnualGenerationKwh}
                       suffix=" kWh"
-                      accent="from-amber-400 to-orange-500"
+                      emphasis
                     />
                     <MetricCard
                       label="Est. yearly savings"
                       value={estimates.estimatedAnnualSavingsInr}
                       prefix="₹"
-                      accent="from-emerald-400 to-green-500"
+                      emphasis
                     />
                     <MetricCard
                       label="Central subsidy (est.)"
                       value={estimates.centralSubsidyInr}
                       prefix="₹"
-                      accent="from-violet-400 to-indigo-500"
+                      emphasis
                     />
                     <MetricCard
                       label="Simple payback"
                       value={estimates.estimatedPaybackYears}
                       suffix=" yrs"
                       decimals={1}
-                      accent="from-sky-400 to-blue-500"
+                      emphasis
                     />
                     <MetricCard
                       label="25-year savings (est.)"
                       value={estimates.estimatedTwentyFiveYearSavingsInr}
                       prefix="₹"
-                      accent="from-fuchsia-400 to-pink-500"
+                      emphasis={false}
                     />
                   </div>
                   {data?.warnings?.length ? (
@@ -623,7 +629,7 @@ export function HariharSolarCalculatorClient() {
                       <button
                         type="submit"
                         disabled={leadBusy}
-                        className="sm:col-span-2 flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/40 bg-cyan-500/15 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/25 disabled:opacity-50"
+                        className="sm:col-span-2 flex items-center justify-center gap-2 rounded-2xl border border-emerald-500/35 bg-emerald-500/12 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-500/18 disabled:opacity-50"
                       >
                         {leadBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                         Send this estimate to Harihar Solar
@@ -711,20 +717,36 @@ function MetricCard({
   prefix,
   suffix,
   decimals,
-  accent
+  emphasis = true
 }: {
   label: string;
   value: number;
   prefix?: string;
   suffix?: string;
   decimals?: number;
-  accent: string;
+  /** Larger type and stronger frame for savings, subsidy, payback, and generation. */
+  emphasis?: boolean;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-4">
-      <div className={cn("pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br opacity-30 blur-2xl", accent)} />
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border bg-black/25 p-4",
+        emphasis ? "border-emerald-500/25 ring-1 ring-emerald-500/10" : "border-white/10"
+      )}
+    >
+      <div
+        className={cn(
+          "pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br opacity-[0.22] blur-2xl",
+          emphasis ? "from-amber-400/90 to-emerald-600/80" : "from-emerald-600/50 to-teal-700/40"
+        )}
+      />
       <p className="relative text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="relative mt-2 font-mono text-xl font-semibold tracking-tight text-white sm:text-2xl">
+      <p
+        className={cn(
+          "relative mt-2 font-mono font-semibold tracking-tight text-white tabular-nums",
+          emphasis ? "text-2xl sm:text-[1.65rem]" : "text-xl sm:text-2xl"
+        )}
+      >
         {prefix}
         <AnimatedInr value={value} decimals={decimals} />
         {suffix}
