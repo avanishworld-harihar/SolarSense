@@ -34,22 +34,26 @@ const alertTone: Record<string, string> = {
   emerald: "border-emerald-200/80 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-950/20"
 };
 
+type IconTone = "sky" | "emerald" | "amber" | "teal" | "violet" | "rose" | "indigo" | "warning";
+
 function InsightPanel({
   title,
   icon: Icon,
+  iconTone = "sky",
   children,
   className
 }: {
   title: string;
   icon: typeof Activity;
+  iconTone?: IconTone;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <article className={cn("glass-panel-premium flex flex-col p-4 sm:p-5", className)}>
-      <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/70 text-brand-700 shadow-sm ring-1 ring-white/80 dark:bg-white/10 dark:text-teal-200 dark:ring-white/10">
-          <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className={cn("ws-icon-well", `ws-icon-well--${iconTone}`)} aria-hidden>
+          <Icon className="h-4 w-4" strokeWidth={2.25} />
         </span>
         <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-[#8B949E]">{title}</h3>
       </div>
@@ -81,6 +85,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         <InsightPanel
           title={uiLang === "hi" ? "पाइपलाइन स्वास्थ्य" : "Pipeline health"}
           icon={TrendingUp}
+          iconTone="emerald"
           className="lg:col-span-7"
         >
           <div className="space-y-3">
@@ -114,6 +119,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         <InsightPanel
           title={uiLang === "hi" ? "ऑपरेशन अलर्ट" : "Operational alerts"}
           icon={AlertTriangle}
+          iconTone="warning"
           className="lg:col-span-5"
         >
           <ul className="space-y-2.5">
@@ -146,6 +152,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         <InsightPanel
           title={uiLang === "hi" ? "फॉलो-अप" : "Follow-ups"}
           icon={ClipboardCheck}
+          iconTone="sky"
           className="lg:col-span-6"
         >
           {model.followUps.length === 0 ? (
@@ -181,6 +188,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         <InsightPanel
           title={uiLang === "hi" ? "इंस्टॉलेशन प्रगति" : "Installation progress"}
           icon={HardHat}
+          iconTone="amber"
           className="lg:col-span-6"
         >
           <div className="mb-3 flex flex-wrap gap-2">
@@ -220,8 +228,8 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         <div className="grid gap-4 sm:grid-cols-2 lg:col-span-6">
           <article className="glass-metric-tile glass-metric-tile--emphasis p-4">
             <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100/90 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
-                <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+              <span className="ws-icon-well ws-icon-well--emerald" aria-hidden>
+                <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
               </span>
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{t("metrics_revenue")}</p>
@@ -236,8 +244,8 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
             className={cn("glass-metric-tile p-4", stats && stats.pendingPayments > 0 && "glass-metric-tile--alert")}
           >
             <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-100/90 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200">
-                <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+              <span className={cn("ws-icon-well", stats && stats.pendingPayments > 0 ? "ws-icon-well--rose" : "ws-icon-well--indigo")} aria-hidden>
+                <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
               </span>
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{t("metrics_pending")}</p>
@@ -253,6 +261,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         <InsightPanel
           title={uiLang === "hi" ? "हाल की गतिविधि" : "Recent activity"}
           icon={Activity}
+          iconTone="violet"
           className="lg:col-span-6"
         >
           {model.recentActivity.length === 0 ? (

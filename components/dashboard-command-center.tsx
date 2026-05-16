@@ -118,6 +118,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
   const pipeline = [
     {
       key: "leads",
+      tone: "sky" as const,
       label: uiLang === "hi" ? "लीड्स" : "Leads",
       raw: stats?.totalLeads ?? 0,
       format: (n: number) => String(n),
@@ -126,6 +127,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
     },
     {
       key: "proposals",
+      tone: "emerald" as const,
       label: uiLang === "hi" ? "प्रस्ताव" : "Proposals",
       raw: stats?.proposalsSent ?? 0,
       format: (n: number) => String(n),
@@ -134,6 +136,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
     },
     {
       key: "orders",
+      tone: "amber" as const,
       label: uiLang === "hi" ? "ऑर्डर" : "Orders",
       raw: stats?.orders ?? 0,
       format: (n: number) => String(n),
@@ -142,6 +145,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
     },
     {
       key: "kw",
+      tone: "teal" as const,
       label: uiLang === "hi" ? "इंस्टॉल kW" : "Installed",
       raw: Math.round(stats?.installedKw ?? 0),
       format: (n: number) => n.toLocaleString("en-IN"),
@@ -166,6 +170,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
       <div className="glass-command-ambient pointer-events-none absolute inset-0" aria-hidden />
       <div className="glass-hero-bloom pointer-events-none absolute inset-0 opacity-90" aria-hidden />
       <div className="glass-command-sheen pointer-events-none absolute inset-0" aria-hidden />
+      <div className="glass-command-reflect pointer-events-none absolute inset-0 rounded-[inherit]" aria-hidden />
       <div className="glass-hero-noise pointer-events-none absolute inset-0 opacity-[0.2]" aria-hidden />
 
       <div className="relative flex flex-col gap-5 p-5 sm:gap-6 sm:p-6 md:p-7">
@@ -203,12 +208,12 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
         </div>
 
         {/* Operational headline — primary focus */}
-        <div className="space-y-2">
+        <div className="glass-status-focus space-y-2">
           <p className="ws-type-label">{uiLang === "hi" ? "ऑपरेशनल स्थिति" : "Operational status"}</p>
           {loading && !stats ? (
             <Skeleton className="h-9 w-full max-w-lg rounded-lg" />
           ) : (
-            <p className="ws-type-status-headline">{operationalHeadline}</p>
+            <p className="ws-type-status-headline border-l-0 pl-0">{operationalHeadline}</p>
           )}
         </div>
 
@@ -267,8 +272,10 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
           <div className="glass-command-inset lg:col-span-5">
             <p className="ws-type-label mb-2.5">{uiLang === "hi" ? "वित्तीय पल्स" : "Financial pulse"}</p>
             <div className="grid grid-cols-2 gap-2.5">
-              <div className="glass-pulse-stat">
-                <CircleDollarSign className="mb-1.5 h-3.5 w-3.5 text-emerald-600/90 dark:text-emerald-400" strokeWidth={2.25} aria-hidden />
+              <div className="glass-pulse-stat glass-pulse-stat--revenue">
+                <span className="ws-icon-well ws-icon-well--emerald mb-2" aria-hidden>
+                  <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
+                </span>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t("metrics_revenue")}</p>
                 {loading && !stats ? (
                   <Skeleton className="mt-1.5 h-6 w-20 rounded" />
@@ -279,7 +286,9 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
                 )}
               </div>
               <div className={cn("glass-pulse-stat", stats && stats.pendingPayments > 0 && "glass-pulse-stat--alert")}>
-                <CircleDollarSign className="mb-1.5 h-3.5 w-3.5 text-rose-600/90 dark:text-rose-400" strokeWidth={2.25} aria-hidden />
+                <span className={cn("ws-icon-well mb-2", stats && stats.pendingPayments > 0 ? "ws-icon-well--rose" : "ws-icon-well--indigo")} aria-hidden>
+                  <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
+                </span>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t("metrics_pending")}</p>
                 {loading && !stats ? (
                   <Skeleton className="mt-1.5 h-6 w-20 rounded" />
