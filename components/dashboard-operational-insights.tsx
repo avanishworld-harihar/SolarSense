@@ -13,10 +13,12 @@ import {
   AlertTriangle,
   ArrowRight,
   ArrowUpRight,
-  CircleDollarSign,
   ClipboardCheck,
+  Clock,
   HardHat,
-  TrendingUp
+  Lightbulb,
+  Percent,
+  Wallet
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,6 +34,12 @@ const alertTone: Record<string, string> = {
   rose: "border-rose-200/80 bg-rose-50/45 dark:border-rose-500/25 dark:bg-rose-950/20",
   sky: "border-sky-200/80 bg-sky-50/45 dark:border-sky-500/25 dark:bg-sky-950/20",
   emerald: "border-emerald-200/80 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-950/20"
+};
+
+const overdueTone: Record<string, string> = {
+  amber: "border-amber-200/85 bg-amber-50/55 dark:border-amber-500/30 dark:bg-amber-950/25",
+  rose: "border-rose-200/85 bg-rose-50/50 dark:border-rose-500/30 dark:bg-rose-950/25",
+  sky: "border-sky-200/85 bg-sky-50/50 dark:border-sky-500/30 dark:bg-sky-950/25"
 };
 
 type IconTone = "sky" | "emerald" | "amber" | "teal" | "violet" | "rose" | "indigo" | "warning";
@@ -62,15 +70,28 @@ function InsightPanel({
   );
 }
 
+function trendRowClass(line: string | null, kind: "revenue" | "pending"): string {
+  if (!line) return "ws-intel-trend-row";
+  const lower = line.toLowerCase();
+  if (kind === "pending") {
+    if (lower.includes("up") || lower.includes("बढ़ा") || lower.includes("அதிகரித்த")) return "ws-intel-trend-row ws-intel-trend-row--warn";
+    if (lower.includes("down") || lower.includes("घटा") || lower.includes("குறைந்த")) return "ws-intel-trend-row ws-intel-trend-row--up";
+  } else {
+    if (lower.includes("more") || lower.includes("ज़्यादा") || lower.includes("அதிகம்")) return "ws-intel-trend-row ws-intel-trend-row--up";
+    if (lower.includes("less") || lower.includes("कम") || lower.includes("குறை")) return "ws-intel-trend-row ws-intel-trend-row--down";
+  }
+  return "ws-intel-trend-row";
+}
+
 export function DashboardOperationalInsights({ stats, trends, loading, className }: DashboardOperationalInsightsProps) {
-  const { t, locale } = useLanguage();
+  const { locale } = useLanguage();
   const uiLang = locale === "en" ? "en" : "hi";
   const model = buildOperationalInsights(stats, trends ?? null, uiLang);
 
   if (loading && !stats) {
     return (
       <div className={cn("grid gap-4 sm:gap-5 lg:grid-cols-2", className)}>
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} className="ws-shimmer h-44 rounded-[1.2rem] border border-white/40" />
         ))}
       </div>
@@ -83,37 +104,54 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
     <div className={cn("grid gap-4 sm:gap-5", className)}>
       <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
         <InsightPanel
-          title={uiLang === "hi" ? "पाइपलाइन स्वास्थ्य" : "Pipeline health"}
-          icon={TrendingUp}
+          title={uiLang === "hi" ? "कन्वर्ज़न फनल" : "Conversion funnel"}
+          icon={Percent}
           iconTone="emerald"
           className="lg:col-span-7"
         >
-          <div className="space-y-3">
-            {model.pipeline.stages.map((stage) => (
-              <div key={stage.key}>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-600 dark:text-[#C9D1D9]">{stage.label}</span>
-                  <span className="tabular-nums font-bold text-brand-800 dark:text-white">{stage.count}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-200/70 dark:bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-brand-500 to-teal-500 transition-[width] duration-500"
-                    style={{ width: `${Math.max(stage.widthPct, stage.count > 0 ? 8 : 0)}%` }}
-                  />
-                </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="ws-conversion-metric">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                {uiLang === "hi" ? "लीड → प्रस्ताव" : "Lead → proposal"}
+              </p>
+              <p className="ws-conversion-metric-value text-sky-900 dark:text-sky-100">
+                {model.conversion.leadToProposalPct != null ? `${model.conversion.leadToProposalPct}%` : "—"}
+              </p>
+              <div className="ws-conversion-bar">
+                <div
+                  className="ws-conversion-bar-fill ws-conversion-bar-fill--sky"
+                  style={{ width: `${model.conversion.leadToProposalPct ?? 0}%` }}
+                />
               </div>
-            ))}
-            <p
-              className={cn(
-                "text-sm leading-relaxed",
-                model.pipeline.tone === "good" && "text-emerald-800 dark:text-emerald-300",
-                model.pipeline.tone === "warn" && "text-amber-900 dark:text-amber-200",
-                model.pipeline.tone === "neutral" && "text-slate-600 dark:text-[#8B949E]"
-              )}
-            >
-              {model.pipeline.summary}
-            </p>
+            </div>
+            <div className="ws-conversion-metric">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                {uiLang === "hi" ? "प्रस्ताव → ऑर्डर" : "Proposal → order"}
+              </p>
+              <p className="ws-conversion-metric-value text-emerald-900 dark:text-emerald-100">
+                {model.conversion.proposalToOrderPct != null ? `${model.conversion.proposalToOrderPct}%` : "—"}
+              </p>
+              <div className="ws-conversion-bar">
+                <div
+                  className="ws-conversion-bar-fill ws-conversion-bar-fill--emerald"
+                  style={{ width: `${model.conversion.proposalToOrderPct ?? 0}%` }}
+                />
+              </div>
+            </div>
           </div>
+          <p
+            className={cn(
+              "mt-3 text-sm leading-relaxed",
+              model.conversion.tone === "good" && "text-emerald-800 dark:text-emerald-300",
+              model.conversion.tone === "warn" && "text-amber-900 dark:text-amber-200",
+              model.conversion.tone === "neutral" && "text-slate-600 dark:text-[#8B949E]"
+            )}
+          >
+            {model.conversion.summary}
+          </p>
+          <p className="mt-2 text-[10px] font-medium text-slate-400 dark:text-[#6E7681]">
+            {uiLang === "hi" ? "गिनती कमांड सेंटर में — यहाँ केवल दरें।" : "Counts live in Command Center — rates only here."}
+          </p>
         </InsightPanel>
 
         <InsightPanel
@@ -224,63 +262,106 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         </InsightPanel>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-12 lg:gap-5">
-        <div className="grid gap-4 sm:grid-cols-2 lg:col-span-6">
-          <article className="glass-metric-tile glass-metric-tile--emphasis p-4">
-            <div className="flex items-start gap-3">
-              <span className="ws-icon-well ws-icon-well--emerald" aria-hidden>
-                <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
-              </span>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{t("metrics_revenue")}</p>
-                <p className="mt-1 text-xl font-bold tabular-nums text-brand-900 dark:text-white">{model.revenue.value}</p>
-                {model.revenue.trend ? (
-                  <p className="mt-1.5 text-[11px] font-medium text-slate-500 dark:text-[#8B949E]">{model.revenue.trend}</p>
-                ) : null}
-              </div>
+      {/* Intelligence row — no duplicate ₹ metrics */}
+      <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
+        <InsightPanel
+          title={uiLang === "hi" ? "संग्रह ट्रेंड" : "Collection trend"}
+          icon={Wallet}
+          iconTone="teal"
+          className="lg:col-span-4"
+        >
+          <div className="space-y-2">
+            <div className={trendRowClass(model.collectionTrend.revenueTrend, "revenue")}>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                {uiLang === "hi" ? "राजस्व ट्रेंड" : "Revenue trend"}
+              </p>
+              <p className="mt-1 text-xs font-semibold leading-snug text-slate-800 dark:text-white">
+                {model.collectionTrend.revenueTrend ??
+                  (uiLang === "hi" ? "अगली सिंक के बाद" : "After next sync")}
+              </p>
             </div>
-          </article>
-          <article
-            className={cn("glass-metric-tile p-4", stats && stats.pendingPayments > 0 && "glass-metric-tile--alert")}
+            <div className={trendRowClass(model.collectionTrend.pendingTrend, "pending")}>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                {uiLang === "hi" ? "लंबित ट्रेंड" : "Outstanding trend"}
+              </p>
+              <p className="mt-1 text-xs font-semibold leading-snug text-slate-800 dark:text-white">
+                {model.collectionTrend.pendingTrend ??
+                  (uiLang === "hi" ? "अगली सिंक के बाद" : "After next sync")}
+              </p>
+            </div>
+          </div>
+          <p
+            className={cn(
+              "mt-3 text-sm leading-relaxed",
+              model.collectionTrend.tone === "warn" && "text-amber-900 dark:text-amber-200",
+              model.collectionTrend.tone === "good" && "text-emerald-800 dark:text-emerald-300",
+              model.collectionTrend.tone === "neutral" && "text-slate-600 dark:text-[#8B949E]"
+            )}
           >
-            <div className="flex items-start gap-3">
-              <span className={cn("ws-icon-well", stats && stats.pendingPayments > 0 ? "ws-icon-well--rose" : "ws-icon-well--indigo")} aria-hidden>
-                <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
-              </span>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{t("metrics_pending")}</p>
-                <p className="mt-1 text-xl font-bold tabular-nums text-brand-900 dark:text-white">{model.collections.value}</p>
-                {model.collections.trend ? (
-                  <p className="mt-1.5 text-[11px] font-medium text-slate-500 dark:text-[#8B949E]">{model.collections.trend}</p>
-                ) : null}
-              </div>
-            </div>
-          </article>
-        </div>
+            {model.collectionTrend.insight}
+          </p>
+        </InsightPanel>
+
+        <InsightPanel
+          title={uiLang === "hi" ? "ओवरड्यू और ध्यान" : "Overdue & attention"}
+          icon={Clock}
+          iconTone="rose"
+          className="lg:col-span-4"
+        >
+          <p className="mb-2.5 text-xs font-semibold text-slate-500 dark:text-[#8B949E]">{model.overdue.summary}</p>
+          {model.overdue.items.length === 0 ? (
+            <p className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-3 py-2.5 text-sm text-emerald-900 dark:border-emerald-500/25 dark:bg-emerald-950/20 dark:text-emerald-200">
+              {uiLang === "hi" ? "सब कुछ समय पर — अच्छा काम।" : "Everything on track — nice work."}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {model.overdue.items.map((item) => (
+                <li
+                  key={item.id}
+                  className={cn("rounded-xl border px-3 py-2.5", overdueTone[item.tone] ?? overdueTone.amber)}
+                >
+                  <p className="text-xs font-bold text-slate-800 dark:text-white">{item.title}</p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-slate-600 dark:text-[#8B949E]">{item.body}</p>
+                  {item.href && item.cta ? (
+                    <Link
+                      href={item.href}
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 dark:text-teal-300"
+                    >
+                      {item.cta}
+                      <ArrowRight className="h-3 w-3" aria-hidden />
+                    </Link>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </InsightPanel>
 
         <InsightPanel
           title={uiLang === "hi" ? "हाल की गतिविधि" : "Recent activity"}
           icon={Activity}
           iconTone="violet"
-          className="lg:col-span-6"
+          className="lg:col-span-4"
         >
           {model.recentActivity.length === 0 ? (
             <p className="text-sm text-slate-600 dark:text-[#8B949E]">
               {uiLang === "hi" ? "अभी कोई गतिविधि नहीं।" : "No recent project updates yet."}
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {model.recentActivity.map((row) => (
                 <li key={row.id}>
                   <Link
                     href={row.href}
-                    className="group flex items-start justify-between gap-3 rounded-lg px-1 py-1.5 hover:bg-white/40 dark:hover:bg-white/5"
+                    className="group flex items-start justify-between gap-2 rounded-lg border border-transparent px-2 py-2 transition-colors hover:border-white/50 hover:bg-white/35 dark:hover:bg-white/5"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-800 dark:text-white">{row.name}</p>
                       <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{row.detail}</p>
                     </div>
-                    <span className="shrink-0 text-[10px] font-semibold text-slate-400">{row.timeLabel}</span>
+                    <span className="shrink-0 rounded-md bg-white/60 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-white/10">
+                      {row.timeLabel}
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -288,6 +369,34 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
           )}
         </InsightPanel>
       </div>
+
+      <InsightPanel
+        title={uiLang === "hi" ? "व्यापार अंतर्दृष्टि" : "Business insights"}
+        icon={Lightbulb}
+        iconTone="indigo"
+        className="lg:col-span-12"
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {model.businessInsights.map((insight) => (
+            <div
+              key={insight.id}
+              className={cn("ws-business-insight", `ws-business-insight--${insight.tone}`)}
+            >
+              <p className="text-xs font-bold text-slate-800 dark:text-white">{insight.title}</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-[#8B949E]">{insight.body}</p>
+              {insight.href && insight.cta ? (
+                <Link
+                  href={insight.href}
+                  className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-900 dark:text-teal-300"
+                >
+                  {insight.cta}
+                  <ArrowRight className="h-3 w-3" aria-hidden />
+                </Link>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </InsightPanel>
     </div>
   );
 }
