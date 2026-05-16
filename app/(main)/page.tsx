@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardGreeting } from "@/components/dashboard-greeting";
+import { DashboardCommandCenter } from "@/components/dashboard-command-center";
 import { DashboardSectionTitle } from "@/components/dashboard-section-title";
 import { OfflineDataNotice } from "@/components/offline-data-notice";
 import { GlassProjectCard, type GlassProjectSummary } from "@/components/glass-project-card";
@@ -274,9 +274,10 @@ function DashboardPageContent() {
   }
 
   return (
+    <div className="workspace-dashboard">
     <DashboardStaggerRoot animate={shouldAnimateDashboard}>
         <DashboardItem animate={shouldAnimateDashboard}>
-          <DashboardGreeting name="Avanish" />
+          <DashboardCommandCenter name="Avanish" stats={stats} loading={showMetricSkeleton} />
         </DashboardItem>
 
         <DashboardItem animate={shouldAnimateDashboard}>
@@ -398,7 +399,7 @@ function DashboardPageContent() {
           </DashboardItem>
         )}
 
-        <DashboardItem animate={shouldAnimateDashboard}>
+        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-metrics">
           <DashboardSectionTitle>{t("dashboard_overview")}</DashboardSectionTitle>
           <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-6">
           <MetricCard
@@ -444,6 +445,7 @@ function DashboardPageContent() {
           <MetricCard
             icon={IndianRupee}
             iconTone="violet"
+            emphasis
             label={t("metrics_revenue")}
             value={stats ? `₹${Math.round(stats.revenue).toLocaleString("en-IN")}` : "₹0"}
             countUpValue={stats?.revenue ?? 0}
@@ -454,6 +456,7 @@ function DashboardPageContent() {
           <MetricCard
             icon={Wallet}
             iconTone="rose"
+            alert
             label={t("metrics_pending")}
             value={stats ? `₹${Math.round(stats.pendingPayments).toLocaleString("en-IN")}` : "₹0"}
             countUpValue={stats?.pendingPayments ?? 0}
@@ -464,9 +467,9 @@ function DashboardPageContent() {
           </div>
         </DashboardItem>
 
-        <DashboardItem animate={shouldAnimateDashboard}>
+        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-secondary">
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <DashboardSectionTitle>{t("dashboard_projectSummaries")}</DashboardSectionTitle>
+            <DashboardSectionTitle tier="quiet">{t("dashboard_projectSummaries")}</DashboardSectionTitle>
             <Link
               href="/projects?view=hidden"
               className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-indigo-600 underline-offset-4 hover:underline dark:text-indigo-300 sm:text-xs"
@@ -490,7 +493,7 @@ function DashboardPageContent() {
           )}
         </DashboardItem>
 
-        <DashboardItem animate={shouldAnimateDashboard}>
+        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-secondary">
           <Card className="glass-surface border-white/55">
             <CardHeader className="space-y-1.5 p-4 pb-2 sm:p-6 sm:pb-3">
                 <div className="flex items-start gap-2">
@@ -571,6 +574,7 @@ function DashboardPageContent() {
           </Card>
         </DashboardItem>
       </DashboardStaggerRoot>
+    </div>
   );
 }
 

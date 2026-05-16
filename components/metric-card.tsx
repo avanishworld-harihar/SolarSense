@@ -32,6 +32,10 @@ export interface MetricCardProps {
   iconTone?: MetricIconTone;
   /** Hinglish delta vs last saved dashboard snapshot (device-local) */
   trend?: string | null;
+  /** Stronger glass + tint for hero financial metrics */
+  emphasis?: boolean;
+  /** Subtle alert tint (e.g. pending payments) */
+  alert?: boolean;
 }
 
 export function MetricCard({
@@ -42,7 +46,9 @@ export function MetricCard({
   loading,
   icon: Icon,
   iconTone = "blue",
-  trend
+  trend,
+  emphasis = false,
+  alert = false
 }: MetricCardProps) {
   const [animatedValue, setAnimatedValue] = useState(0);
   const [showFinal, setShowFinal] = useState(false);
@@ -94,12 +100,11 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-[16px] border border-slate-200/90 p-3.5 sm:p-4",
-        "bg-white/34 shadow-[0_12px_40px_rgba(11,34,64,0.11),inset_0_1px_0_rgba(255,255,255,0.68)]",
-        "backdrop-blur-xl backdrop-saturate-150 transition-[transform,box-shadow] duration-200 ease-out will-change-transform",
-        "hover:scale-105 hover:shadow-[0_16px_48px_rgba(11,34,64,0.14),inset_0_1px_0_rgba(255,255,255,0.78)]",
-        "motion-reduce:transition-shadow motion-reduce:hover:scale-100",
-        "dark:border-white/10 dark:ss-dashboard-glass dark:backdrop-saturate-150 dark:shadow-[0_14px_44px_rgba(0,0,0,0.52)] dark:hover:shadow-[0_20px_56px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.06)]"
+        "glass-metric-tile group p-3.5 sm:p-4",
+        emphasis && "glass-metric-tile--emphasis",
+        alert && "glass-metric-tile--alert",
+        "motion-reduce:hover:translate-y-0",
+        "dark:!border-white/10 dark:!bg-transparent dark:ss-dashboard-glass dark:shadow-[0_14px_44px_rgba(0,0,0,0.52)] dark:hover:shadow-[0_20px_56px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.06)] dark:hover:translate-y-0"
       )}
     >
       <div
@@ -128,7 +133,7 @@ export function MetricCard({
             </div>
           ) : (
             <>
-              <p className="mt-1 break-words text-lg font-extrabold tabular-nums tracking-tight text-brand-700 dark:text-white sm:mt-1.5 sm:text-xl md:text-2xl">
+              <p className="mt-1 break-words text-lg font-bold tabular-nums tracking-tight text-brand-800 dark:font-extrabold dark:text-white sm:mt-1.5 sm:text-xl md:text-2xl">
                 {displayValue}
               </p>
               {trend ? (

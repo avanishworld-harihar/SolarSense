@@ -14,10 +14,8 @@ import { cn } from "@/lib/utils";
 const STALE_MS = 3 * 86_400_000;
 
 const glassBase =
-  "border-[0.5px] border-white/60 bg-white/40 backdrop-blur-xl backdrop-saturate-150 " +
-  "!shadow-[0_12px_40px_rgba(11,34,64,0.11),inset_0_1px_0_rgba(255,255,255,0.72)] " +
-  "transition-[box-shadow,transform] duration-200 " +
-  "dark:ss-dashboard-glass dark:!shadow-[0_18px_52px_rgba(0,0,0,0.52),inset_0_1px_0_rgba(255,255,255,0.05)]";
+  "glass-surface relative overflow-hidden transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 motion-reduce:transform-none " +
+  "dark:ss-dashboard-glass dark:!shadow-[0_18px_52px_rgba(0,0,0,0.52),inset_0_1px_0_rgba(255,255,255,0.05)] dark:hover:translate-y-0";
 
 export type GlassProjectSummary = {
   id: string;

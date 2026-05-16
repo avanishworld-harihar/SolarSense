@@ -2,14 +2,33 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-export function DashboardSectionTitle({ children, className }: { children: ReactNode; className?: string }) {
+export function DashboardSectionTitle({
+  children,
+  className,
+  tier = "default"
+}: {
+  children: ReactNode;
+  className?: string;
+  /** default = overview; quiet = projects / secondary blocks */
+  tier?: "default" | "quiet";
+}) {
   return (
-    <div className={cn("mb-2.5 flex items-center gap-2 px-0.5 sm:mb-3", className)}>
+    <div className={cn("mb-3 flex items-center gap-2.5 px-0.5 sm:mb-3.5", className)}>
       <span
-        className="h-1 w-1 shrink-0 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/40 sm:h-1.5 sm:w-1.5 dark:bg-teal-400 dark:shadow-[0_0_14px_rgba(45,212,191,0.55)]"
+        className={cn(
+          "h-4 w-0.5 shrink-0 rounded-full",
+          tier === "default"
+            ? "bg-gradient-to-b from-brand-500 to-teal-400 shadow-sm shadow-brand-500/25"
+            : "bg-slate-300/90 dark:bg-teal-400/70"
+        )}
         aria-hidden
       />
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-600 dark:text-white sm:text-xs md:text-sm">
+      <h2
+        className={cn(
+          "font-semibold tracking-tight text-slate-700 dark:text-white",
+          tier === "default" ? "text-xs uppercase tracking-[0.16em] sm:text-[13px]" : "text-[11px] uppercase tracking-[0.14em] text-slate-500 sm:text-xs"
+        )}
+      >
         {children}
       </h2>
     </div>
