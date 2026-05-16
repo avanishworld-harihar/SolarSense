@@ -663,7 +663,7 @@ export function HariharSolarCalculatorClient() {
           appearance: none;
           height: 10px;
           border-radius: 9999px;
-          background: linear-gradient(90deg, rgba(45, 212, 191, 0.35), rgba(56, 189, 248, 0.35));
+          background: linear-gradient(90deg, rgba(16, 185, 129, 0.35), rgba(245, 158, 11, 0.22));
           outline: none;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
@@ -672,18 +672,18 @@ export function HariharSolarCalculatorClient() {
           width: 26px;
           height: 26px;
           border-radius: 50%;
-          background: linear-gradient(145deg, #f8fafc, #cbd5e1);
-          border: 2px solid rgba(45, 212, 191, 0.8);
-          box-shadow: 0 4px 20px rgba(34, 211, 238, 0.35);
+          background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+          border: 2px solid rgba(16, 185, 129, 0.85);
+          box-shadow: 0 4px 18px rgba(16, 185, 129, 0.28);
           cursor: pointer;
         }
         .harihar-range::-moz-range-thumb {
           width: 26px;
           height: 26px;
           border-radius: 50%;
-          background: linear-gradient(145deg, #f8fafc, #cbd5e1);
-          border: 2px solid rgba(45, 212, 191, 0.8);
-          box-shadow: 0 4px 20px rgba(34, 211, 238, 0.35);
+          background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+          border: 2px solid rgba(16, 185, 129, 0.85);
+          box-shadow: 0 4px 18px rgba(16, 185, 129, 0.28);
           cursor: pointer;
         }
         .harihar-select,
@@ -699,8 +699,8 @@ export function HariharSolarCalculatorClient() {
         }
         .harihar-select:focus,
         .harihar-input:focus {
-          border-color: rgba(45, 212, 191, 0.45);
-          box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+          border-color: rgba(16, 185, 129, 0.45);
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
         }
         .harihar-select option {
           background: #0f172a;
