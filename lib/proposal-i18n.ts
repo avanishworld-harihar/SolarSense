@@ -213,7 +213,7 @@ const EN: ProposalDict = {
   "common.annualSaving": "Annual Saving",
   "common.lifeProfit": "25-Year Profit",
   "common.billReduction": "Bill Reduction",
-  "common.engineNote": "Numbers verified by FY 2025-26 MPERC tariff engine",
+  "common.engineNote": "Figures use FY 2025–26 MPERC rules — same check as our printed proposals.",
   "common.thankYou": "Thank You",
   "common.continued": "continued",
   "common.page": "Page",
@@ -302,7 +302,7 @@ const EN: ProposalDict = {
 
   "hero.contactLabel": "Contact",
   "hero.aboutInstaller": "About %INSTALLER%",
-  "hero.engineeredEyebrow": "Engineered Locally",
+  "hero.engineeredEyebrow": "Built near you",
   "hero.localTeamBold": "100% Local team, end-to-end EPC",
   "hero.localTeamFine": "Site survey · Design · Install · Net-meter · 1 yr aftercare.",
 
@@ -379,7 +379,7 @@ const HI: ProposalDict = {
   "common.annualSaving": "वार्षिक बचत",
   "common.lifeProfit": "25-वर्ष का मुनाफा",
   "common.billReduction": "बिल में कमी",
-  "common.engineNote": "FY 2025-26 MPERC टैरिफ इंजन से सत्यापित",
+  "common.engineNote": "आंकड़े FY 2025–26 MPERC नियमों के अनुसार — जैसा प्रिंट प्रस्ताव में।",
   "common.thankYou": "धन्यवाद",
   "common.continued": "जारी",
   "common.page": "पृष्ठ",
@@ -468,7 +468,7 @@ const HI: ProposalDict = {
 
   "hero.contactLabel": "संपर्क",
   "hero.aboutInstaller": "%INSTALLER% के बारे में",
-  "hero.engineeredEyebrow": "स्थानीय इंजीनियरिंग",
+  "hero.engineeredEyebrow": "आपके आसपास से",
   "hero.localTeamBold": "100% स्थानीय टीम, एंड-टू-एंड EPC",
   "hero.localTeamFine": "साइट सर्वे · डिज़ाइन · इंस्टॉल · नेट-मीटर · 1 वर्ष आफ्टरकेयर।",
 

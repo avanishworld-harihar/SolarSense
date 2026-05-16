@@ -33,6 +33,7 @@ import { ATAL_GRIHA_JYOTI } from "@/lib/mp-tariff-2025-26";
 import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
 import { hindiHonoredDisplayName } from "@/lib/roman-name-to-devanagari";
 import { resolvedCompanyProfileForLang } from "@/lib/proposal-company-resolve";
+import { PROPOSAL_PLATFORM_CREDIT } from "@/lib/platform-branding";
 import { expertiseCategoriesCopy, solutionsForEveryScale, whyCustomersChooseUsTitle } from "@/lib/proposal-about-expertise";
 
 // ---------------------------------------------------------------------------
@@ -184,7 +185,7 @@ function AuditNetBillCell({
         : "text-rose-600 font-semibold";
   return (
     <div className="flex min-w-[5.5rem] flex-col items-end justify-center gap-1 py-0.5 sm:min-w-0">
-      <span className={`text-[15px] font-bold tabular-nums leading-none sm:text-sm md:text-base ${amtColor}`}>
+      <span className={`text-[17px] font-extrabold tabular-nums leading-none sm:text-base md:text-lg ${amtColor}`}>
         {inr(total)}
       </span>
       {hasSub ? (
@@ -521,7 +522,8 @@ function HeroCover({
   summary,
   installerLogoUrl,
   location,
-  siteImages
+  siteImages,
+  darkMode = false
 }: {
   D: ProposalDict;
   lang: ProposalLang;
@@ -529,6 +531,7 @@ function HeroCover({
   installerLogoUrl?: string;
   location?: string;
   siteImages?: string[];
+  darkMode?: boolean;
 }) {
   const cp = summary.customerProfile;
   const cmp = resolvedCompanyProfileForLang(summary.companyProfile, lang);
@@ -537,157 +540,236 @@ function HeroCover({
   const taglineClass =
     lang === "hi"
       ? "truncate text-[11px] text-slate-500 sm:text-xs tracking-normal"
-      : "truncate text-[11px] uppercase tracking-[0.2em] text-slate-500 sm:text-xs";
+      : "truncate text-[11px] font-medium text-slate-500 sm:text-xs";
+  const metricDark = darkMode;
 
   // Strict 12-col grid — every block declares its column span so nothing
   // floats or overlaps. On mobile the grid collapses to 1 column.
   return (
-    <section className="proposal-hero relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-50 via-white to-emerald-50/40 p-5 sm:p-8 lg:p-10">
-      {/* ── 1. INSTALLER BAR (Logo · Name · Tagline · Contact) ─────────── */}
-      <div className="grid grid-cols-12 items-center gap-3">
-        <div className="col-span-12 flex items-center gap-3 sm:col-span-7">
-          {installerLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={installerLogoUrl} alt={summary.installer} className="h-12 w-12 flex-shrink-0 rounded-xl border border-white/60 bg-white object-contain p-1 shadow-md sm:h-14 sm:w-14" />
-          ) : (
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-emerald-500 text-white shadow-md sm:h-14 sm:w-14">
-              <Sun className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">{summary.installer}</p>
-            <p className={taglineClass}>{summary.tagline}</p>
-          </div>
-        </div>
-        <div className="col-span-12 sm:col-span-5 sm:text-right">
-          <p className={`text-[10px] font-bold text-slate-400 ${lang === "hi" ? "tracking-normal" : "uppercase tracking-widest"}`}>
-            {D["hero.contactLabel"]}
-          </p>
-          <p className="text-xs font-semibold text-slate-700 sm:text-sm">{summary.contact}</p>
-        </div>
-      </div>
-
-      {/* ── 2. KICKER + CUSTOMER NAME ──────────────────────────────────── */}
-      <div className="mt-7 sm:mt-9">
-        <motion.p
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className={`text-[11px] font-bold text-sky-700 sm:text-xs ${
-            lang === "hi" ? "tracking-normal" : "uppercase tracking-[0.3em]"
+    <section
+      className={`proposal-hero relative overflow-hidden rounded-3xl border p-5 sm:p-8 lg:p-10 ${
+        darkMode
+          ? "border-white/10 bg-slate-900 shadow-[0_24px_80px_-20px_rgba(0,0,0,0.5)]"
+          : "border-slate-200/90 bg-white shadow-[0_24px_80px_-24px_rgba(15,23,42,0.12)]"
+      }`}
+    >
+      {/* Soft document wash — screen only; print stays clean white via globals */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 ${
+          darkMode
+            ? "bg-[radial-gradient(ellipse_90%_70%_at_50%_-20%,rgba(56,189,248,0.12),transparent_55%)]"
+            : "bg-[radial-gradient(ellipse_100%_85%_at_50%_-30%,rgba(14,165,233,0.07),transparent_55%),radial-gradient(ellipse_70%_50%_at_100%_0%,rgba(16,185,129,0.05),transparent_50%)]"
+        }`}
+      />
+      <div className="relative">
+        {/* ── 1. INSTALLER BAR (Logo · Name · Tagline · Contact) ─────────── */}
+        <div
+          className={`grid grid-cols-12 items-center gap-4 border-b border-dashed pb-5 sm:pb-6 ${
+            darkMode ? "border-white/15" : "border-slate-200/80"
           }`}
         >
-          {D["slide.cover.kicker"]}
-        </motion.p>
-        <motion.h1
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
-          className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl lg:text-5xl"
-        >
-          {displayName}
-        </motion.h1>
-        {location ? (
-          <p className="mt-1 text-sm text-slate-600 sm:text-base">{location}</p>
-        ) : null}
-      </div>
+          <div className="col-span-12 flex items-center gap-3 sm:col-span-7">
+            {installerLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={installerLogoUrl}
+                alt={summary.installer}
+                className={`h-12 w-12 flex-shrink-0 rounded-2xl border object-contain p-1 shadow-sm sm:h-14 sm:w-14 ${
+                  darkMode ? "border-white/15 bg-white/95" : "border-slate-200/90 bg-white"
+                }`}
+              />
+            ) : (
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-sky-500 to-emerald-600 text-white shadow-md sm:h-14 sm:w-14">
+                <Sun className="h-6 w-6 sm:h-7 sm:w-7" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className={`truncate text-lg font-bold tracking-tight sm:text-xl ${darkMode ? "text-white" : "text-slate-900"}`}>
+                {summary.installer}
+              </p>
+              <p className={darkMode ? `${taglineClass} text-slate-400` : taglineClass}>{summary.tagline}</p>
+            </div>
+          </div>
+          <div className={`col-span-12 sm:col-span-5 sm:text-right ${darkMode ? "text-slate-200" : ""}`}>
+            <p className={`text-[10px] font-semibold ${darkMode ? "text-slate-500" : "text-slate-400"} ${lang === "hi" ? "tracking-normal" : "uppercase tracking-wide"}`}>
+              {D["hero.contactLabel"]}
+            </p>
+            <p className={`text-xs font-semibold sm:text-sm ${darkMode ? "text-slate-100" : "text-slate-800"}`}>{summary.contact}</p>
+          </div>
+        </div>
 
-      {/* ── 3. CUSTOMER PROFILE — strict 6-col grid ────────────────────── */}
-      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
-        {[
-          { l: D["profile.consumerId"], v: profileFieldOrDash(cp.consumerId) },
-          { l: D["profile.meterNo"], v: profileFieldOrDash(cp.meterNumber) },
-          { l: D["profile.connectionDate"], v: formatConnectionDate(cp.connectionDate) },
-          { l: D["profile.connectionType"], v: expandConnectionType(cp.connectionType, lang) },
-          { l: D["profile.phase"], v: profileFieldOrDash(cp.phase) },
-          { l: D["profile.sanctionedLoad"], v: cp.sanctionedLoadKw ? `${cp.sanctionedLoadKw} kW` : "—" }
-        ].map((c, i) => (
-          <motion.div
-            key={c.l}
-            initial={{ opacity: 0, y: 6 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            transition={{ duration: 0.35, delay: 0.05 + i * 0.04 }}
-            className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-3 py-2.5 backdrop-blur-sm shadow-[0_2px_10px_rgba(15,23,42,0.04)]"
+        {/* ── 2. KICKER + CUSTOMER NAME ──────────────────────────────────── */}
+        <div className="mt-7 sm:mt-8">
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={`text-xs font-semibold sm:text-sm ${darkMode ? "text-sky-400" : "text-sky-700"} ${lang === "hi" ? "tracking-normal" : "tracking-wide"}`}
           >
-            <p
-              className={`truncate text-[10px] font-semibold text-slate-500 ${
-                lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.16em]"
+            {D["slide.cover.kicker"]}
+          </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.05 }}
+            className={`mt-2 text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.6rem] lg:leading-tight ${
+              darkMode ? "text-white" : "text-slate-950"
+            }`}
+          >
+            {displayName}
+          </motion.h1>
+          {location ? (
+            <p className={`mt-1 text-sm sm:text-base ${darkMode ? "text-slate-400" : "text-slate-600"}`}>{location}</p>
+          ) : null}
+        </div>
+
+        {/* ── 3. CUSTOMER PROFILE — strict 6-col grid ────────────────────── */}
+        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+          {[
+            { l: D["profile.consumerId"], v: profileFieldOrDash(cp.consumerId) },
+            { l: D["profile.meterNo"], v: profileFieldOrDash(cp.meterNumber) },
+            { l: D["profile.connectionDate"], v: formatConnectionDate(cp.connectionDate) },
+            { l: D["profile.connectionType"], v: expandConnectionType(cp.connectionType, lang) },
+            { l: D["profile.phase"], v: profileFieldOrDash(cp.phase) },
+            { l: D["profile.sanctionedLoad"], v: cp.sanctionedLoadKw ? `${cp.sanctionedLoadKw} kW` : "—" }
+          ].map((c, i) => (
+            <motion.div
+              key={c.l}
+              initial={{ opacity: 0, y: 6 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, delay: 0.05 + i * 0.04 }}
+              className={`min-w-0 rounded-xl border px-3 py-2.5 ${
+                darkMode
+                  ? "border-white/10 bg-white/[0.06]"
+                  : "border-slate-200/90 bg-slate-50/90 shadow-[0_1px_0_rgba(255,255,255,0.8)_inset]"
               }`}
             >
-              {c.l}
-            </p>
-            <p className="mt-1 truncate text-[13px] font-bold leading-tight text-slate-900 sm:text-sm" title={c.v}>{c.v}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* ── 4. ABOUT-US BLURB (1 short paragraph from companyProfile) ──── */}
-      {cmp.aboutUsParagraphs?.[0] ? (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mt-6 rounded-2xl border border-white/60 bg-white/70 p-4 backdrop-blur-sm shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:p-5"
-        >
-          <p
-            className={`text-[10px] font-bold text-emerald-700 ${
-              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.22em]"
-            }`}
-          >
-            {D["hero.aboutInstaller"].replace("%INSTALLER%", summary.installer)}
-          </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-700 sm:text-sm">
-            {cmp.aboutUsParagraphs[0]}
-          </p>
-        </motion.div>
-      ) : null}
-
-      {/* ── 5. SYSTEM SUMMARY — strict 5-col grid; no overlap ──────────── */}
-      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
-        <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} lang={lang} />
-        <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} lang={lang} />
-        <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} tone="blue" delay={0.15} lang={lang} />
-        <StatTile label={D["common.payback"]} value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`} tone="green" delay={0.2} lang={lang} />
-        <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} lang={lang} />
-      </div>
-      <p className="mt-3 text-[10px] italic text-slate-500 sm:text-[11px]">{D["common.engineNote"]}</p>
-
-      {/* ── 6. WIDE BOTTOM IMAGE — bleed effect, strictly at page bottom ── */}
-      {heroBottomImage ? (
-        <motion.div
-          initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative mt-7 overflow-hidden rounded-2xl shadow-[0_12px_40px_rgba(15,23,42,0.18)] sm:mt-8"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={heroBottomImage} alt="Solar installation" className="h-44 w-full object-cover sm:h-56 lg:h-64" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/10 to-transparent" />
-          <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3 sm:bottom-4 sm:left-6 sm:right-6">
-            <div>
               <p
-                className={`text-[10px] font-bold text-emerald-300 sm:text-xs ${
-                  lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.28em]"
-                }`}
+                className={`truncate text-[10px] font-semibold ${
+                  darkMode ? "text-slate-500" : "text-slate-500"
+                } ${lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wide"}`}
               >
-                {D["hero.engineeredEyebrow"]}
+                {c.l}
               </p>
-              <p className="mt-0.5 text-base font-extrabold leading-tight text-white sm:text-lg">{summary.installer}</p>
-            </div>
-            <p className="text-right text-[10px] font-semibold text-white/80 sm:text-xs">{cmp.installationsDone} {cmp.installationsLabel}</p>
-          </div>
-        </motion.div>
-      ) : (
-        // No image? Fill the bottom with a strong brand band so the page never reads "empty".
-        <motion.div
-          initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative mt-7 overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-sky-900 to-emerald-900 p-5 text-white sm:mt-8 sm:p-7"
-        >
-          <p
-            className={`text-[10px] font-bold text-emerald-300 sm:text-xs ${
-              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.28em]"
+              <p
+                className={`mt-1 truncate text-[13px] font-bold leading-tight sm:text-sm ${darkMode ? "text-white" : "text-slate-900"}`}
+                title={c.v}
+              >
+                {c.v}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ── 4. ABOUT-US BLURB (1 short paragraph from companyProfile) ──── */}
+        {cmp.aboutUsParagraphs?.[0] ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className={`mt-6 rounded-2xl border-l-4 p-4 sm:p-5 ${
+              darkMode
+                ? "border border-white/10 border-l-emerald-400 bg-emerald-950/25"
+                : "border border-emerald-100/90 border-l-emerald-500 bg-emerald-50/40"
             }`}
           >
-            {D["hero.engineeredEyebrow"]}
+            <p
+              className={`text-[10px] font-bold ${
+                darkMode ? "text-emerald-400" : "text-emerald-800"
+              } ${lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wide"}`}
+            >
+              {D["hero.aboutInstaller"].replace("%INSTALLER%", summary.installer)}
+            </p>
+            <p className={`mt-1.5 text-[13px] leading-relaxed sm:text-sm ${darkMode ? "text-slate-200" : "text-slate-700"}`}>
+              {cmp.aboutUsParagraphs[0]}
+            </p>
+          </motion.div>
+        ) : null}
+
+        {/* ── 5. SYSTEM SUMMARY — strict 5-col grid; no overlap ──────────── */}
+        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
+          <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} lang={lang} dark={metricDark} />
+          <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} lang={lang} dark={metricDark} />
+          <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} tone="blue" delay={0.15} lang={lang} dark={metricDark} />
+          <StatTile label={D["common.payback"]} value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`} tone="green" delay={0.2} lang={lang} dark={metricDark} />
+          <StatTile
+            label={D["common.lifeProfit"]}
+            value={inrK(summary.lifetime25Profit)}
+            tone={summary.lifetime25Profit > 0 ? "green" : "rose"}
+            delay={0.25}
+            lang={lang}
+            dark={metricDark}
+          />
+        </div>
+        <div
+          className={`mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 ${
+            darkMode ? "border-white/10" : "border-slate-200/80"
+          }`}
+        >
+          <p className={`text-[10px] leading-snug sm:max-w-[70%] sm:text-[11px] ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
+            {D["common.engineNote"]}
           </p>
-          <p className="mt-1 text-lg font-extrabold tracking-tight sm:text-2xl">{D["hero.localTeamBold"]}</p>
-          <p className="mt-1 text-xs text-white/70 sm:text-sm">{D["hero.localTeamFine"]}</p>
-        </motion.div>
-      )}
+          <p className={`shrink-0 text-[10px] font-medium sm:text-right sm:text-[11px] ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
+            {PROPOSAL_PLATFORM_CREDIT}
+          </p>
+        </div>
+
+        {/* ── 6. WIDE BOTTOM IMAGE — bleed effect, strictly at page bottom ── */}
+        {heroBottomImage ? (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative mt-7 overflow-hidden rounded-2xl shadow-lg shadow-slate-900/15 sm:mt-8"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={heroBottomImage} alt="Solar installation" className="h-44 w-full object-cover sm:h-56 lg:h-64" />
+            <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/85 via-slate-900/35 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-emerald-950 to-transparent px-4 pb-4 pt-16 sm:px-6 sm:pb-5 sm:pt-20">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p
+                    className={`text-[10px] font-bold text-emerald-300/95 sm:text-xs ${
+                      lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wide"
+                    }`}
+                  >
+                    {D["hero.engineeredEyebrow"]}
+                  </p>
+                  <p className="mt-0.5 text-base font-bold leading-tight text-white sm:text-lg">{D["hero.localTeamBold"]}</p>
+                  <p className="mt-1 max-w-xl text-[11px] leading-snug text-white/85 sm:text-sm">{D["hero.localTeamFine"]}</p>
+                </div>
+                <p className="text-[10px] font-semibold text-emerald-100/90 sm:text-right sm:text-xs">
+                  {summary.installer}
+                  <span className="mx-1.5 opacity-50">·</span>
+                  {cmp.installationsDone} {cmp.installationsLabel}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative mt-7 overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-800 via-emerald-900 to-slate-900 p-5 text-white shadow-lg sm:mt-8 sm:p-7"
+          >
+            <p
+              className={`text-[10px] font-bold text-emerald-300 sm:text-xs ${
+                lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wide"
+              }`}
+            >
+              {D["hero.engineeredEyebrow"]}
+            </p>
+            <p className="mt-1 text-lg font-bold tracking-tight sm:text-2xl">{D["hero.localTeamBold"]}</p>
+            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-white/85 sm:text-sm">{D["hero.localTeamFine"]}</p>
+          </motion.div>
+        )}
+      </div>
     </section>
   );
 }
@@ -719,12 +801,12 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
         </p>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="proposal-audit-table-scroll overflow-x-auto overflow-y-visible overscroll-x-contain scroll-smooth rounded-2xl [-webkit-overflow-scrolling:touch] sm:overflow-x-visible">
-            <table className="proposal-audit-table min-w-[720px] w-full border-separate border-spacing-0 text-sm sm:min-w-0 sm:table-fixed">
+            <table className="proposal-audit-table min-w-[760px] w-full border-separate border-spacing-0 text-sm sm:min-w-0 sm:table-fixed">
               <thead className="bg-slate-900 text-white">
                 <tr>
                   <th
                     scope="col"
-                    className={`sticky left-0 z-30 min-w-[3.5rem] whitespace-nowrap border-b border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-[10px] font-bold shadow-[4px_0_8px_-2px_rgba(0,0,0,0.25)] sm:static sm:z-auto sm:w-[10%] sm:px-2 sm:py-2 sm:text-[9px] sm:shadow-none ${
+                    className={`sticky left-0 z-30 min-w-[4rem] whitespace-nowrap border-b border-slate-700 bg-slate-900 px-3 py-3 text-left text-xs font-bold shadow-[4px_0_8px_-2px_rgba(0,0,0,0.25)] sm:static sm:z-auto sm:w-[10%] sm:px-2.5 sm:py-2.5 sm:text-sm sm:shadow-none ${
                       lang === "hi" ? "tracking-normal text-white" : "uppercase tracking-wider text-white"
                     }`}
                   >
@@ -732,7 +814,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
                   </th>
                   <th
                     scope="col"
-                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[9%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                    className={`border-b border-slate-700 px-3 py-3 text-right text-xs sm:w-[9%] sm:px-2.5 sm:py-2.5 sm:text-sm ${
                       lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
                     }`}
                   >
@@ -740,7 +822,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
                   </th>
                   <th
                     scope="col"
-                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                    className={`border-b border-slate-700 px-3 py-3 text-right text-xs sm:w-[17%] sm:px-2.5 sm:py-2.5 sm:text-sm ${
                       lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
                     }`}
                   >
@@ -748,7 +830,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
                   </th>
                   <th
                     scope="col"
-                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[15%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                    className={`border-b border-slate-700 px-3 py-3 text-right text-xs sm:w-[15%] sm:px-2.5 sm:py-2.5 sm:text-sm ${
                       lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
                     }`}
                   >
@@ -756,7 +838,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
                   </th>
                   <th
                     scope="col"
-                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                    className={`border-b border-slate-700 px-3 py-3 text-right text-xs sm:w-[17%] sm:px-2.5 sm:py-2.5 sm:text-sm ${
                       lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
                     }`}
                   >
@@ -764,7 +846,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
                   </th>
                   <th
                     scope="col"
-                    className={`min-w-[9rem] border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:min-w-0 sm:w-[32%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                    className={`min-w-[9rem] border-b border-slate-700 px-3 py-3 text-right text-xs sm:min-w-0 sm:w-[32%] sm:px-2.5 sm:py-2.5 sm:text-sm ${
                       lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
                     }`}
                   >
@@ -777,43 +859,45 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
                   const isPeak = i >= 3 && i <= 6;
                   /** Opaque row + sticky cell backgrounds — semi-transparent rows caused scrolled columns to show through the Month column on mobile. */
                   const rowBg = isPeak ? "bg-rose-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50";
-                  const stickyMonthClass = `sticky left-0 z-20 min-w-[3.5rem] whitespace-nowrap border-b border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-[4px_0_6px_-2px_rgba(15,23,42,0.12)] sm:static sm:z-auto sm:min-w-0 sm:px-2 sm:py-2 sm:text-xs sm:shadow-none ${rowBg}`;
+                  const stickyMonthClass = `sticky left-0 z-20 min-w-[4rem] whitespace-nowrap border-b border-slate-200 px-3 py-3 text-[15px] font-bold text-slate-900 shadow-[4px_0_6px_-2px_rgba(15,23,42,0.12)] sm:static sm:z-auto sm:min-w-0 sm:px-2.5 sm:py-2.5 sm:text-sm sm:shadow-none ${rowBg}`;
                   return (
                     <tr key={r.label} className={rowBg}>
                       <td className={stickyMonthClass}>{monthLbls[i]}</td>
-                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-3 text-right text-[15px] font-bold tabular-nums text-slate-800 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
                         {r.units}
                       </td>
-                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-3 text-right text-[15px] font-bold tabular-nums text-slate-800 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
                         {inr(r.energy)}
                       </td>
-                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-3 text-right text-[15px] font-bold tabular-nums text-slate-800 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
                         {inr(r.fixed)}
                       </td>
-                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-3 text-right text-[15px] font-bold tabular-nums text-slate-800 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
                         {inr(r.duty + r.fuel)}
                       </td>
-                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right align-top sm:px-2 sm:py-2">
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-3 text-right align-top sm:px-2.5 sm:py-2.5">
                         <AuditNetBillCell D={D} total={r.total} subsidy={r.subsidy} isPeak={isPeak} />
                       </td>
                     </tr>
                   );
                 })}
                 <tr className="bg-sky-50 font-bold text-sky-900">
-                  <td className="sticky left-0 z-20 min-w-[3.5rem] whitespace-nowrap border-b border-sky-100 bg-sky-50 px-3 py-2.5 text-sm shadow-[4px_0_6px_-2px_rgba(14,116,144,0.15)] sm:static sm:z-auto sm:min-w-0 sm:px-2 sm:py-2 sm:text-xs sm:shadow-none">
+                  <td className="sticky left-0 z-20 min-w-[4rem] whitespace-nowrap border-b border-sky-100 bg-sky-50 px-3 py-3 text-[15px] font-bold shadow-[4px_0_6px_-2px_rgba(14,116,144,0.15)] sm:static sm:z-auto sm:min-w-0 sm:px-2.5 sm:py-2.5 sm:text-sm sm:shadow-none">
                     {D["audit.total"]}
                   </td>
-                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">{summary.auditTotals.units}</td>
-                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-3 text-right text-[15px] font-bold tabular-nums text-sky-950 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
+                    {summary.auditTotals.units}
+                  </td>
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-3 text-right text-[15px] font-bold tabular-nums text-sky-950 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
                     {inr(summary.auditTotals.energy)}
                   </td>
-                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-3 text-right text-[15px] font-bold tabular-nums text-sky-950 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
                     {inr(summary.auditTotals.fixed)}
                   </td>
-                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-3 text-right text-[15px] font-bold tabular-nums text-sky-950 sm:px-2.5 sm:py-2.5 sm:text-sm md:text-[15px]">
                     {inr(summary.auditTotals.duty + summary.auditTotals.fuel)}
                   </td>
-                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right align-top sm:px-2 sm:py-2">
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-3 text-right align-top sm:px-2.5 sm:py-2.5">
                     <AuditNetBillCell
                       D={D}
                       total={summary.auditTotals.total}
@@ -2239,6 +2323,7 @@ export default function ProposalView({
           installerLogoUrl={displayInstallerLogoUrl || undefined}
           location={undefined}
           siteImages={siteImages}
+          darkMode={darkMode}
         />
       </div>
 
