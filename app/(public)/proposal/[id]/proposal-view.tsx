@@ -2115,6 +2115,10 @@ function ClosingSection({
   lang: ProposalLang;
   honoredDisplay: string;
 }) {
+  const closingPhotos = [3, 4, 5]
+    .map((i) => siteImages?.[i])
+    .filter((u): u is string => typeof u === "string" && u.trim().length > 0);
+
   return (
     <section className="mt-12 sm:mt-16">
       <motion.div
@@ -2122,35 +2126,32 @@ function ClosingSection({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white sm:p-10"
+        className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950/90 via-slate-900 to-slate-950 p-6 text-white ring-1 ring-white/10 sm:p-10"
       >
         <p
-          className={`text-xs text-sky-300 ${
+          className={`text-xs text-emerald-200/90 ${
             lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.32em]"
           }`}
         >
           {D["common.thankYou"]}
         </p>
-        <h3 className="mt-3 text-3xl font-bold sm:text-5xl">{honoredDisplay}!</h3>
-        <p className="mt-3 text-base text-slate-300 sm:text-lg">{D["slide.closing.title"]}</p>
-        <div className="mt-6 grid grid-cols-3 gap-3">
-          {[3, 4, 5].map((i, idx) => {
-            const url = siteImages?.[i] ?? siteImages?.[idx];
-            return (
-              <div key={idx} className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-700">
-                {url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={url} alt={`Site ${idx + 1}`} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-slate-400">
-                    <span className="text-[10px] uppercase tracking-widest">Photo</span>
-                  </div>
-                )}
+        <h3 className="mt-3 text-3xl font-bold tracking-tight sm:text-5xl">{honoredDisplay}!</h3>
+        <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">{D["slide.closing.title"]}</p>
+        {closingPhotos.length > 0 ? (
+          <div
+            className={`mt-8 grid gap-3 ${
+              closingPhotos.length === 1 ? "grid-cols-1 sm:max-w-md" : closingPhotos.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
+            }`}
+          >
+            {closingPhotos.map((url, idx) => (
+              <div key={`${url}-${idx}`} className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-800/80 ring-1 ring-white/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt={`Installation ${idx + 1}`} className="h-full w-full object-cover" />
               </div>
-            );
-          })}
-        </div>
-        <div className="mt-6 flex flex-wrap gap-3">
+            ))}
+          </div>
+        ) : null}
+        <div className="mt-8 flex flex-wrap gap-3 sm:gap-4">
           <CtaButton onClick={onShare} variant="secondary">
             <MessageCircle className="h-4 w-4" /> {D["cta.whatsapp"]}
           </CtaButton>

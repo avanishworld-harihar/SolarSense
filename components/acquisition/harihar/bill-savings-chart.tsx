@@ -17,7 +17,7 @@ export function BillSavingsChart({ currentBill, newBill, monthlySavings }: Props
 
   return (
     <div className="space-y-5">
-      <p className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-teal-200/80">
+      <p className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
         Monthly bill model
       </p>
       <div className="space-y-3">
@@ -52,11 +52,11 @@ export function BillSavingsChart({ currentBill, newBill, monthlySavings }: Props
         <div>
           <div className="mb-1 flex justify-between text-xs text-slate-400">
             <span>Estimated monthly savings</span>
-            <span className="font-mono text-cyan-200">₹{monthlySavings.toLocaleString("en-IN")}</span>
+            <span className="font-mono text-amber-100">₹{monthlySavings.toLocaleString("en-IN")}</span>
           </div>
           <div className="h-3 overflow-hidden rounded-full bg-white/5 ring-1 ring-white/10">
             <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500/90 to-sky-400/70"
+              className="h-full rounded-full bg-gradient-to-r from-amber-500/95 to-amber-300/75"
               initial={{ width: 0 }}
               animate={{ width: `${savW}%` }}
               transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.16 }}
@@ -94,12 +94,12 @@ export function TwentyFiveYearSpark({ annualSavings }: SparkProps) {
       <svg viewBox="0 0 100 100" className="aspect-[2/1] w-full" preserveAspectRatio="none" aria-hidden>
         <defs>
           <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgb(45,212,191)" stopOpacity="0.45" />
+            <stop offset="0%" stopColor="rgb(16,185,129)" stopOpacity="0.4" />
             <stop offset="100%" stopColor="rgb(15,23,42)" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="sparkLine" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#5eead4" />
-            <stop offset="100%" stopColor="#38bdf8" />
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#fbbf24" />
           </linearGradient>
         </defs>
         <path d={d} fill="url(#sparkFill)" />
@@ -115,7 +115,7 @@ export function TwentyFiveYearSpark({ annualSavings }: SparkProps) {
           transition={{ duration: 0.9, ease: "easeOut" }}
         />
       </svg>
-      <p className="mt-1 text-center font-mono text-xs text-teal-100/90">
+      <p className="mt-1 text-center font-mono text-xs text-emerald-100/90">
         ≈ ₹{Math.round(total).toLocaleString("en-IN")} cumulative (25 × annual model)
       </p>
     </div>

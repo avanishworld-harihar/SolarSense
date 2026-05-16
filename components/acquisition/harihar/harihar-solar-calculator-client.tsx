@@ -503,7 +503,7 @@ export function HariharSolarCalculatorClient() {
               >
                 <section className="rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-white/[0.07] to-emerald-950/20 p-5 shadow-2xl backdrop-blur-2xl sm:p-7">
                   <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-base font-semibold text-emerald-100">Your results</h2>
+                    <h2 className="text-lg font-semibold tracking-tight text-emerald-50">Your results</h2>
                     <span className="rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[10px] text-slate-400">
                       Model v{data?.engineVersion} · {data?.tariff.discomLabel}
                     </span>
