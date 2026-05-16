@@ -1051,6 +1051,276 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   will-change: height, transform;
 }
 
+/* ----------------------------------------------------------------------------
+   Proposal journey — one connected scroll (screen). Print stays unchanged.
+---------------------------------------------------------------------------- */
+
+.proposal-document.proposal-journey-connected {
+  position: relative;
+}
+
+.proposal-document.proposal-journey-connected[data-theme="dark"] {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -30%, rgba(16, 185, 129, 0.08), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 100% 20%, rgba(14, 165, 233, 0.06), transparent 50%),
+    #030712;
+  color: rgb(226 232 240);
+}
+
+.proposal-document.proposal-journey-connected[data-theme="light"] {
+  background:
+    radial-gradient(ellipse 100% 70% at 50% -20%, rgba(14, 165, 233, 0.06), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 0% 30%, rgba(16, 185, 129, 0.04), transparent 45%),
+    rgb(248 250 252);
+}
+
+.proposal-journey-section-pad {
+  padding-top: 0.25rem;
+}
+
+.proposal-journey-header .proposal-journey-kicker {
+  color: rgb(14 165 233);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-kicker {
+  color: rgb(56 189 248);
+}
+
+.proposal-journey-title {
+  color: rgb(15 23 42);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-title {
+  color: rgb(248 250 252);
+}
+
+.proposal-journey-subtitle {
+  color: rgb(71 85 105);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-subtitle {
+  color: rgb(148 163 184);
+}
+
+.proposal-journey-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgb(5 150 105);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-step-badge {
+  color: rgb(110 231 183);
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.proposal-journey-bridge {
+  border-radius: 1rem;
+  padding: 0.85rem 1.1rem;
+  border-left: 3px solid rgb(16 185 129);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.08), transparent 70%);
+  color: rgb(30 41 59);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-bridge {
+  border-left-color: rgb(52 211 153);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.12), transparent 72%);
+  color: rgb(203 213 225);
+}
+
+.proposal-journey-progress {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(8px);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-progress {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.proposal-journey-progress-link {
+  color: rgb(71 85 105);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.proposal-journey-progress-link:hover {
+  background: rgba(14, 165, 233, 0.1);
+  color: rgb(14 116 144);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-progress-link {
+  color: rgb(148 163 184);
+}
+
+.proposal-document[data-theme="dark"] .proposal-journey-progress-link:hover {
+  background: rgba(56, 189, 248, 0.12);
+  color: rgb(186 230 253);
+}
+
+.proposal-panel {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 4px 24px rgba(11, 34, 64, 0.06);
+  backdrop-filter: blur(6px);
+}
+
+.proposal-document[data-theme="dark"] .proposal-panel {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.proposal-panel--highlight {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.12), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 0 32px rgba(16, 185, 129, 0.12);
+}
+
+.proposal-document[data-theme="light"] .proposal-panel--highlight {
+  background: linear-gradient(145deg, rgba(236, 253, 245, 0.95), rgba(255, 255, 255, 0.9));
+}
+
+.proposal-panel--muted {
+  opacity: 0.95;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.proposal-document[data-theme="dark"] .proposal-panel--muted {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.proposal-document[data-theme="dark"] .proposal-page {
+  background: rgba(15, 23, 42, 0.55);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(56, 189, 248, 0.06);
+}
+
+.proposal-document[data-theme="dark"] .proposal-page:hover {
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(56, 189, 248, 0.14),
+    0 0 28px rgba(16, 185, 129, 0.08);
+}
+
+.proposal-chart-label {
+  color: rgb(100 116 139);
+}
+
+.proposal-document[data-theme="dark"] .proposal-chart-label {
+  color: rgb(148 163 184);
+}
+
+.proposal-hero-ribbon {
+  gap: 0.5rem;
+}
+
+.proposal-hero-ribbon-tile {
+  border-radius: 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.proposal-document[data-theme="light"] .proposal-hero-ribbon-tile {
+  background: rgba(248, 250, 252, 0.95);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.proposal-hero-ribbon-tile--primary {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(14, 165, 233, 0.08));
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.15);
+}
+
+.proposal-hero-ribbon-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgb(100 116 139);
+}
+
+.proposal-document[data-theme="dark"] .proposal-hero-ribbon-label {
+  color: rgb(148 163 184);
+}
+
+.proposal-hero-ribbon-value {
+  margin-top: 0.25rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: rgb(15 23 42);
+}
+
+.proposal-document[data-theme="dark"] .proposal-hero-ribbon-value {
+  color: rgb(248 250 252);
+}
+
+.proposal-hero-ribbon-tile--primary .proposal-hero-ribbon-value {
+  font-size: 1.35rem;
+  color: rgb(5 150 105);
+}
+
+.proposal-document[data-theme="dark"] .proposal-hero-ribbon-tile--primary .proposal-hero-ribbon-value {
+  color: rgb(110 231 183);
+}
+
+.proposal-hero-ribbon-hint {
+  margin-top: 0.15rem;
+  font-size: 10px;
+  color: rgb(100 116 139);
+}
+
+.proposal-document[data-theme="dark"] .proposal-insight-card {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.proposal-financial-hero {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .proposal-financial-hero {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.proposal-financial-hero-tile {
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid transparent;
+}
+
+.proposal-financial-hero-tile--saving {
+  grid-column: span 2;
+  border-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.08));
+}
+
+@media (min-width: 640px) {
+  .proposal-financial-hero-tile--saving {
+    grid-column: span 1;
+  }
+}
+
+.proposal-document[data-theme="dark"] .proposal-financial-hero-tile--saving {
+  box-shadow: 0 0 28px rgba(16, 185, 129, 0.2);
+}
+
 @media print {
   @page {
     size: 210mm 297mm; /* Exact A4 portrait */

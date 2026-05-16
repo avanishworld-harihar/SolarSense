@@ -40,6 +40,14 @@ import {
   solutionsForEveryScale,
   whyCustomersChooseUsTitle
 } from "@/lib/proposal-about-expertise";
+import {
+  HeroSavingsRibbon,
+  JourneyBridge,
+  ProposalJourneyProgress,
+  ProposalJourneySection,
+  ProposalPanel,
+  ProposalSectionHeader
+} from "@/components/proposal/proposal-journey";
 
 // ---------------------------------------------------------------------------
 // Connection-type expansion — gives "LT" → "LT — Low Tension (Residential)"
@@ -277,18 +285,46 @@ function StatTile({
   );
 }
 
-function SectionHeader({ kicker, title, subtitle, lang = "en" }: { kicker: string; title: string; subtitle?: string; lang?: ProposalLang }) {
-  return (
-    <header className="mb-6">
-      <p
-        className={`text-xs text-sky-700 ${lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.32em]"}`}
-      >
-        {kicker}
-      </p>
-      <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{title}</h2>
-      {subtitle ? <p className="mt-1 text-sm text-slate-600 sm:text-base">{subtitle}</p> : null}
-    </header>
-  );
+function SectionHeader({
+  kicker,
+  title,
+  subtitle,
+  lang = "en",
+  step
+}: {
+  kicker: string;
+  title: string;
+  subtitle?: string;
+  lang?: ProposalLang;
+  step?: number;
+}) {
+  return <ProposalSectionHeader kicker={kicker} title={title} subtitle={subtitle} lang={lang} step={step} />;
+}
+
+function journeyBridge(lang: ProposalLang, key: string): string {
+  const en: Record<string, string> = {
+    afterCover: "We start with who we are — then we look at your bill, your savings, and your system.",
+    afterTrust: "Your real electricity bills show where costs go up — and where solar helps.",
+    afterBill: "From your bill pattern, here is how much you can save each year.",
+    afterSavings: "Along with savings, solar also cuts pollution and helps the planet.",
+    afterImpact: "This is the system size and parts we recommend for your roof.",
+    afterSystem: "Here is how we install, support, and stay with you after go-live.",
+    afterInstall: "Clear yearly care so your panels keep working for decades.",
+    afterSupport: "Payment steps, subsidy, and commercial terms — all in one place.",
+    afterPay: "Bank details and a simple way to say yes — we are ready when you are."
+  };
+  const hi: Record<string, string> = {
+    afterCover: "पहले हमारा परिचय — फिर आपका बिल, बचत और सिस्टम।",
+    afterTrust: "आपके असली बिल बताते हैं कि खर्च कहाँ बढ़ता है — और सोलर कहाँ मदद करता है।",
+    afterBill: "बिल के हिसाब से, हर साल आप कितना बचा सकते हैं — यहाँ है।",
+    afterSavings: "बचत के साथ, सोलर से प्रदूषण भी कम होता है।",
+    afterImpact: "आपकी छत के लिए सिस्टम साइज़ और सामान — यहाँ है।",
+    afterSystem: "इंस्टॉल, सपोर्ट और बाद की देखभाल — कैसे करते हैं।",
+    afterInstall: "सालाना AMC — ताकि पैनल सालों तक चलें।",
+    afterSupport: "भुगतान, सब्सिडी और शर्तें — सब एक जगह।",
+    afterPay: "बैंक विवरण और अगला कदम — जब आप तैयार हों।"
+  };
+  return lang === "hi" ? hi[key] ?? en[key] ?? "" : en[key] ?? "";
 }
 
 function toFiniteNonNegative(value: unknown): number {
@@ -327,7 +363,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               }`}
               aria-label={`${safeLabels[i]}: ${v}`}
             />
-            <span className="text-[10px] font-medium text-slate-500">{safeLabels[i]}</span>
+            <span className="proposal-chart-label text-[10px] font-medium">{safeLabels[i]}</span>
           </div>
         );
       })}
@@ -717,6 +753,18 @@ function HeroCover({
             dark={metricDark}
           />
         </div>
+        <HeroSavingsRibbon
+          annualSaving={summary.annualSaving}
+          paybackYears={summary.paybackYears}
+          netCost={summary.netCost}
+          subsidy={summary.pmSubsidy}
+          labels={{
+            saving: D["common.annualSaving"],
+            payback: D["common.payback"],
+            net: D["common.netCost"],
+            subsidy: lang === "hi" ? "सब्सिडी" : "Subsidy"
+          }}
+        />
         <div
           className={`mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 ${
             darkMode ? "border-white/10" : "border-slate-200/80"
@@ -789,13 +837,12 @@ function HeroCover({
 
 function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; summary: ProposalDeckSummary; monthLbls: string[]; lang: ProposalLang }) {
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
+    <ProposalJourneySection id="bill-audit">
+      <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
 
-      {/* Bar chart with summer trap highlight */}
-      <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-4 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
+      <ProposalPanel className="sm:p-6">
         <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
-      </div>
+      </ProposalPanel>
       {summary.mpSmartBillingCaption ? (
         <p className="mt-4 rounded-xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-xs leading-relaxed text-slate-800">
           <span className="font-bold text-sky-900">{D["audit.mpSmartPrefix"]} </span>
@@ -983,7 +1030,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           </p>
         </div>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1003,12 +1050,39 @@ function EconomicsSection({
   const [showFinance, setShowFinance] = useState(false);
 
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.economics.kicker"]} title={D["slide.economics.title"]} subtitle={D["slide.economics.subtitle"]} lang={lang} />
+    <ProposalJourneySection id="economics">
+      <SectionHeader step={4} kicker={D["slide.economics.kicker"]} title={D["slide.economics.title"]} subtitle={D["slide.economics.subtitle"]} lang={lang} />
+
+      <motion.div className="proposal-financial-hero mb-6">
+        <div className="proposal-financial-hero-tile proposal-financial-hero-tile--saving">
+          <p className="proposal-hero-ribbon-label">{D["common.annualSaving"]}</p>
+          <p className="proposal-hero-ribbon-value">
+            <AnimatedINR value={summary.annualSaving} />
+          </p>
+          <p className="proposal-hero-ribbon-hint">{D["common.perYr"]}</p>
+        </div>
+        <div className="proposal-financial-hero-tile proposal-panel">
+          <p className="proposal-hero-ribbon-label">{D["common.payback"]}</p>
+          <p className="proposal-hero-ribbon-value">{summary.paybackYears.toFixed(1)} {D["emi.years"]}</p>
+        </div>
+        <div className="proposal-financial-hero-tile proposal-panel">
+          <p className="proposal-hero-ribbon-label">{D["econ.netSaving"]}</p>
+          <p className="proposal-hero-ribbon-value">
+            <AnimatedINR value={summary.solarVsGrid.netSaving} />
+          </p>
+          <p className="proposal-hero-ribbon-hint">25 {D["emi.years"]}</p>
+        </div>
+        <div className="proposal-financial-hero-tile proposal-panel">
+          <p className="proposal-hero-ribbon-label">{D["common.netCost"]}</p>
+          <p className="proposal-hero-ribbon-value">
+            <AnimatedINR value={summary.netCost} />
+          </p>
+        </div>
+      </motion.div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Generation vs Usage */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <ProposalPanel className="sm:p-6">
           <p
             className={`text-xs text-slate-500 ${
               lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.18em]"
@@ -1047,10 +1121,10 @@ function EconomicsSection({
               <p className="mt-1 text-lg font-bold text-sky-900">{summary.coverage}%</p>
             </div>
           </div>
-        </div>
+        </ProposalPanel>
 
         {/* EMI calculator */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <ProposalPanel className="sm:p-6">
           <div className="flex items-center justify-between">
             <p
               className={`text-xs text-slate-500 ${
@@ -1123,25 +1197,25 @@ function EconomicsSection({
               </a>
             </motion.div>
           ) : null}
-        </div>
+        </ProposalPanel>
       </div>
 
       {/* 25-yr comparison */}
       <div className="mt-8 grid gap-4 sm:grid-cols-5">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:col-span-3 sm:p-6">
+        <ProposalPanel emphasis="highlight" className="sm:col-span-3 sm:p-6">
           <SolarVsGridChart
             years={summary.solarVsGrid.years}
             grid={summary.solarVsGrid.gridCumulative}
             solar={summary.solarVsGrid.solarCumulative}
           />
-        </div>
+        </ProposalPanel>
         <div className="grid gap-3 sm:col-span-2">
           <StatTile label={D["econ.grid25"]} value={inr(summary.solarVsGrid.totalGrid)} tone="rose" lang={lang} />
           <StatTile label={D["econ.solar25"]} value={inr(summary.solarVsGrid.totalSolar)} tone="blue" lang={lang} />
           <StatTile label={D["econ.netSaving"]} value={inr(summary.solarVsGrid.netSaving)} tone="green" lang={lang} />
         </div>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1179,8 +1253,8 @@ function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: Pr
   const yearlyTrees = Math.round(summary.environmental.treeEquivalent / 25);
 
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.environment.kicker"]} title={D["slide.environment.title"]} subtitle={D["slide.environment.subtitle"]} lang={lang} />
+    <ProposalJourneySection id="environment">
+      <SectionHeader step={5} kicker={D["slide.environment.kicker"]} title={D["slide.environment.title"]} subtitle={D["slide.environment.subtitle"]} lang={lang} />
       <div ref={ref} className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -1298,7 +1372,7 @@ function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: Pr
         </p>
         <p className="mt-3 text-base text-slate-300 sm:text-lg">{D["env.legacy.sub"]}</p>
       </motion.div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1319,8 +1393,8 @@ function CompanyProfileSection({
   const trustTitle = whyCustomersChooseUsTitle(lang);
 
   return (
-    <section className="mt-10 sm:mt-12">
-      <SectionHeader kicker={D["slide.about.kicker"]} title={scale.title} subtitle={scale.subtitle} lang={lang} />
+    <ProposalJourneySection id="expertise">
+      <SectionHeader step={2} kicker={D["slide.about.kicker"]} title={scale.title} subtitle={scale.subtitle} lang={lang} />
 
       {/* Three expertise cards — strict 3-column grid, equal heights */}
       <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
@@ -1443,7 +1517,7 @@ function CompanyProfileSection({
           </motion.div>
         ))}
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1473,8 +1547,8 @@ function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang:
       ];
 
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.technical.kicker"]} title={D["slide.technical.title"]} lang={lang} />
+    <ProposalJourneySection id="technical">
+      <SectionHeader step={6} kicker={D["slide.technical.kicker"]} title={D["slide.technical.title"]} lang={lang} />
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
         <p
           className={`text-xs text-slate-500 ${
@@ -1526,14 +1600,14 @@ function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang:
           ))}
         </div>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
 function BomSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.bom.kicker"]} title={D["slide.bom.title"]} lang={lang} />
+    <ProposalJourneySection id="bom">
+      <SectionHeader step={6} kicker={D["slide.bom.kicker"]} title={D["slide.bom.title"]} lang={lang} />
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-900 text-white">
@@ -1604,7 +1678,7 @@ function BomSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang;
           </div>
         </div>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1612,8 +1686,8 @@ function PaymentSection({ D, summary, lang }: { D: ProposalDict; summary: Propos
   const colors = ["bg-sky-500", "bg-violet-500", "bg-emerald-500", "bg-amber-500"];
   const labelKeys: Array<keyof ProposalDict> = ["pay.advance", "pay.material", "pay.installation", "pay.commissioning"];
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.payment.kicker"]} title={D["slide.payment.title"]} lang={lang} />
+    <ProposalJourneySection id="payment">
+      <SectionHeader step={9} kicker={D["slide.payment.kicker"]} title={D["slide.payment.title"]} lang={lang} />
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex h-12 w-full">
           {summary.paymentMilestones.map((m, i) => (
@@ -1648,7 +1722,7 @@ function PaymentSection({ D, summary, lang }: { D: ProposalDict; summary: Propos
           {D["commercial.net"]}: <span className="font-bold text-sky-300">{inr(summary.netCost)}</span>
         </p>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1666,8 +1740,8 @@ function CommercialAndAmcSection({
   lang: ProposalLang;
 }) {
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.commercial.kicker"]} title={D["slide.commercial.title"]} lang={lang} />
+    <ProposalJourneySection id="commercial-terms">
+      <SectionHeader step={9} kicker={D["slide.commercial.kicker"]} title={D["slide.commercial.title"]} lang={lang} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{D["commercial.gross"]}</p>
@@ -1722,7 +1796,7 @@ function CommercialAndAmcSection({
           </div>
         </div>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1734,8 +1808,8 @@ function ServiceAmcSection({ D, lang, summary }: { D: ProposalDict; lang: Propos
     ? ["साइट पर पानी एवं विद्युत आपूर्ति", "बीमा एवं भौतिक नुकसान", "इंटरनेट कनेक्शन", "वैंडालिज्म से क्षति"]
     : ["Water + power at the site", "Insurance & physical damage", "Internet connectivity", "Vandalism damage"];
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.amc.kicker"]} title={D["slide.amc.title"]} lang={lang} />
+    <ProposalJourneySection id="amc">
+      <SectionHeader step={8} kicker={D["slide.amc.kicker"]} title={D["slide.amc.title"]} lang={lang} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <div className="flex items-center gap-2">
@@ -1784,7 +1858,7 @@ function ServiceAmcSection({ D, lang, summary }: { D: ProposalDict; lang: Propos
           </div>
         </div>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1858,8 +1932,8 @@ function BankingSection({
       : (lang === "hi" ? "वेब प्रपोजल देखने के लिए स्कैन करें" : "Scan to view this proposal online");
 
   return (
-    <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.banking.kicker"]} title={D["slide.banking.title"]} lang={lang} />
+    <ProposalJourneySection id="banking">
+      <SectionHeader step={10} kicker={D["slide.banking.kicker"]} title={D["slide.banking.title"]} lang={lang} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex items-center gap-2">
@@ -1928,7 +2002,7 @@ function BankingSection({
       <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-center text-xs font-bold text-emerald-800">
         🔒 GST receipt issued · RTGS / NEFT / UPI accepted
       </p>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -1974,8 +2048,9 @@ function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; la
       ];
 
   return (
-    <section className="mt-10 sm:mt-12">
+    <ProposalJourneySection id="survey">
       <SectionHeader
+        step={7}
         kicker={lang === "hi" ? "सर्वे + डिज़ाइन" : "Survey · Design · Build"}
         title={lang === "hi" ? "साइट इंजीनियरिंग गहराई" : "Site Survey, Shadow Analysis & Build Workflow"}
         subtitle={lang === "hi"
@@ -2090,7 +2165,7 @@ function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; la
           ))}
         </div>
       </div>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -2120,7 +2195,7 @@ function ClosingSection({
     .filter((u): u is string => typeof u === "string" && u.trim().length > 0);
 
   return (
-    <section className="mt-12 sm:mt-16">
+    <ProposalJourneySection id="closing-cta">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -2164,10 +2239,10 @@ function ClosingSection({
           </CtaButton>
         </div>
       </motion.div>
-      <p className="mt-8 text-center text-[11px] uppercase tracking-[0.24em] text-slate-400">
+      <p className="mt-8 text-center text-[11px] uppercase tracking-[0.24em] text-slate-400 proposal-journey-subtitle">
         {installer.name} · {installer.contact} · {installer.tagline}
       </p>
-    </section>
+    </ProposalJourneySection>
   );
 }
 
@@ -2187,7 +2262,7 @@ export default function ProposalView({
   const [downloading, setDownloading] = useState(false);
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
   const [selectedAmcYears, setSelectedAmcYears] = useState<1 | 5 | 10>(1);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   /** Prefer snapshot from DB; if missing (older proposals), fall back to this browser's saved branding. */
   const [displayInstallerLogoUrl, setDisplayInstallerLogoUrl] = useState("");
 
@@ -2276,12 +2351,15 @@ export default function ProposalView({
   return (
     <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="never">
       <div
-        className={`proposal-document mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
+        className={`proposal-document proposal-journey-connected mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
           lang === "hi" ? "lang-hi " : ""
-        }${darkMode ? "bg-slate-950 text-white" : "bg-transparent"}`}
+        }${darkMode ? "text-white" : ""}`}
         data-theme={darkMode ? "dark" : "light"}
       >
       {/* Floating controls — hidden in print */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <ProposalJourneyProgress showSurvey={showSurveyWorkflowSection} className="flex-1 min-w-0" />
+      </div>
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2 print:hidden">
         <button
           type="button"
@@ -2334,31 +2412,46 @@ export default function ProposalView({
         />
       </div>
 
+      <JourneyBridge text={journeyBridge(lang, "afterCover")} lang={lang} />
+
       {/* PAGE 2 — THE EXPERTISE (Domestic / Commercial / Industrial verticals) */}
       <div className="proposal-page" data-page="expertise">
         <CompanyProfileSection D={D} lang={lang} summary={summary} siteImages={siteImages} />
       </div>
+
+      <JourneyBridge text={journeyBridge(lang, "afterTrust")} lang={lang} />
 
       {/* PAGE 3 — BILL INTELLIGENCE (Audit + bar chart) */}
       <div className="proposal-page" data-page="bill-audit">
         <DeepAuditSection D={D} summary={summary} monthLbls={monthLbls} lang={lang} />
       </div>
 
+      <JourneyBridge text={journeyBridge(lang, "afterBill")} lang={lang} />
+
       {/* PAGE 4 — ECONOMICS (Solar vs Grid, EMI, ROI) */}
       <div className="proposal-page" data-page="economics">
         <EconomicsSection D={D} summary={summary} monthLbls={monthLbls} lang={lang} />
       </div>
+
+      <JourneyBridge text={journeyBridge(lang, "afterSavings")} lang={lang} />
 
       {/* PAGE 5 — ENVIRONMENT (Carbon offset + tree-planting equivalence) */}
       <div className="proposal-page" data-page="environment">
         <EnvironmentSection D={D} summary={summary} lang={lang} />
       </div>
 
+      <JourneyBridge text={journeyBridge(lang, "afterImpact")} lang={lang} />
+
       {/* PAGE 6 — TECHNICAL + BOM (single high-density page, 2 sections combined) */}
       <div className="proposal-page" data-page="technical-bom">
         <TechnicalProposalSection D={D} lang={lang} summary={summary} />
         <BomSection D={D} lang={lang} summary={summary} />
       </div>
+
+      <JourneyBridge
+        text={journeyBridge(lang, showSurveyWorkflowSection ? "afterSystem" : "afterInstall")}
+        lang={lang}
+      />
 
       {/* PAGE 7 — Survey & workflow (only after CRM marks site survey complete) */}
       {showSurveyWorkflowSection ? (
@@ -2367,10 +2460,16 @@ export default function ProposalView({
         </div>
       ) : null}
 
+      {showSurveyWorkflowSection ? (
+        <JourneyBridge text={journeyBridge(lang, "afterInstall")} lang={lang} />
+      ) : null}
+
       {/* PAGE 8 — AMC SERVICE (Aftercare detail) */}
       <div className="proposal-page" data-page="amc">
         <ServiceAmcSection D={D} lang={lang} summary={summary} />
       </div>
+
+      <JourneyBridge text={journeyBridge(lang, "afterSupport")} lang={lang} />
 
       {/* PAGE 9 — COMMERCIAL (Payment plan + Commercial terms combined) */}
       <div className="proposal-page" data-page="commercial">
@@ -2383,6 +2482,8 @@ export default function ProposalView({
           lang={lang}
         />
       </div>
+
+      <JourneyBridge text={journeyBridge(lang, "afterPay")} lang={lang} />
 
       {/* PAGE 10 — THE CLOSING (Banking + Thank You combined; QR perfectly visible) */}
       <div className="proposal-page" data-page="closing">
@@ -2401,7 +2502,11 @@ export default function ProposalView({
       </div>
 
       {/* Sticky bottom action bar — mobile only, hidden in print */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:hidden print:hidden">
+      <motion.div
+        className={`fixed bottom-0 left-0 right-0 z-30 border-t px-4 py-3 backdrop-blur sm:hidden print:hidden ${
+          darkMode ? "border-white/10 bg-slate-950/95" : "border-slate-200 bg-white/95"
+        }`}
+      >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <button
             type="button"
@@ -2419,7 +2524,7 @@ export default function ProposalView({
             <Download className="h-4 w-4" /> {downloading ? "…" : D["cta.downloadPpt"]}
           </button>
         </div>
-      </div>
+      </motion.div>
       </div>
     </MotionConfig>
   );
