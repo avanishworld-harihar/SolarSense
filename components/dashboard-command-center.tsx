@@ -12,8 +12,7 @@ import {
   ClipboardList,
   Send,
   Sun,
-  UserPlus,
-  Zap
+  UserPlus
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -29,7 +28,7 @@ function formatInr(n: number): string {
   return `₹${Math.round(Math.max(0, n)).toLocaleString("en-IN")}`;
 }
 
-function useAnimatedInt(target: number, enabled: boolean, durationMs = 720) {
+function useAnimatedInt(target: number, enabled: boolean, durationMs = 680) {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (!enabled || !Number.isFinite(target)) {
@@ -65,42 +64,65 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
   const insights = useMemo(() => buildOperationalInsights(stats, null, uiLang), [stats, uiLang]);
 
   const now = new Date();
-  const weekday = now.toLocaleDateString("en-IN", { weekday: "long" });
-  const dateStr = now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+  const dateStr = now.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short"
+  });
 
-  const focus = (() => {
+  const operationalHeadline = (() => {
     if (!stats) {
-      return uiLang === "hi" ? "डेटा लोड होने पर आज का फोकस यहाँ दिखेगा।" : "Today's focus will appear when your numbers load.";
+      return uiLang === "hi" ? "ऑपरेशनल स्थिति लोड हो रही है" : "Loading operational status";
     }
     if (stats.pendingPayments > 0) {
       return uiLang === "hi"
-        ? `${formatInr(stats.pendingPayments)} बकाया — आज कलेक्शन और फॉलो-अप प्राथमिकता पर।`
-        : `${formatInr(stats.pendingPayments)} outstanding — prioritize collections and follow-ups today.`;
+        ? `${formatInr(stats.pendingPayments)} बकाया — आज संग्रह प्राथमिक`
+        : `${formatInr(stats.pendingPayments)} outstanding — collections are today's priority`;
     }
-    if (stats.proposalsSent > 0) {
+    if (stats.proposalsSent > 0 && stats.orders < stats.proposalsSent) {
       return uiLang === "hi"
-        ? `${stats.proposalsSent} प्रस्ताव सक्रिय — जिन्होंने लिंक नहीं खोला, उन्हें आज कॉल करें।`
-        : `${stats.proposalsSent} proposals active — call customers who have not opened the link yet.`;
+        ? `${stats.proposalsSent} प्रस्ताव सक्रिय — कन्वर्ज़न पर ध्यान दें`
+        : `${stats.proposalsSent} proposals active — drive conversion to orders`;
     }
     if (stats.totalLeads > 0) {
       return uiLang === "hi"
-        ? `${stats.totalLeads} लीड्स पाइपलाइन में — नए प्रस्ताव से गति बनाएँ।`
-        : `${stats.totalLeads} leads in pipeline — create proposals to keep momentum.`;
+        ? `पाइपलाइन में ${stats.totalLeads} लीड्स — गति बनाए रखें`
+        : `${stats.totalLeads} leads in pipeline — maintain forward momentum`;
     }
-    return uiLang === "hi" ? "नई लीड जोड़ें या पहला प्रस्ताव बनाएँ।" : "Add a lead or create your first proposal to get started.";
+    return uiLang === "hi" ? "सिस्टम तैयार — पहली लीड जोड़ें" : "System ready — add your first lead to begin";
+  })();
+
+  const directive = (() => {
+    if (!stats) {
+      return uiLang === "hi"
+        ? "डेटा सिंक होते ही आज का निर्देश यहाँ दिखेगा।"
+        : "Today's directive will appear once data syncs.";
+    }
+    if (stats.pendingPayments > 0) {
+      return uiLang === "hi"
+        ? "बकाया खातों पर कॉल करें, भुगतान लिंक भेजें, और प्रोजेक्ट स्टेटस अपडेट करें।"
+        : "Call outstanding accounts, send payment links, and update project status before EOD.";
+    }
+    if (stats.proposalsSent > 0) {
+      return uiLang === "hi"
+        ? "जिन ग्राहकों ने प्रस्ताव लिंक नहीं खोला, उन्हें आज फॉलो-अप करें।"
+        : "Follow up today with customers who have not opened the proposal link.";
+    }
+    return uiLang === "hi"
+      ? "नई लीड कैप्चर करें और प्रस्ताव बनाकर पाइपलाइन आगे बढ़ाएँ।"
+      : "Capture new leads and advance the pipeline with fresh proposals.";
   })();
 
   const urgentFollowUps = insights?.followUps.filter((f) => f.stale).slice(0, 2) ?? [];
 
-  const tiles = [
+  const pipeline = [
     {
       key: "leads",
       label: uiLang === "hi" ? "लीड्स" : "Leads",
       raw: stats?.totalLeads ?? 0,
       format: (n: number) => String(n),
       icon: UserPlus,
-      href: "/customers",
-      tone: "sky" as const
+      href: "/customers"
     },
     {
       key: "proposals",
@@ -108,8 +130,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
       raw: stats?.proposalsSent ?? 0,
       format: (n: number) => String(n),
       icon: Send,
-      href: "/proposals",
-      tone: "emerald" as const
+      href: "/proposals"
     },
     {
       key: "orders",
@@ -117,170 +138,158 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
       raw: stats?.orders ?? 0,
       format: (n: number) => String(n),
       icon: ClipboardList,
-      href: "/projects",
-      tone: "amber" as const
+      href: "/projects"
     },
     {
       key: "kw",
-      label: uiLang === "hi" ? "इंस्टॉल" : "Installed",
-      raw: stats?.installedKw ?? 0,
-      format: (n: number) => `${n.toLocaleString("en-IN")} kW`,
+      label: uiLang === "hi" ? "इंस्टॉल kW" : "Installed",
+      raw: Math.round(stats?.installedKw ?? 0),
+      format: (n: number) => n.toLocaleString("en-IN"),
       icon: Sun,
-      href: "/projects",
-      tone: "teal" as const
+      href: "/projects"
     }
   ];
 
-  const animateMetrics = Boolean(stats) && !loading;
-  const leadsAnim = useAnimatedInt(stats?.totalLeads ?? 0, animateMetrics);
-  const proposalsAnim = useAnimatedInt(stats?.proposalsSent ?? 0, animateMetrics);
-  const ordersAnim = useAnimatedInt(stats?.orders ?? 0, animateMetrics);
-  const kwAnim = useAnimatedInt(Math.round(stats?.installedKw ?? 0), animateMetrics);
-  const animatedValues: Record<string, number> = {
-    leads: leadsAnim,
-    proposals: proposalsAnim,
-    orders: ordersAnim,
-    kw: kwAnim
+  const animate = Boolean(stats) && !loading;
+  const anim = {
+    leads: useAnimatedInt(stats?.totalLeads ?? 0, animate),
+    proposals: useAnimatedInt(stats?.proposalsSent ?? 0, animate),
+    orders: useAnimatedInt(stats?.orders ?? 0, animate),
+    kw: useAnimatedInt(Math.round(stats?.installedKw ?? 0), animate)
   };
 
   const isLive = Boolean(stats) && !loading;
 
   return (
-    <header className={cn("glass-command-center relative overflow-hidden rounded-[1.4rem]", className)}>
+    <header className={cn("glass-command-center isolate ws-command-enter", className)}>
       <div className="glass-command-rim pointer-events-none absolute inset-0 rounded-[inherit]" aria-hidden />
-      <div className="glass-hero-bloom pointer-events-none absolute inset-0" aria-hidden />
+      <div className="glass-command-ambient pointer-events-none absolute inset-0" aria-hidden />
+      <div className="glass-hero-bloom pointer-events-none absolute inset-0 opacity-90" aria-hidden />
       <div className="glass-command-sheen pointer-events-none absolute inset-0" aria-hidden />
-      <div className="glass-hero-noise pointer-events-none absolute inset-0 opacity-[0.28]" aria-hidden />
+      <div className="glass-hero-noise pointer-events-none absolute inset-0 opacity-[0.2]" aria-hidden />
 
-      <div className="relative flex flex-col gap-6 p-5 sm:gap-7 sm:p-7">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 max-w-2xl space-y-3">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="ws-type-eyebrow text-brand-700/85 dark:text-teal-300/90">
-                {uiLang === "hi" ? "कमांड सेंटर" : "Command center"}
+      <div className="relative flex flex-col gap-5 p-5 sm:gap-6 sm:p-6 md:p-7">
+        {/* Status rail — not a marketing hero */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/50 pb-4 dark:border-white/10">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+            <span className="ws-type-eyebrow text-slate-500 dark:text-[#8B949E]">
+              {uiLang === "hi" ? "वर्कस्पेस" : "Workspace"}
+            </span>
+            <span className="hidden h-3 w-px bg-slate-300/80 sm:block dark:bg-white/15" aria-hidden />
+            <span className="text-xs font-medium text-slate-500 dark:text-[#8B949E]">
+              {t("dashboard_greetingName", { name })} · {dateStr}
+            </span>
+            {isLive ? (
+              <span className="ws-live-pill inline-flex items-center gap-1.5">
+                <span className="ws-live-dot" aria-hidden />
+                {uiLang === "hi" ? "लाइव" : "Live"}
               </span>
-              {isLive ? (
-                <span className="ws-live-pill inline-flex items-center gap-1.5">
-                  <span className="ws-live-dot" aria-hidden />
-                  {uiLang === "hi" ? "लाइव" : "Live"}
-                </span>
-              ) : loading ? (
-                <span className="ws-live-pill ws-live-pill--muted">{uiLang === "hi" ? "सिंक…" : "Syncing…"}</span>
-              ) : null}
-            </div>
-            <h1 className="ws-type-hero text-brand-950 dark:text-white">{t("dashboard_greetingName", { name })}</h1>
-            <p className="ws-type-subline">
-              {weekday} · {dateStr}
-            </p>
+            ) : loading ? (
+              <span className="ws-live-pill ws-live-pill--muted">{uiLang === "hi" ? "सिंक" : "Sync"}</span>
+            ) : null}
           </div>
-
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col lg:items-end">
-            <Link href="/proposal" className="glass-hero-cta group inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white">
-              <Zap className="h-4 w-4 opacity-90" strokeWidth={2.25} aria-hidden />
-              {t("actions_newProposal")}
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
-            </Link>
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href="/customers?add=1"
-              className="glass-hero-cta-secondary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+              className="glass-hero-cta-secondary hidden rounded-lg px-3 py-2 text-xs font-semibold sm:inline-flex"
             >
               {t("dashboard_addCustomerCta")}
+            </Link>
+            <Link href="/proposal" className="glass-hero-cta group inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white">
+              {t("actions_newProposal")}
+              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
             </Link>
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-12 lg:gap-5">
-          <div className="glass-command-inset space-y-3 lg:col-span-7">
-            <p className="ws-type-label">{uiLang === "hi" ? "आज का ऑपरेशनल फोकस" : "Today's operational focus"}</p>
-            <p className="ws-type-body max-w-2xl">{focus}</p>
+        {/* Operational headline — primary focus */}
+        <div className="space-y-2">
+          <p className="ws-type-label">{uiLang === "hi" ? "ऑपरेशनल स्थिति" : "Operational status"}</p>
+          {loading && !stats ? (
+            <Skeleton className="h-9 w-full max-w-lg rounded-lg" />
+          ) : (
+            <p className="ws-type-status-headline">{operationalHeadline}</p>
+          )}
+        </div>
+
+        {/* Pipeline console — single control strip, not four KPI cards */}
+        <nav className="glass-pipeline-console" aria-label={uiLang === "hi" ? "पाइपलाइन कंसोल" : "Pipeline console"}>
+          {pipeline.map((seg, i) => {
+            const Icon = seg.icon;
+            const val = loading && !stats ? "—" : seg.format(anim[seg.key as keyof typeof anim] ?? seg.raw);
+            const segment = (
+              <Link
+                href={seg.href}
+                className={cn("glass-pipeline-segment group", i > 0 && "glass-pipeline-segment--divider")}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" strokeWidth={2.25} aria-hidden />
+                <span className="min-w-0">
+                  <span className="glass-pipeline-segment-value tabular-nums">{val}</span>
+                  <span className="glass-pipeline-segment-label">{seg.label}</span>
+                </span>
+              </Link>
+            );
+            if (reduced) return <div key={seg.key}>{segment}</div>;
+            return (
+              <motion.div
+                key={seg.key}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.35, delay: 0.04 * i }}
+              >
+                {segment}
+              </motion.div>
+            );
+          })}
+        </nav>
+
+        {/* Intelligence panels */}
+        <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
+          <div className="glass-command-inset space-y-2.5 lg:col-span-7">
+            <p className="ws-type-label">{uiLang === "hi" ? "आज का निर्देश" : "Today's directive"}</p>
+            <p className="ws-type-body">{directive}</p>
             {urgentFollowUps.length > 0 ? (
-              <div className="flex flex-col gap-2 pt-1">
-                <p className="ws-type-label text-amber-800/90 dark:text-amber-200/90">
-                  {uiLang === "hi" ? "तत्काल फॉलो-अप" : "Urgent follow-ups"}
-                </p>
-                <ul className="space-y-1.5">
-                  {urgentFollowUps.map((row) => (
-                    <li key={row.id}>
-                      <Link href={row.href} className="glass-urgent-row group flex items-center justify-between gap-2 rounded-lg px-3 py-2">
-                        <span className="min-w-0 truncate text-xs font-semibold text-slate-800 dark:text-white">{row.name}</span>
-                        <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-amber-700 group-hover:text-amber-900 dark:text-amber-300">
-                          {uiLang === "hi" ? "देखें" : "Review"}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <ul className="mt-2 space-y-1 border-t border-white/40 pt-2.5 dark:border-white/10">
+                {urgentFollowUps.map((row) => (
+                  <li key={row.id}>
+                    <Link href={row.href} className="glass-urgent-row group flex items-center justify-between gap-2 rounded-lg px-2.5 py-2">
+                      <span className="min-w-0 truncate text-xs font-semibold text-slate-800 dark:text-white">{row.name}</span>
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                        {uiLang === "hi" ? "रुका" : "Stale"}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </div>
 
           <div className="glass-command-inset lg:col-span-5">
-            <p className="ws-type-label mb-3">{uiLang === "hi" ? "बिज़नेस पल्स" : "Business pulse"}</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="ws-type-label mb-2.5">{uiLang === "hi" ? "वित्तीय पल्स" : "Financial pulse"}</p>
+            <div className="grid grid-cols-2 gap-2.5">
               <div className="glass-pulse-stat">
-                <CircleDollarSign className="mb-2 h-4 w-4 text-emerald-600 dark:text-emerald-400" strokeWidth={2.25} aria-hidden />
-                <p className="ws-type-label">{t("metrics_revenue")}</p>
+                <CircleDollarSign className="mb-1.5 h-3.5 w-3.5 text-emerald-600/90 dark:text-emerald-400" strokeWidth={2.25} aria-hidden />
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t("metrics_revenue")}</p>
                 {loading && !stats ? (
-                  <Skeleton className="mt-2 h-7 w-24 rounded-md" />
+                  <Skeleton className="mt-1.5 h-6 w-20 rounded" />
                 ) : (
-                  <p className="ws-type-metric mt-1 text-emerald-900 dark:text-emerald-100">
+                  <p className="mt-1 text-base font-semibold tabular-nums tracking-tight text-emerald-900 dark:text-emerald-100">
                     {stats ? formatInr(stats.revenue) : "—"}
                   </p>
                 )}
               </div>
               <div className={cn("glass-pulse-stat", stats && stats.pendingPayments > 0 && "glass-pulse-stat--alert")}>
-                <CircleDollarSign className="mb-2 h-4 w-4 text-rose-600 dark:text-rose-400" strokeWidth={2.25} aria-hidden />
-                <p className="ws-type-label">{t("metrics_pending")}</p>
+                <CircleDollarSign className="mb-1.5 h-3.5 w-3.5 text-rose-600/90 dark:text-rose-400" strokeWidth={2.25} aria-hidden />
+                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t("metrics_pending")}</p>
                 {loading && !stats ? (
-                  <Skeleton className="mt-2 h-7 w-24 rounded-md" />
+                  <Skeleton className="mt-1.5 h-6 w-20 rounded" />
                 ) : (
-                  <p className="ws-type-metric mt-1">{stats ? formatInr(stats.pendingPayments) : "—"}</p>
+                  <p className="mt-1 text-base font-semibold tabular-nums tracking-tight text-brand-950 dark:text-white">
+                    {stats ? formatInr(stats.pendingPayments) : "—"}
+                  </p>
                 )}
               </div>
             </div>
-          </div>
-        </div>
-
-        <div>
-          <p className="ws-type-label mb-3">{uiLang === "hi" ? "ऑपरेशनल इंडिकेटर्स" : "Operational indicators"}</p>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
-            {tiles.map((tile, i) => {
-              const Icon = tile.icon;
-              const display = loading && !stats ? "—" : tile.format(animatedValues[tile.key] ?? tile.raw);
-              const chip = (
-                <Link
-                  href={tile.href}
-                  className={cn(
-                    "glass-metric-chip-premium group flex flex-col gap-2.5 rounded-[1rem] p-3.5 sm:p-4",
-                    tile.tone === "sky" && "glass-metric-chip--sky",
-                    tile.tone === "emerald" && "glass-metric-chip--emerald",
-                    tile.tone === "amber" && "glass-metric-chip--amber",
-                    tile.tone === "teal" && "glass-metric-chip--teal"
-                  )}
-                >
-                  <span className="glass-metric-chip-icon flex h-9 w-9 items-center justify-center rounded-[0.65rem]">
-                    <Icon className="h-[1.05rem] w-[1.05rem]" strokeWidth={2.25} aria-hidden />
-                  </span>
-                  {loading && !stats ? (
-                    <Skeleton className="h-8 w-[4.5rem] rounded-lg bg-slate-200/80" />
-                  ) : (
-                    <p className="ws-type-metric-lg tabular-nums text-brand-950 dark:text-white">{display}</p>
-                  )}
-                  <p className="ws-type-chip-label">{tile.label}</p>
-                </Link>
-              );
-              if (reduced) return <div key={tile.key}>{chip}</div>;
-              return (
-                <motion.div
-                  key={tile.key}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: 0.06 + i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {chip}
-                </motion.div>
-              );
-            })}
           </div>
         </div>
       </div>

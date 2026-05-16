@@ -390,8 +390,10 @@ function DashboardPageContent() {
         )}
 
         <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-insights">
-          <DashboardSectionTitle>{t("dashboard_operationalInsights")}</DashboardSectionTitle>
-          <DashboardOperationalInsights stats={stats} trends={metricTrends} loading={showMetricSkeleton} />
+          <div className="ws-zone-surface">
+            <DashboardSectionTitle>{t("dashboard_operationalInsights")}</DashboardSectionTitle>
+            <DashboardOperationalInsights stats={stats} trends={metricTrends} loading={showMetricSkeleton} />
+          </div>
         </DashboardItem>
 
         <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-secondary">
