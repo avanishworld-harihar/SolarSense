@@ -172,15 +172,20 @@ function AuditNetBillCell({
   const hasSub = s < 0;
   const amtColor =
     variant === "total" ? "text-sky-950" : isPeak ? "text-rose-800" : "text-slate-900";
-  const subColor = variant === "total" ? "text-sky-800/90" : "text-slate-500";
+  const subColor =
+    variant === "total"
+      ? "text-rose-700 font-semibold"
+      : isPeak
+        ? "text-rose-700 font-semibold"
+        : "text-rose-600 font-semibold";
   return (
-    <div className="flex min-w-[4.75rem] flex-col items-end justify-center gap-0.5 py-0.5 sm:min-w-[5.25rem]">
+    <div className="flex min-w-[5.5rem] flex-col items-end justify-center gap-1 py-0.5 sm:min-w-0">
       <span className={`text-[15px] font-bold tabular-nums leading-none sm:text-sm md:text-base ${amtColor}`}>
         {inr(total)}
       </span>
       {hasSub ? (
         <span
-          className={`max-w-[11rem] text-right text-[9px] font-medium leading-tight sm:max-w-none sm:text-[10px] ${subColor}`}
+          className={`max-w-[12rem] text-right text-[10px] font-semibold leading-snug sm:text-[11px] ${subColor}`}
         >
           {D["audit.mpSubLabel"]} · −₹{Math.abs(s).toLocaleString("en-IN")}
         </span>
@@ -661,36 +666,44 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
           <ChevronsLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" aria-hidden />
           <span>{D["audit.swipeHint"]}</span>
         </p>
-        <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div
-            className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-11 rounded-r-2xl bg-gradient-to-l from-white from-40% via-white/70 to-transparent lg:hidden"
-            aria-hidden
-          />
-          <div className="overflow-x-auto overscroll-x-contain scroll-smooth rounded-2xl [-webkit-overflow-scrolling:touch]">
-            <table className="min-w-[720px] w-full border-separate border-spacing-0 text-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="proposal-audit-table-scroll overflow-x-auto overflow-y-visible overscroll-x-contain scroll-smooth rounded-2xl [-webkit-overflow-scrolling:touch] sm:overflow-x-visible">
+            <table className="proposal-audit-table min-w-[720px] w-full border-separate border-spacing-0 text-sm sm:min-w-0 sm:table-fixed">
               <thead className="bg-slate-900 text-white">
                 <tr>
                   <th
                     scope="col"
-                    className="sticky left-0 z-20 whitespace-nowrap border-b border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider shadow-[4px_0_14px_-2px_rgba(0,0,0,0.35)]"
+                    className="sticky left-0 z-30 min-w-[3.5rem] whitespace-nowrap border-b border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider shadow-[4px_0_8px_-2px_rgba(0,0,0,0.25)] sm:static sm:z-auto sm:w-[10%] sm:px-2 sm:py-2 sm:text-[9px] sm:shadow-none"
                   >
                     {D["audit.month"]}
                   </th>
-                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[9%] sm:px-2 sm:py-2 sm:text-[9px]"
+                  >
                     {D["audit.units"]}
                   </th>
-                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px]"
+                  >
                     {D["audit.energy"]}
                   </th>
-                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[15%] sm:px-2 sm:py-2 sm:text-[9px]"
+                  >
                     {D["audit.fixed"]}
                   </th>
-                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px]"
+                  >
                     {D["audit.dutyFuel"]}
                   </th>
                   <th
                     scope="col"
-                    className="min-w-[7.5rem] border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider"
+                    className="min-w-[9rem] border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:min-w-0 sm:w-[32%] sm:px-2 sm:py-2 sm:text-[9px]"
                   >
                     {D["audit.netBill"]}
                   </th>
@@ -699,35 +712,45 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
               <tbody>
                 {summary.auditRows.map((r, i) => {
                   const isPeak = i >= 3 && i <= 6;
-                  const rowBg = isPeak ? "bg-rose-50/60" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60";
+                  /** Opaque row + sticky cell backgrounds — semi-transparent rows caused scrolled columns to show through the Month column on mobile. */
+                  const rowBg = isPeak ? "bg-rose-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50";
+                  const stickyMonthClass = `sticky left-0 z-20 min-w-[3.5rem] whitespace-nowrap border-b border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-[4px_0_6px_-2px_rgba(15,23,42,0.12)] sm:static sm:z-auto sm:min-w-0 sm:px-2 sm:py-2 sm:text-xs sm:shadow-none ${rowBg}`;
                   return (
                     <tr key={r.label} className={rowBg}>
-                      <td
-                        className={`sticky left-0 z-10 whitespace-nowrap border-b border-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-[3px_0_12px_-4px_rgba(15,23,42,0.14)] ${rowBg}`}
-                      >
-                        {monthLbls[i]}
+                      <td className={stickyMonthClass}>{monthLbls[i]}</td>
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                        {r.units}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{r.units}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{inr(r.energy)}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{inr(r.fixed)}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{inr(r.duty + r.fuel)}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-right align-top">
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                        {inr(r.energy)}
+                      </td>
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                        {inr(r.fixed)}
+                      </td>
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right text-slate-700 sm:px-2 sm:py-2 sm:text-xs">
+                        {inr(r.duty + r.fuel)}
+                      </td>
+                      <td className="border-b border-slate-100 bg-inherit px-3 py-2 text-right align-top sm:px-2 sm:py-2">
                         <AuditNetBillCell D={D} total={r.total} subsidy={r.subsidy} isPeak={isPeak} />
                       </td>
                     </tr>
                   );
                 })}
                 <tr className="bg-sky-50 font-bold text-sky-900">
-                  <td className="sticky left-0 z-10 whitespace-nowrap border-b border-sky-100 bg-sky-50 px-3 py-2.5 text-sm shadow-[3px_0_12px_-4px_rgba(14,116,144,0.2)]">
+                  <td className="sticky left-0 z-20 min-w-[3.5rem] whitespace-nowrap border-b border-sky-100 bg-sky-50 px-3 py-2.5 text-sm shadow-[4px_0_6px_-2px_rgba(14,116,144,0.15)] sm:static sm:z-auto sm:min-w-0 sm:px-2 sm:py-2 sm:text-xs sm:shadow-none">
                     {D["audit.total"]}
                   </td>
-                  <td className="border-b border-sky-100 px-3 py-2 text-right">{summary.auditTotals.units}</td>
-                  <td className="border-b border-sky-100 px-3 py-2 text-right">{inr(summary.auditTotals.energy)}</td>
-                  <td className="border-b border-sky-100 px-3 py-2 text-right">{inr(summary.auditTotals.fixed)}</td>
-                  <td className="border-b border-sky-100 px-3 py-2 text-right">
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">{summary.auditTotals.units}</td>
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">
+                    {inr(summary.auditTotals.energy)}
+                  </td>
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">
+                    {inr(summary.auditTotals.fixed)}
+                  </td>
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right sm:px-2 sm:py-2 sm:text-xs">
                     {inr(summary.auditTotals.duty + summary.auditTotals.fuel)}
                   </td>
-                  <td className="border-b border-sky-100 px-3 py-2 text-right align-top">
+                  <td className="border-b border-sky-100 bg-sky-50 px-3 py-2 text-right align-top sm:px-2 sm:py-2">
                     <AuditNetBillCell
                       D={D}
                       total={summary.auditTotals.total}

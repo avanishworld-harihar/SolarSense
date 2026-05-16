@@ -1158,6 +1158,23 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     max-width: 100% !important;
   }
 
+  /* Bill audit table: print/PDF must show all columns — no overflow scroll clip */
+  .proposal-page .proposal-audit-table-scroll {
+    overflow: visible !important;
+  }
+  .proposal-page .proposal-audit-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    font-size: 8.25pt !important;
+  }
+  .proposal-page .proposal-audit-table th,
+  .proposal-page .proposal-audit-table td {
+    position: static !important;
+    left: auto !important;
+    box-shadow: none !important;
+  }
+
   /* Ensure images render crisply in PDF, capped for A4 fit */
   .proposal-page img {
     display: block !important;

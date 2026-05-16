@@ -234,7 +234,7 @@ const EN: ProposalDict = {
   "audit.dutyFuel": "Duty + Fuel ₹",
   "audit.netBill": "Net Bill ₹",
   "audit.total": "Total",
-  "audit.swipeHint": "Wide table — swipe left ↔ right to see all columns (Net Bill is on the right).",
+  "audit.swipeHint": "Wide table — swipe left ↔ right for all columns. Net Bill is on the right →",
   "audit.mpSubLabel": "MP subsidy",
 
   "insight.summer.title": "Summer Bill Trap",
@@ -383,7 +383,7 @@ const HI: ProposalDict = {
   "audit.dutyFuel": "ड्यूटी+फ्यूल ₹",
   "audit.netBill": "नेट बिल ₹",
   "audit.total": "कुल",
-  "audit.swipeHint": "चौड़ा टेबल — सभी कॉलम देखने के लिए बाएँ–दाएँ स्वाइप करें (नेट बिल दाईं ओर है)।",
+  "audit.swipeHint": "चौड़ा टेबल — सभी कॉलम के लिए बाएँ–दाएँ स्वाइप करें। नेट बिल दाईं ओर →",
   "audit.mpSubLabel": "MP सब्सिडी",
 
   "insight.summer.title": "गर्मी का बिल जाल",
