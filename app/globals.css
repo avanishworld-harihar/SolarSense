@@ -286,7 +286,8 @@
   }
 
   .glass-surface-subtle {
-    @apply relative border border-white/55 bg-white/62 backdrop-blur-lg backdrop-saturate-150;
+    @apply relative border border-white/55 backdrop-blur-lg backdrop-saturate-150;
+    background-color: rgba(255, 255, 255, 0.62);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.75) inset,
       0 10px 32px rgba(11, 34, 64, 0.07);
@@ -294,7 +295,8 @@
   }
 
   .glass-surface-elevated {
-    @apply relative overflow-hidden rounded-[1.25rem] border border-white/75 bg-white/58 backdrop-blur-2xl backdrop-saturate-150;
+    @apply relative overflow-hidden rounded-[1.25rem] border border-white/75 backdrop-blur-2xl backdrop-saturate-150;
+    background-color: rgba(255, 255, 255, 0.58);
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.95) inset,
       0 18px 50px rgba(11, 34, 64, 0.1),
@@ -358,7 +360,7 @@
   }
 
   .glass-metric-tile {
-    @apply relative overflow-hidden rounded-[16px] border border-white/75 bg-white/52 backdrop-blur-xl backdrop-saturate-150;
+    @apply relative overflow-hidden rounded-[16px] border border-white/75 bg-white/50 backdrop-blur-xl backdrop-saturate-150;
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.92) inset,
       0 14px 40px rgba(11, 34, 64, 0.09);
