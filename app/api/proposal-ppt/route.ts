@@ -123,7 +123,7 @@ const bodySchema = z.object({
   panelBrand: z.enum(["Adani", "Waaree", "JSW", "Tata", "Vikram", "RenewSys"]).optional(),
   installerName: z.string().max(120).optional(),
   installerTagline: z.string().max(160).optional(),
-  installerContact: z.string().max(160).optional(),
+  installerContact: z.string().max(220).optional(),
   ...proposalExtrasShape
 });
 

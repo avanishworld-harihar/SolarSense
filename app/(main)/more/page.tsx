@@ -65,6 +65,7 @@ export default function MorePage() {
   );
   const [companyName, setCompanyName] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName);
   const [companyContact, setCompanyContact] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact);
+  const [companyEmail, setCompanyEmail] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerEmail);
   const [companyLogo, setCompanyLogo] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerLogoUrl);
   const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.paymentQrCodeUrl);
   const [personalizedBranding, setPersonalizedBranding] = useState(true);
@@ -100,6 +101,7 @@ export default function MorePage() {
       const settings = readProposalBrandingSettings();
       setCompanyName(settings.installerName);
       setCompanyContact(settings.installerContact);
+      setCompanyEmail(settings.installerEmail);
       setCompanyLogo(settings.installerLogoUrl);
       setPaymentQrCodeUrl(settings.paymentQrCodeUrl ?? "");
       setPersonalizedBranding(settings.personalizedBranding);
@@ -274,6 +276,7 @@ export default function MorePage() {
     return {
       installerName: companyName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName,
       installerContact: companyContact.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact,
+      installerEmail: companyEmail.trim(),
       installerLogoUrl: companyLogo.trim(),
       personalizedBranding,
       themePreset,
@@ -283,7 +286,7 @@ export default function MorePage() {
 
   function saveCompanyProfile() {
     writeProposalBrandingSettings(currentBrandingSettings());
-    markSaved("Company profile saved for PPT/PDF branding.");
+    markSaved("Company profile saved — used when you generate the next web proposal or PPT.");
   }
 
   function saveProposalStyles() {
@@ -382,6 +385,7 @@ export default function MorePage() {
       writeProposalBrandingSettings({
         installerName: companyName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName,
         installerContact: companyContact.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact,
+        installerEmail: companyEmail.trim(),
         installerLogoUrl: nextUrl,
         personalizedBranding,
         themePreset,
@@ -419,10 +423,13 @@ export default function MorePage() {
           )}
         </AnimatePresence>
 
-        <SectionCard icon={Building2} title="My Company Profile" subtitle="Installer as STAR — used in proposal cover, PDF, and sales deck.">
+        <SectionCard icon={Building2} title="My Company Profile" subtitle="Installer as STAR — name, phone, email, and logo sync to the web proposal, PPT, and sales deck when you generate a proposal.">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <LabeledInput label="Installer / Company name" value={companyName} onChange={setCompanyName} placeholder="Harihar Solar" />
             <LabeledInput label="Contact number" value={companyContact} onChange={setCompanyContact} placeholder="+91-9993322267" />
+            <div className="sm:col-span-2">
+              <LabeledInput label="Email" value={companyEmail} onChange={setCompanyEmail} placeholder="harihar@solar.com" />
+            </div>
             <div className="sm:col-span-2">
               <LabeledInput
                 label="Logo URL (big brand in PPT/PDF)"

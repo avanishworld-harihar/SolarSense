@@ -19,7 +19,7 @@ import {
 } from "@/lib/bill-parse";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import { INSTALLER_REGION_EVENT, readInstallerRegion } from "@/lib/installer-region-storage";
-import { PROPOSAL_BRANDING_UPDATED_EVENT, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
+import { PROPOSAL_BRANDING_UPDATED_EVENT, formatInstallerContactLine, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast-center";
@@ -1095,6 +1095,8 @@ export default function ProposalPage() {
    */
 
   function buildProposalExtrasPayload() {
+    const branding = readProposalBrandingSettings();
+    const installerContactLine = formatInstallerContactLine(branding.installerContact, branding.installerEmail);
     const sanctionedLoadKw = (() => {
       const s = manual.sanctionedLoad?.trim();
       if (s) {
@@ -1122,6 +1124,8 @@ export default function ProposalPage() {
       lang: proposalLang,
       amcSelectedYears,
       financeOption: { interestRatePct: financeRatePct, tenuresYears: [3, 5, 7] as number[] },
+      installerName: branding.installerName.trim() || undefined,
+      installerContact: installerContactLine,
       customerProfile: {
         consumerId: manual.consumerId || undefined,
         meterNumber: manual.meterNumber || undefined,

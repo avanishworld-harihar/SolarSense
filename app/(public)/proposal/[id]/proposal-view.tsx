@@ -211,6 +211,14 @@ const inrK = (v: number) => {
   return `₹${x.toLocaleString("en-IN")}`;
 };
 
+/** `contact` may be `phone · email` — `tel:` must use the phone segment only. */
+function telHrefFromInstallerContact(contact: string): string {
+  const segment = contact.split("·")[0]?.trim() ?? contact.trim();
+  const compact = segment.replace(/[^\d+]/g, "");
+  if (compact.replace(/\+/g, "").length >= 8) return compact;
+  return "+919993322267";
+}
+
 // ---------------------------------------------------------------------------
 // Reusable atoms
 // ---------------------------------------------------------------------------
@@ -2150,7 +2158,7 @@ function ClosingSection({
             <Download className="h-4 w-4" />
             {downloading ? "…" : D["cta.downloadPpt"]}
           </CtaButton>
-          <CtaButton href={`tel:${installer.contact.replace(/[^\d+]/g, "")}`} variant="ghost">
+          <CtaButton href={`tel:${telHrefFromInstallerContact(installer.contact)}`} variant="ghost">
             <Phone className="h-4 w-4" /> {D["cta.callUs"]}
           </CtaButton>
         </div>
