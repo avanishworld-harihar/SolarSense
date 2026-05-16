@@ -1,14 +1,19 @@
 "use client";
 
+import { ProposalHubAnalyticsStrip } from "@/components/proposals/proposal-hub-analytics-strip";
 import { ProposalHubDealList, type ProposalHubDealRow } from "@/components/proposals/proposal-hub-deal-list";
 import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
 import { ProposalWorkspacePreview } from "@/components/proposals/proposal-workspace-preview";
 import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { computeProposalHubStats } from "@/lib/proposal-hub-insights";
 import { useLanguage } from "@/lib/language-context";
 import type { ProposalStatus } from "@/lib/proposal-status";
+import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 
@@ -25,7 +30,7 @@ async function fetchProposals(url: string) {
 }
 
 export default function ProposalsHubPage() {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const { data, error, isLoading } = useSWR(PROPOSALS_SWR_KEY, fetchProposals, { revalidateOnFocus: true, dedupingInterval: 15_000 });
   const rows = data?.ok && Array.isArray(data.data) ? data.data : [];
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -41,6 +46,8 @@ export default function ProposalsHubPage() {
   }, [rows, focusId]);
 
   const focused = useMemo(() => rows.find((r) => r.id === focusId) ?? null, [rows, focusId]);
+  const stats = useMemo(() => computeProposalHubStats(rows), [rows]);
+  const uiLang = locale === "en" ? "en" : "hi";
 
   const cardLabels = useMemo(
     () => ({
@@ -72,62 +79,86 @@ export default function ProposalsHubPage() {
       nextAction: t("proposals_workspaceNextActionHint"),
       empty: t("proposals_workspaceEmpty"),
       paneEyebrow: t("proposals_workspacePaneEyebrow"),
-      nextStep: t("proposals_workspaceNextStepLabel")
+      nextStepLabel: t("proposals_workspaceNextStepLabel")
     }),
     [t]
   );
 
+  const analyticsLabels = useMemo(
+    () => ({
+      total: uiLang === "hi" ? "कुल प्रस्ताव" : "Total proposals",
+      followUp: uiLang === "hi" ? "फॉलो-अप" : "Need follow-up",
+      approved: uiLang === "hi" ? "मंजूर" : "Approved",
+      pipeline: uiLang === "hi" ? "पाइपलाइन मूल्य" : "Pipeline value"
+    }),
+    [uiLang]
+  );
+
+  const intelTitle = uiLang === "hi" ? "अगला कदम" : "Recommended next";
+
   return (
-    <div className="space-y-8 pb-4 md:pb-6">
+    <motion.div className="proposal-hub pb-6 md:pb-8">
       <ProposalHubHeader
         variant="workspace"
         title={t("proposals_title")}
         subtitle={t("proposals_hubSubtitle")}
+        analytics={
+          !isLoading && rows.length > 0 ? (
+            <ProposalHubAnalyticsStrip stats={stats} labels={analyticsLabels} />
+          ) : null
+        }
         action={
-          <Button asChild variant="default" size="default" className="font-semibold">
-            <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
+          <Button asChild size="default" className="proposal-hub-new-btn gap-2 font-semibold shadow-lg">
+            <Link href="/proposal">
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("proposals_newProposalCta")}
+            </Link>
           </Button>
         }
       />
 
-      <div className="border-b border-slate-200/70 pb-4 dark:border-white/[0.08]">
-        <WorkflowLifecycleStrip surface="proposals-hub" />
+      <div className="proposal-hub-lifecycle mt-5 rounded-xl border px-3 py-3 sm:px-4">
+        <WorkflowLifecycleStrip surface="proposals-hub" proposalStatus={focused?.proposal_status} />
       </div>
 
-      {error && (
-        <p className="rounded-2xl border border-rose-200/80 bg-rose-50/90 p-4 text-sm font-semibold text-rose-900 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-100">
+      {error ? (
+        <p className="proposal-hub-error mt-5 rounded-xl border p-4 text-sm font-semibold">
           Could not load proposals.
         </p>
-      )}
+      ) : null}
 
       {isLoading && !data ? (
-        <div className="hidden min-h-[min(76vh,680px)] md:grid md:grid-cols-[minmax(240px,0.34fr)_1fr] md:divide-x md:divide-slate-200/60 dark:md:divide-white/[0.08]">
-          <Skeleton className="h-[min(76vh,680px)] rounded-none bg-slate-100/80 dark:bg-white/[0.04]" />
-          <Skeleton className="h-[min(76vh,680px)] rounded-none bg-slate-50/50 dark:bg-white/[0.02]" />
-        </div>
+        <motion.div className="proposal-hub-shell mt-5 hidden min-h-[min(76vh,680px)] md:grid md:grid-cols-[minmax(260px,0.36fr)_1fr] md:gap-0">
+          <Skeleton className="h-full min-h-[400px] rounded-none bg-white/[0.04]" />
+          <Skeleton className="h-full min-h-[400px] rounded-none bg-white/[0.02]" />
+        </motion.div>
       ) : null}
       {isLoading && !data ? (
-        <div className="space-y-3 md:hidden">
-          <Skeleton className="h-40 rounded-xl" />
-          <Skeleton className="h-56 rounded-xl" />
+        <div className="mt-5 space-y-3 md:hidden">
+          <Skeleton className="h-44 rounded-xl bg-white/[0.04]" />
+          <Skeleton className="h-64 rounded-xl bg-white/[0.03]" />
         </div>
       ) : null}
 
       {!isLoading && rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200/90 bg-slate-50/40 px-6 py-14 text-center dark:border-white/10 dark:bg-white/[0.02]">
-          <p className="mx-auto max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t("proposals_empty")}</p>
-          <Button asChild className="mt-8 font-semibold" variant="default">
-            <Link href="/proposal">{t("proposals_newProposalCta")}</Link>
+        <div className="proposal-hub-empty mt-6 rounded-2xl border border-dashed px-6 py-16 text-center">
+          <p className="mx-auto max-w-md text-sm leading-relaxed text-slate-400">{t("proposals_empty")}</p>
+          <Button asChild className="proposal-hub-new-btn mt-8 gap-2 font-semibold">
+            <Link href="/proposal">
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("proposals_newProposalCta")}
+            </Link>
           </Button>
         </div>
       ) : null}
 
       {!isLoading && rows.length > 0 ? (
         <>
-          <p className="hidden text-xs leading-relaxed text-slate-500 dark:text-slate-500 md:block">{t("proposals_hubSplitHint")}</p>
+          <p className="proposal-hub-hint mt-5 hidden text-xs text-slate-500 md:block">{t("proposals_hubSplitHint")}</p>
 
-          <div className="flex flex-col gap-5 md:hidden">
-            <div className="max-h-[min(44vh,380px)] min-h-0 shrink-0">
+          {/* Mobile */}
+          <div className="mt-4 flex flex-col gap-4 md:hidden">
+            <div className="proposal-hub-shell-list max-h-[min(42vh,400px)] min-h-0 shrink-0 rounded-2xl border p-3">
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
@@ -138,19 +169,29 @@ export default function ProposalsHubPage() {
                 className="max-h-full"
               />
             </div>
-            <ProposalWorkspacePreview
-              row={focused}
-              labels={cardLabels}
-              summaryTitle={pipelineLabels.summaryTitle}
-              nextActionHint={pipelineLabels.nextAction}
-              emptyLabel={pipelineLabels.empty}
-              paneEyebrow={pipelineLabels.paneEyebrow}
-              nextStepLabel={pipelineLabels.nextStep}
-            />
+            <div className="proposal-hub-shell-workspace min-h-0 rounded-2xl border p-4">
+              <ProposalWorkspacePreview
+                row={focused}
+                labels={cardLabels}
+                summaryTitle={pipelineLabels.summaryTitle}
+                nextActionHint={pipelineLabels.nextAction}
+                emptyLabel={pipelineLabels.empty}
+                paneEyebrow={pipelineLabels.paneEyebrow}
+                nextStepLabel={pipelineLabels.nextStepLabel}
+                lang={uiLang}
+                intelTitle={intelTitle}
+              />
+            </div>
           </div>
 
-          <div className="hidden min-h-0 md:grid md:min-h-[min(76vh,680px)] md:max-h-[min(84vh,760px)] md:grid-cols-[minmax(240px,0.34fr)_1fr] md:divide-x md:divide-slate-200/60 dark:md:divide-white/[0.08]">
-            <div className="flex min-h-0 flex-col pr-5">
+          {/* Desktop */}
+          <div
+            className={cn(
+              "proposal-hub-shell mt-5 hidden min-h-0 md:grid md:min-h-[min(78vh,720px)] md:max-h-[min(84vh,780px)]",
+              "md:grid-cols-[minmax(260px,0.34fr)_1fr] md:overflow-hidden md:rounded-2xl md:border"
+            )}
+          >
+            <div className="proposal-hub-shell-list flex min-h-0 flex-col border-r p-4 md:pr-5">
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
@@ -160,7 +201,7 @@ export default function ProposalsHubPage() {
                 pipelineLabel={pipelineLabels.pipeline}
               />
             </div>
-            <div className="min-h-0 min-w-0 overflow-y-auto overscroll-contain pl-6 md:pl-8">
+            <div className="proposal-hub-shell-workspace min-h-0 overflow-y-auto overscroll-contain p-5 md:p-7 lg:p-8">
               <ProposalWorkspacePreview
                 row={focused}
                 labels={cardLabels}
@@ -168,12 +209,14 @@ export default function ProposalsHubPage() {
                 nextActionHint={pipelineLabels.nextAction}
                 emptyLabel={pipelineLabels.empty}
                 paneEyebrow={pipelineLabels.paneEyebrow}
-                nextStepLabel={pipelineLabels.nextStep}
+                nextStepLabel={pipelineLabels.nextStepLabel}
+                lang={uiLang}
+                intelTitle={intelTitle}
               />
             </div>
           </div>
         </>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

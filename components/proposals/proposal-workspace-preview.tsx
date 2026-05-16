@@ -1,11 +1,14 @@
 "use client";
 
 import { ProposalHubActionsSheet } from "@/components/proposals/proposal-hub-actions-sheet";
+import { ProposalHubIntelPanel } from "@/components/proposals/proposal-hub-intel-panel";
 import type { ProposalListCardProps } from "@/components/proposals/proposal-list-card";
 import { Button } from "@/components/ui/button";
+import { hubNextActionHint, statusProgressPct, statusVisual } from "@/lib/proposal-hub-insights";
 import { normalizeProposalStatus } from "@/lib/proposal-status";
 import { cn } from "@/lib/utils";
-import { ArrowRight, MoreHorizontal } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, ExternalLink, MessageCircle, MoreHorizontal, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { ProposalHubDealRow } from "./proposal-hub-deal-list";
@@ -27,105 +30,145 @@ export function ProposalWorkspacePreview({
   nextActionHint,
   emptyLabel,
   paneEyebrow,
-  nextStepLabel
+  nextStepLabel,
+  lang = "en",
+  intelTitle = "Recommended next"
 }: {
   row: ProposalHubDealRow | null;
   labels: ProposalListCardProps["labels"];
   summaryTitle: string;
   nextActionHint: string;
   emptyLabel: string;
-  /** Shown above customer name in hub split / desktop pane (workflow focus). */
   paneEyebrow?: string;
-  /** Label above the next-action copy. */
   nextStepLabel?: string;
+  lang?: "en" | "hi";
+  intelTitle?: string;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const reduced = useReducedMotion();
 
   if (!row) {
     return (
-      <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-dashed border-slate-200/80 bg-slate-50/30 px-6 py-16 text-center text-sm text-slate-500 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-400">
-        {emptyLabel}
+      <div className="proposal-hub-workspace-empty flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-16 text-center">
+        <p className="text-sm text-slate-500">{emptyLabel}</p>
       </div>
     );
   }
 
   const st = normalizeProposalStatus(row.proposal_status);
+  const vis = statusVisual(st);
   const manageHref = `/proposals/${row.id}`;
+  const publicHref = `/proposal/${row.id}`;
   const savingMo =
     row.annual_saving_inr != null && Number.isFinite(row.annual_saving_inr)
       ? Math.round(row.annual_saving_inr / 12)
       : null;
+  const pct = statusProgressPct(st);
+  const dynamicHint = hubNextActionHint(st, lang);
+
+  const metrics = [
+    { label: labels.kw, value: `${row.system_kw}`, accent: false },
+    { label: labels.netPayable, value: row.final_amount_inr != null ? `₹${Math.round(row.final_amount_inr).toLocaleString("en-IN")}` : "—", accent: true },
+    ...(savingMo != null
+      ? [{ label: labels.estSavingMo, value: `₹${savingMo.toLocaleString("en-IN")}`, accent: false }]
+      : []),
+    { label: labels.panelBrand, value: row.panel_brand ?? "—", accent: false, wide: true }
+  ];
 
   return (
     <>
-      <div className="flex min-h-0 flex-col">
-        <header className="sticky top-0 z-10 -mx-1 border-b border-slate-200/60 bg-white/90 pb-6 pt-1 backdrop-blur-md dark:border-white/[0.07] dark:bg-[#0c1017]/90">
-          {paneEyebrow ? (
-            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{paneEyebrow}</p>
-          ) : null}
-          <h2 className={cn("text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl", paneEyebrow && "mt-2")}>
-            {row.customer_name}
-          </h2>
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
-            <span className="font-medium text-slate-700 dark:text-slate-300">{labels.statusLabel(st)}</span>
-            <span className="text-slate-300 dark:text-slate-600" aria-hidden>
-              ·
-            </span>
-            <span>{formatShortDate(row.generated_at)}</span>
+      <div className="proposal-hub-workspace flex min-h-0 flex-col">
+        <header className="proposal-hub-workspace-head shrink-0 pb-5">
+          {paneEyebrow ? <p className="proposal-hub-workspace-eyebrow text-[10px] font-bold uppercase tracking-[0.2em]">{paneEyebrow}</p> : null}
+          <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-50 sm:text-3xl">{row.customer_name}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1", vis.pillClass)}>
+                  <span className={cn("h-1.5 w-1.5 rounded-full", vis.dotClass)} aria-hidden />
+                  {labels.statusLabel(st)}
+                </span>
+                <span className="text-slate-500">{formatShortDate(row.generated_at)}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                {lang === "hi" ? "प्रगति" : "Health"}
+              </p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums text-emerald-300">{pct}%</p>
+            </div>
           </div>
         </header>
 
-        <section className="mt-8" aria-labelledby="hub-commercial-heading">
-          <h3 id="hub-commercial-heading" className="text-xs font-medium text-slate-500 dark:text-slate-400">
+        <section aria-labelledby="hub-commercial-heading" className="shrink-0">
+          <h3 id="hub-commercial-heading" className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
             {summaryTitle}
           </h3>
-          <div className="mt-4 flex flex-wrap gap-x-10 gap-y-6 border-b border-slate-100 pb-8 dark:border-white/[0.06]">
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{labels.kw}</p>
-              <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-slate-50">{row.system_kw}</p>
-            </div>
-            <div className="min-w-0 max-w-[14rem]">
-              <p className="text-xs text-slate-500 dark:text-slate-400">{labels.panelBrand}</p>
-              <p className="mt-1.5 truncate text-xl font-semibold text-slate-900 dark:text-slate-50">{row.panel_brand ?? "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{labels.netPayable}</p>
-              <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight text-teal-800 dark:text-teal-200">
-                {row.final_amount_inr != null ? `₹${Math.round(row.final_amount_inr).toLocaleString("en-IN")}` : "—"}
-              </p>
-            </div>
-            {savingMo != null ? (
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{labels.estSavingMo}</p>
-                <p className="mt-1.5 text-xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-slate-50">
-                  ₹{savingMo.toLocaleString("en-IN")}
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {metrics.map((m, i) => (
+              <motion.div
+                key={m.label}
+                initial={reduced ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={cn(
+                  "proposal-hub-metric rounded-xl border p-3",
+                  m.accent && "proposal-hub-metric--accent",
+                  "wide" in m && m.wide && "col-span-2 sm:col-span-1"
+                )}
+              >
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{m.label}</p>
+                <p className={cn("mt-1 truncate text-lg font-bold tabular-nums tracking-tight", m.accent ? "text-emerald-300" : "text-slate-100")}>
+                  {m.value}
                 </p>
-              </div>
-            ) : null}
+              </motion.div>
+            ))}
           </div>
         </section>
 
-        <section className="mt-8">
-          {nextStepLabel ? (
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{nextStepLabel}</p>
-          ) : null}
-          <p className={cn("max-w-prose text-sm leading-relaxed text-slate-600 dark:text-slate-400", nextStepLabel && "mt-2")}>
-            {nextActionHint}
-          </p>
-        </section>
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_minmax(200px,0.42fr)]">
+          <section className="proposal-hub-workspace-next rounded-xl border p-4">
+            {nextStepLabel ? (
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{nextStepLabel}</p>
+            ) : null}
+            <p className={cn("text-sm leading-relaxed text-slate-300", nextStepLabel && "mt-2")}>{dynamicHint}</p>
+            <p className="mt-3 text-[11px] leading-relaxed text-slate-500">{nextActionHint}</p>
+          </section>
+          <ProposalHubIntelPanel row={row} lang={lang} title={intelTitle} />
+        </div>
 
-        <div className="mt-10 flex flex-wrap items-center gap-2">
-          <Button asChild type="button" size="lg" variant="default" className="min-h-11 flex-1 gap-2 font-semibold sm:flex-none sm:min-w-[200px]">
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Button asChild size="lg" className="proposal-hub-cta-primary col-span-2 min-h-11 gap-2 font-semibold sm:col-span-1 sm:min-w-[200px]">
             <Link href={manageHref}>
               {labels.openWorkspace}
-              <ArrowRight className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              <ArrowRight className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
             </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="proposal-hub-cta-secondary min-h-11 gap-2 font-semibold">
+            <Link href={publicHref} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4" aria-hidden />
+              {labels.previewPublic}
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="proposal-hub-cta-secondary min-h-11 gap-2 font-semibold"
+            onClick={() => {
+              const url = `${typeof window !== "undefined" ? window.location.origin : ""}${publicHref}`;
+              const text = encodeURIComponent(`Solar proposal: ${url}`);
+              window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+            }}
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden />
+            {labels.send}
           </Button>
           <Button
             type="button"
             size="icon"
             variant="ghost"
-            className="h-11 w-11 shrink-0 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/[0.06]"
+            className="proposal-hub-cta-ghost h-11 w-11"
             aria-label={labels.moreActions}
             aria-expanded={sheetOpen}
             onClick={() => setSheetOpen(true)}
@@ -133,6 +176,14 @@ export function ProposalWorkspacePreview({
             <MoreHorizontal className="h-5 w-5" aria-hidden />
           </Button>
         </div>
+
+        <Link
+          href={manageHref}
+          className="proposal-hub-inline-link mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-emerald-300"
+        >
+          <PencilLine className="h-3.5 w-3.5" aria-hidden />
+          {labels.editPricing}
+        </Link>
       </div>
 
       <ProposalHubActionsSheet
