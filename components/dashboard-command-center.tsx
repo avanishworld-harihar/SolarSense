@@ -213,7 +213,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
           {loading && !stats ? (
             <Skeleton className="h-9 w-full max-w-lg rounded-lg" />
           ) : (
-            <p className="ws-type-status-headline border-l-0 pl-0">{operationalHeadline}</p>
+            <p className="ws-type-status-headline border-l-0 pl-0 text-balance">{operationalHeadline}</p>
           )}
         </div>
 
@@ -225,9 +225,15 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
             const segment = (
               <Link
                 href={seg.href}
-                className={cn("glass-pipeline-segment group", i > 0 && "glass-pipeline-segment--divider")}
+                className={cn(
+                  "glass-pipeline-segment group",
+                  `glass-pipeline-segment--${seg.tone}`,
+                  i > 0 && "glass-pipeline-segment--divider"
+                )}
               >
-                <Icon className="h-3.5 w-3.5 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" strokeWidth={2.25} aria-hidden />
+                <span className={cn("ws-icon-well h-8 w-8 shrink-0 sm:h-9 sm:w-9", `ws-icon-well--${seg.tone}`)} aria-hidden>
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.25} />
+                </span>
                 <span className="min-w-0">
                   <span className="glass-pipeline-segment-value tabular-nums">{val}</span>
                   <span className="glass-pipeline-segment-label">{seg.label}</span>
@@ -249,8 +255,8 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
         </nav>
 
         {/* Intelligence panels */}
-        <div className="grid gap-3 sm:gap-4 lg:grid-cols-12">
-          <div className="glass-command-inset space-y-2.5 lg:col-span-7">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-12">
+          <div className="glass-command-inset min-w-0 space-y-2.5 lg:col-span-7">
             <p className="ws-type-label">{uiLang === "hi" ? "आज का निर्देश" : "Today's directive"}</p>
             <p className="ws-type-body">{directive}</p>
             {urgentFollowUps.length > 0 ? (
@@ -269,9 +275,9 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
             ) : null}
           </div>
 
-          <div className="glass-command-inset lg:col-span-5">
+          <div className="glass-command-inset min-w-0 lg:col-span-5">
             <p className="ws-type-label mb-2.5">{uiLang === "hi" ? "वित्तीय पल्स" : "Financial pulse"}</p>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2">
               <div className="glass-pulse-stat glass-pulse-stat--revenue">
                 <span className="ws-icon-well ws-icon-well--emerald mb-2" aria-hidden>
                   <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />

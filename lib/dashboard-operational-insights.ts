@@ -40,6 +40,8 @@ export type OverdueItem = {
 export type ConversionFunnel = {
   leadToProposalPct: number | null;
   proposalToOrderPct: number | null;
+  leadToProposalDisplay: string;
+  proposalToOrderDisplay: string;
   summary: string;
   tone: "good" | "warn" | "neutral";
 };
@@ -139,10 +141,18 @@ export function buildOperationalInsights(
   const projects = stats.recentProjects ?? [];
   const { active, pending, done, avgProgress } = pipelineFromProjects(projects);
 
-  const leadToProposalPct =
+  const leadToProposalRaw =
     stats.totalLeads > 0 ? Math.round((stats.proposalsSent / stats.totalLeads) * 100) : null;
-  const proposalToOrderPct =
+  const proposalToOrderRaw =
     stats.proposalsSent > 0 ? Math.round((stats.orders / stats.proposalsSent) * 100) : null;
+  const leadToProposalPct = leadToProposalRaw != null ? Math.min(100, leadToProposalRaw) : null;
+  const proposalToOrderPct = proposalToOrderRaw != null ? Math.min(100, proposalToOrderRaw) : null;
+  const leadToProposalOverflow =
+    leadToProposalRaw != null && leadToProposalRaw > 100
+      ? uiLang === "hi"
+        ? `${(stats.proposalsSent / stats.totalLeads).toFixed(1)}× कवरेज`
+        : `${(stats.proposalsSent / stats.totalLeads).toFixed(1)}× coverage`
+      : null;
 
   let conversionSummary: string;
   let conversionTone: "good" | "warn" | "neutral" = "neutral";
@@ -410,10 +420,17 @@ export function buildOperationalInsights(
         ? `${active} सक्रिय, ${pending} लंबित — औसत प्रगति ${avgProgress}%।`
         : `${active} active, ${pending} pending — average progress ${avgProgress}%.`;
 
+  const leadToProposalDisplay =
+    leadToProposalOverflow ??
+    (leadToProposalPct != null ? `${leadToProposalPct}%` : "—");
+  const proposalToOrderDisplay = proposalToOrderPct != null ? `${proposalToOrderPct}%` : "—";
+
   return {
     conversion: {
       leadToProposalPct,
       proposalToOrderPct,
+      leadToProposalDisplay,
+      proposalToOrderDisplay,
       summary: conversionSummary,
       tone: conversionTone
     },

@@ -9,8 +9,16 @@ export function DashboardQuickActions({ className }: { className?: string }) {
   const { t } = useLanguage();
 
   return (
-    <div className={cn("grid min-w-0 grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4 lg:gap-3", className)}>
-      <Link href="/customers?add=1" className="glass-quick-action glass-quick-action--featured group sm:col-span-2 lg:col-span-2">
+    <div
+      className={cn(
+        "grid min-w-0 grid-cols-1 gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4 lg:gap-3",
+        className
+      )}
+    >
+      <Link
+        href="/customers?add=1"
+        className="glass-quick-action glass-quick-action--featured group min-[520px]:col-span-2 lg:col-span-1"
+      >
         <span className="ws-icon-well ws-icon-well--sky mb-3 h-10 w-10 rounded-xl" aria-hidden>
           <UserPlus className="h-5 w-5 transition-transform duration-300 group-hover:scale-105" strokeWidth={2.25} />
         </span>
@@ -18,7 +26,7 @@ export function DashboardQuickActions({ className }: { className?: string }) {
         <span className="text-[11px] font-medium text-slate-500 dark:text-[#8B949E]">{t("dashboard_addCustomerSub")}</span>
       </Link>
 
-      <Link href="/proposal" className="glass-quick-action glass-quick-action--featured group">
+      <Link href="/proposal" className="glass-quick-action glass-quick-action--featured group min-[520px]:col-span-2 lg:col-span-1">
         <span className="ws-icon-well ws-icon-well--emerald mb-3 h-10 w-10 rounded-xl" aria-hidden>
           <FileText className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5" strokeWidth={2.25} />
         </span>
@@ -26,14 +34,14 @@ export function DashboardQuickActions({ className }: { className?: string }) {
         <span className="text-[11px] font-medium text-slate-500 dark:text-[#8B949E]">{t("dashboard_newProposalSub")}</span>
       </Link>
 
-      <Link href="/proposal" className="glass-quick-action-compact">
-        <Upload className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-        {t("actions_uploadBill")}
+      <Link href="/proposal" className="glass-quick-action-compact min-h-[5.5rem] min-[520px]:min-h-11 lg:min-h-[5.5rem]">
+        <Upload className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+        <span className="text-left">{t("actions_uploadBill")}</span>
       </Link>
 
-      <Link href="/projects" className="glass-quick-action-compact">
-        <FolderPlus className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-        {t("actions_createProject")}
+      <Link href="/projects" className="glass-quick-action-compact min-h-[5.5rem] min-[520px]:min-h-11 lg:min-h-[5.5rem]">
+        <FolderPlus className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+        <span className="text-left">{t("actions_createProject")}</span>
       </Link>
     </div>
   );
