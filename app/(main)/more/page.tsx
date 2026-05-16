@@ -41,9 +41,9 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   BadgeCheck,
   Building2,
+  ChevronDown,
   CreditCard,
   MapPin,
-  Palette,
   QrCode,
   ReceiptText,
   Settings2,
@@ -55,13 +55,6 @@ import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
 
 const STORAGE_LAST_RATE_REPORT_AT = "ss_last_rate_report_at";
-
-const MORE_PAGE_NAV = [
-  { id: "more-section-brand", label: "Brand & proposals" },
-  { id: "more-section-tariff", label: "Tariff" },
-  { id: "more-section-app", label: "App" },
-  { id: "more-section-plans", label: "Plans" }
-] as const;
 
 export default function MorePage() {
   const { mode, localScript, setMode, setLocalPreference, t } = useLanguage();
@@ -431,11 +424,6 @@ export default function MorePage() {
     return row?.status === "live" ? "Live now" : "Rolling out (English fallback safe)";
   }, [selectedLanguage]);
 
-  function scrollToMoreSection(id: (typeof MORE_PAGE_NAV)[number]["id"]) {
-    const el = typeof document !== "undefined" ? document.getElementById(id) : null;
-    el?.scrollIntoView({ behavior: lightMotion ? "auto" : "smooth", block: "start" });
-  }
-
   return (
     <>
       <div className="ss-page-shell">
@@ -453,27 +441,11 @@ export default function MorePage() {
           )}
         </AnimatePresence>
 
-        <nav
-          className="flex flex-wrap gap-2 rounded-2xl border border-white/60 bg-white/80 p-2 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/75"
-          aria-label="More page sections"
-        >
-          {MORE_PAGE_NAV.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => scrollToMoreSection(item.id)}
-              className="rounded-full border border-slate-200/90 bg-white/95 px-3 py-1.5 text-[11px] font-bold text-slate-700 transition hover:border-brand-400 hover:text-brand-900 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:border-emerald-500/40"
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div id="more-section-brand" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
-        <SectionCard
+        <MoreGroup
+          id="more-section-brand"
           icon={Building2}
-          title="Company & proposals"
-          subtitle="Contact, logo, AMC, bank text, payment QR, and site photos — saved here and picked up by the proposal builder."
+          title="Brand & proposals"
+          subtitle="Company, bank, QR, photos, and proposal look — tap to open."
         >
           <Subsection title="Contact" description="Name, phone, and email on proposals.">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -598,13 +570,13 @@ export default function MorePage() {
           <button type="button" onClick={saveCompanyProfile} className="ss-cta-primary w-full sm:w-auto">
             Save company profile
           </button>
-        </SectionCard>
 
-        <SectionCard
-          icon={Palette}
-          title="Proposal look"
-          subtitle="Installer-led branding and theme presets for new web proposals and PPTs."
-        >
+          <div className="border-t border-slate-200/80 pt-4 dark:border-white/10">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Proposal look</p>
+            <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400">
+              Installer-led branding and theme for new web proposals and PPTs.
+            </p>
+            <div className="mt-3 space-y-3">
           <div className="rounded-xl border border-white/50 bg-white/60 p-3">
             <div className="flex items-center justify-between gap-2">
               <div>
@@ -658,14 +630,15 @@ export default function MorePage() {
           <button type="button" onClick={saveProposalStyles} className="ss-cta-primary mt-1 w-full sm:w-auto">
             Save proposal styles
           </button>
-        </SectionCard>
-        </div>
+            </div>
+          </div>
+        </MoreGroup>
 
-        <div id="more-section-tariff" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
-        <SectionCard
+        <MoreGroup
+          id="more-section-tariff"
           icon={ReceiptText}
-          title="Tariff Center"
-          subtitle="Figures follow your saved state / DISCOM. Log a rate change when DISCOM publishes new tariffs."
+          title="Tariff"
+          subtitle="Model status, slab preview, and reporting — tap to open."
         >
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <InfoChip label="Active tariff" value={tariff.discomLabel} />
@@ -716,15 +689,13 @@ export default function MorePage() {
               </span>
             ) : null}
           </div>
-        </SectionCard>
-
-        {adminReady && isAdmin ? (
+          {adminReady && isAdmin ? (
           <motion.a
             href="/admin/tariff-reports"
             whileHover={lightMotion ? undefined : { scale: 1.01 }}
             whileTap={lightMotion ? undefined : { scale: 0.995 }}
             className={cn(
-              "glass-surface group relative block overflow-hidden rounded-2xl border border-amber-300/70 bg-gradient-to-r from-amber-50/90 via-yellow-50/85 to-amber-100/90 p-4",
+              "glass-surface group relative mt-3 block overflow-hidden rounded-2xl border border-amber-300/70 bg-gradient-to-r from-amber-50/90 via-yellow-50/85 to-amber-100/90 p-4",
               "shadow-[0_0_0_1px_rgba(251,191,36,0.2),0_14px_34px_rgba(245,158,11,0.15)]"
             )}
           >
@@ -748,10 +719,14 @@ export default function MorePage() {
             </div>
           </motion.a>
         ) : null}
-        </div>
+        </MoreGroup>
 
-        <div id="more-section-app" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
-        <SectionCard icon={Settings2} title="App settings" subtitle="Region, language, appearance, and performance for this device.">
+        <MoreGroup
+          id="more-section-app"
+          icon={Settings2}
+          title="App"
+          subtitle="Region, language, theme, and performance — tap to open."
+        >
           <Subsection
             title="Operating region"
             description="Same as dashboard setup — DISCOM list comes from your state; proposals use this context."
@@ -894,11 +869,14 @@ export default function MorePage() {
               </div>
             </div>
           </Subsection>
-        </SectionCard>
-        </div>
+        </MoreGroup>
 
-        <div id="more-section-plans" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
-        <SectionCard icon={CreditCard} title="Subscription" subtitle="Plans for when you outgrow the trial.">
+        <MoreGroup
+          id="more-section-plans"
+          icon={CreditCard}
+          title="Plans"
+          subtitle="Subscriptions and a quick reminder — tap to open."
+        >
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             <PlanCard title="Trial" price="Free 30 days" detail="Full Pro access to build habit fast" accent="blue" />
             <PlanCard title="Pro" price="₹299 / month" detail="Unlimited proposals for growing teams" accent="green" />
@@ -907,9 +885,8 @@ export default function MorePage() {
           <p className="text-[11px] font-semibold text-slate-600 sm:text-xs">
             Pro is the usual pick for active proposal teams.
           </p>
-        </SectionCard>
 
-        <div className="ss-card-subtle rounded-2xl p-3">
+          <div className="ss-card-subtle rounded-2xl p-3">
           <div className="flex items-start gap-2">
             <Sparkles className="mt-0.5 h-4 w-4 text-amber-500" />
             <p className="text-xs font-semibold text-slate-700 sm:text-sm">
@@ -917,9 +894,51 @@ export default function MorePage() {
             </p>
           </div>
         </div>
-        </div>
+        </MoreGroup>
       </div>
     </>
+  );
+}
+
+function MoreGroup({
+  id,
+  title,
+  subtitle,
+  icon: Icon,
+  defaultOpen = false,
+  children
+}: {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: ComponentType<{ className?: string }>;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details
+      id={id}
+      className={cn(
+        "ss-card overflow-hidden p-0 [[open]_&_.more-chevron]:rotate-180",
+        "[&_summary::-webkit-details-marker]:hidden [&_summary::marker]:content-none"
+      )}
+      {...(defaultOpen ? { defaultOpen: true } : {})}
+    >
+      <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100">
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-extrabold text-brand-900 dark:text-foreground sm:text-base">{title}</span>
+          <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-slate-600 dark:text-slate-400">{subtitle}</span>
+        </span>
+        <ChevronDown
+          className="more-chevron mt-0.5 h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200 dark:text-slate-400"
+          aria-hidden
+        />
+      </summary>
+      <div className="space-y-4 border-t border-slate-200/80 px-4 pb-4 pt-3 sm:px-5 sm:pb-5 sm:pt-4 dark:border-white/10">{children}</div>
+    </details>
   );
 }
 
