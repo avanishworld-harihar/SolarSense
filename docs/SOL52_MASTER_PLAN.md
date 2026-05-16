@@ -1,23 +1,36 @@
 # Sol.52 — Complete Master Plan
-**Version:** 2.0 | **Date:** April 2026  
+**Version:** 2.3 | **Date:** May 2026  
 **Owner:** Avanish Gupta | Harihar Solar | Satna, MP | 9993322267  
 **Vision:** Solar ka Zomato — App → Platform → Data → Marketplace → Finance
 
-> **Architecture source of truth:** Multi-tenancy, RBAC levels, marketplace governance, org ownership, and phased scaling are defined in **[`MASTERPLAN.md`](../MASTERPLAN.md)** at the repo root. Update that file when platform or permission model changes; keep this document for product narrative, brand, and screen-level history.
+> **Architecture source of truth:** Multi-tenancy, RBAC, marketplace, **separate acquisition-brand repos vs this platform repo**, **API-first ingestion**, org ownership, and phased scaling are defined in **[`MASTERPLAN.md`](../MASTERPLAN.md)** at the repo root. **Platform vs acquisition branding** (Powered by SOL.52, Intelligence Engine, proposal credits, shared APIs) is defined in **[`ACQUISITION_BRANDING_ARCHITECTURE.md`](ACQUISITION_BRANDING_ARCHITECTURE.md)**. Update those files when platform or permission model changes; keep this document for product narrative, brand, and screen-level history.
 
 ---
 
-## 1. BRAND STRUCTURE
+## 1. BRAND & ECOSYSTEM STRUCTURE
 
-| Type | Name |
-|------|------|
-| Company | Harihar Solar |
-| App | Sol.52 |
-| Platform | Sol.52 Network |
-| Installer Program | Sol.52 Partner |
-| Data Platform | Sol.52 Data |
-| Finance | Sol.52 Finance |
-| Marketplace | Sol.52 Market |
+**SOL.52** is the **parent ecosystem** (CRM, proposals, pipeline, vendors, marketplace, analytics, automation, **canonical calculator engine**, future **public/partner APIs**). **Harihar Solar** is developed as a **completely separate project** — its **own repository**, frontend stack, deployment, and branding — and connects to SOL.52 **only through APIs and shared backend services** (no Harihar marketing site inside the SOL.52 app codebase). Additional local brands follow the same pattern.
+
+| Layer | Name | Role |
+|-------|------|------|
+| Parent ecosystem / platform | **SOL.52** | Core backend + installer product; APIs for leads/calculator; multi-tenant CRM |
+| Installer-facing product | **Sol.52** (app) | Day-to-day tool for teams under an organization |
+| Local acquisition brand (customer-facing) | **Harihar Solar** (first; more later) | Separate repo/site: lead generation → **ingests into SOL.52** |
+| Network / programs (narrative) | Sol.52 Network, Sol.52 Partner, Sol.52 Data, Sol.52 Finance, Sol.52 Market | As before — platform-level offerings |
+
+**Lead flow (target):** Harihar Solar (and future brands) → **SOL.52 HTTP APIs** → **`leads`** / CRM with **acquisition-brand attribution** → proposals and pipeline unchanged in ownership model. Schema and tenancy guidance: **`MASTERPLAN.md`** §6.3, §10–§11.
+
+**Public tools on brand properties:** Show **“Powered by SOL.52”** and, where appropriate, **“SOL.52 Intelligence Engine”** on calculators and similar widgets (see **`ACQUISITION_BRANDING_ARCHITECTURE.md`**). **Installer PPT / customer proposals** keep existing rules (installer and customer as heroes; Sol.52 minimal footer where already defined below).
+
+### 1.1 Platform presentation (summary)
+
+| Surface | Hero | SOL.52 credit |
+|---------|------|----------------|
+| Harihar (and future) acquisition sites | Local brand | Powered by SOL.52 · Intelligence Engine on tools |
+| Installer app & org proposals | Installer + customer | Minimal Sol.52 footer (PPT rules below) |
+| Shared APIs | — | `branding` metadata from `lib/platform-branding.ts` |
+
+**Harihar Solar** is the first registered acquisition brand (`harihar_solar` in `lib/platform-branding.ts`). Additional brands reuse the same module and API infrastructure without forking calculator or proposal engines.
 
 **Logo (canonical):** File `public/sol52-logo.png` → URL `/sol52-logo.png` (transparent; app header, proposal HTML/PDF, fallbacks). **Tagline:** *Solar Intelligence. Total Support.*  
 **Palette (reference):** Navy `#0D2C54`, gold dot `#FFB81C`, teal `#00A88F`, tagline gray ~`#A9A9A9`.
@@ -396,7 +409,7 @@ Actions = Hindi (Upload karo, Calculate karo, Save karo)
 
 ---
 
-## 12. PPT BRANDING RULES
+## 12. PPT & SURFACE BRANDING RULES
 
 ```
 Installer company = BIG (star of the show)
@@ -404,6 +417,8 @@ Customer name = Throughout all slides
 Sol.52 = Tiny footer only
 Business plan version = Zero Sol.52 branding
 ```
+
+**Acquisition brand websites (Harihar Solar, future locals):** On **public calculators and similar tools** that call SOL.52 logic, show **“Powered by SOL.52”** and the **“SOL.52 Intelligence Engine”** line per **`ACQUISITION_BRANDING_ARCHITECTURE.md`** — distinct from PPT footers; keeps local brand hero while crediting the platform.
 
 ---
 
@@ -418,6 +433,7 @@ Business plan version = Zero Sol.52 branding
 6. Tariff updates: Self-learning — installer reports → admin approves
 7. PPT live sync: "Outdated flag" approach (not auto-regen)
 8. Agreement clauses: Modular — AMC default OFF
+9. Multi-brand acquisition: New local brands attach to SOL.52 same pattern as Harihar Solar; no duplicate calculator/proposal source of truth off-platform
 ```
 
 ---
@@ -466,5 +482,5 @@ Installer Tool → Platform → Data → Finance → Marketplace
 
 ---
 
-*Document End — Sol.52 Master Plan v2.0*
+*Document End — Sol.52 Master Plan v2.3*
 *Keep this file updated with every major decision*

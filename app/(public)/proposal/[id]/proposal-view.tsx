@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Compass,
   Download,
+  ChevronsLeftRight,
   Factory,
   Gauge,
   Hammer,
@@ -151,17 +152,43 @@ type ProposalViewProps = {
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
 
 /**
- * Net bill cell: subsidy first in parentheses, then net — e.g. `(−₹545 MP Sub) ₹225`.
- * Rule book: MP Govt. Domestic Subsidy is paid ONLY for monthly consumption ≤ 150 u.
- * Any subsidy line on a >150-u row must be 0 (forfeited); no tier suffix is shown.
+ * Net bill cell (web): **amount first** (large), subsidy as a small second line — easier on mobile
+ * than a single cramped string. PPT/PDF still use one-line format in `lib/proposal-ppt.ts`.
  */
-function formatAuditNetBillCell(_D: ProposalDict, total: number, subsidy?: number, _rowUnits?: number) {
-  const base = inr(total);
+function AuditNetBillCell({
+  D,
+  total,
+  subsidy,
+  isPeak,
+  variant = "body"
+}: {
+  D: ProposalDict;
+  total: number;
+  subsidy?: number;
+  isPeak?: boolean;
+  variant?: "body" | "total";
+}) {
   const s = Math.round(subsidy ?? 0);
-  if (s >= 0) return base;
-  const a = Math.abs(s).toLocaleString("en-IN");
-  return `(−₹${a} MP Sub) ${base}`;
+  const hasSub = s < 0;
+  const amtColor =
+    variant === "total" ? "text-sky-950" : isPeak ? "text-rose-800" : "text-slate-900";
+  const subColor = variant === "total" ? "text-sky-800/90" : "text-slate-500";
+  return (
+    <div className="flex min-w-[4.75rem] flex-col items-end justify-center gap-0.5 py-0.5 sm:min-w-[5.25rem]">
+      <span className={`text-[15px] font-bold tabular-nums leading-none sm:text-sm md:text-base ${amtColor}`}>
+        {inr(total)}
+      </span>
+      {hasSub ? (
+        <span
+          className={`max-w-[11rem] text-right text-[9px] font-medium leading-tight sm:max-w-none sm:text-[10px] ${subColor}`}
+        >
+          {D["audit.mpSubLabel"]} · −₹{Math.abs(s).toLocaleString("en-IN")}
+        </span>
+      ) : null}
+    </div>
+  );
 }
+
 const inrK = (v: number) => {
   const x = Math.max(0, Math.round(v));
   if (x >= 100000) return `₹${(x / 100000).toFixed(1)}L`;
@@ -625,45 +652,94 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
         </p>
       ) : null}
 
-      {/* Month-wise table */}
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-900 text-white">
-            <tr>
-              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider">{D["audit.month"]}</th>
-              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">{D["audit.units"]}</th>
-              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">{D["audit.energy"]}</th>
-              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">{D["audit.fixed"]}</th>
-              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">{D["audit.dutyFuel"]}</th>
-              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">{D["audit.netBill"]}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {summary.auditRows.map((r, i) => {
-              const isPeak = i >= 3 && i <= 6;
-              return (
-                <tr key={r.label} className={isPeak ? "bg-rose-50/60" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
-                  <td className="px-3 py-2 font-semibold text-slate-900">{monthLbls[i]}</td>
-                  <td className="px-3 py-2 text-right text-slate-700">{r.units}</td>
-                  <td className="px-3 py-2 text-right text-slate-700">{inr(r.energy)}</td>
-                  <td className="px-3 py-2 text-right text-slate-700">{inr(r.fixed)}</td>
-                  <td className="px-3 py-2 text-right text-slate-700">{inr(r.duty + r.fuel)}</td>
-                  <td className={`px-3 py-2 text-right text-[11px] font-bold leading-snug sm:text-sm ${isPeak ? "text-rose-700" : "text-slate-900"}`}>
-                    {formatAuditNetBillCell(D, r.total, r.subsidy, r.units)}
+      {/* Month-wise table — min width, swipe hint, sticky month column, stacked net bill on mobile */}
+      <div className="mt-6">
+        <p
+          className="mb-2 flex items-start gap-2 rounded-xl border border-slate-200/90 bg-slate-50 px-3 py-2.5 text-[11px] leading-snug text-slate-700 shadow-sm lg:hidden"
+          role="note"
+        >
+          <ChevronsLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" aria-hidden />
+          <span>{D["audit.swipeHint"]}</span>
+        </p>
+        <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-11 rounded-r-2xl bg-gradient-to-l from-white from-40% via-white/70 to-transparent lg:hidden"
+            aria-hidden
+          />
+          <div className="overflow-x-auto overscroll-x-contain scroll-smooth rounded-2xl [-webkit-overflow-scrolling:touch]">
+            <table className="min-w-[720px] w-full border-separate border-spacing-0 text-sm">
+              <thead className="bg-slate-900 text-white">
+                <tr>
+                  <th
+                    scope="col"
+                    className="sticky left-0 z-20 whitespace-nowrap border-b border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider shadow-[4px_0_14px_-2px_rgba(0,0,0,0.35)]"
+                  >
+                    {D["audit.month"]}
+                  </th>
+                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                    {D["audit.units"]}
+                  </th>
+                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                    {D["audit.energy"]}
+                  </th>
+                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                    {D["audit.fixed"]}
+                  </th>
+                  <th scope="col" className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider">
+                    {D["audit.dutyFuel"]}
+                  </th>
+                  <th
+                    scope="col"
+                    className="min-w-[7.5rem] border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider"
+                  >
+                    {D["audit.netBill"]}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.auditRows.map((r, i) => {
+                  const isPeak = i >= 3 && i <= 6;
+                  const rowBg = isPeak ? "bg-rose-50/60" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60";
+                  return (
+                    <tr key={r.label} className={rowBg}>
+                      <td
+                        className={`sticky left-0 z-10 whitespace-nowrap border-b border-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-900 shadow-[3px_0_12px_-4px_rgba(15,23,42,0.14)] ${rowBg}`}
+                      >
+                        {monthLbls[i]}
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{r.units}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{inr(r.energy)}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{inr(r.fixed)}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-right text-slate-700">{inr(r.duty + r.fuel)}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-right align-top">
+                        <AuditNetBillCell D={D} total={r.total} subsidy={r.subsidy} isPeak={isPeak} />
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr className="bg-sky-50 font-bold text-sky-900">
+                  <td className="sticky left-0 z-10 whitespace-nowrap border-b border-sky-100 bg-sky-50 px-3 py-2.5 text-sm shadow-[3px_0_12px_-4px_rgba(14,116,144,0.2)]">
+                    {D["audit.total"]}
+                  </td>
+                  <td className="border-b border-sky-100 px-3 py-2 text-right">{summary.auditTotals.units}</td>
+                  <td className="border-b border-sky-100 px-3 py-2 text-right">{inr(summary.auditTotals.energy)}</td>
+                  <td className="border-b border-sky-100 px-3 py-2 text-right">{inr(summary.auditTotals.fixed)}</td>
+                  <td className="border-b border-sky-100 px-3 py-2 text-right">
+                    {inr(summary.auditTotals.duty + summary.auditTotals.fuel)}
+                  </td>
+                  <td className="border-b border-sky-100 px-3 py-2 text-right align-top">
+                    <AuditNetBillCell
+                      D={D}
+                      total={summary.auditTotals.total}
+                      subsidy={summary.auditTotals.subsidy}
+                      variant="total"
+                    />
                   </td>
                 </tr>
-              );
-            })}
-            <tr className="bg-sky-50 font-bold text-sky-900">
-              <td className="px-3 py-2">{D["audit.total"]}</td>
-              <td className="px-3 py-2 text-right">{summary.auditTotals.units}</td>
-              <td className="px-3 py-2 text-right">{inr(summary.auditTotals.energy)}</td>
-              <td className="px-3 py-2 text-right">{inr(summary.auditTotals.fixed)}</td>
-              <td className="px-3 py-2 text-right">{inr(summary.auditTotals.duty + summary.auditTotals.fuel)}</td>
-              <td className="px-3 py-2 text-right text-[11px] leading-snug sm:text-sm">{formatAuditNetBillCell(D, summary.auditTotals.total, summary.auditTotals.subsidy)}</td>
-            </tr>
-          </tbody>
-        </table>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {/* Insight cards */}
