@@ -986,6 +986,11 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   }
 }
 
+/* Hindi proposal: readable Devanagari stack + no faux letter-spacing in body copy */
+.proposal-document.lang-hi {
+  font-family: var(--font-noto-deva), "Noto Sans Devanagari", ui-sans-serif, system-ui, sans-serif;
+}
+
 .proposal-page {
   /* Each "page" sits on the document with a soft seam between sections.
      On desktop we add a subtle frame so it actually reads like a printed sheet. */

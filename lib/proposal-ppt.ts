@@ -28,6 +28,8 @@ import {
   type PaymentMilestone
 } from "@/lib/proposal-deck-helpers";
 import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
+import { resolvedCompanyProfileForLang } from "@/lib/proposal-company-resolve";
+import { hindiHonoredDisplayName } from "@/lib/roman-name-to-devanagari";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
 import { ATAL_GRIHA_JYOTI } from "@/lib/mp-tariff-2025-26";
 
@@ -487,7 +489,10 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
   const paymentMilestones = buildPaymentMilestones(grossSystemCost);
   const amcOptions = buildAmcOptions(grossSystemCost, lang);
   const baseCompany = defaultCompanyProfile(lang);
-  const companyProfile: CompanyProfile = { ...baseCompany, ...(input.companyProfile ?? {}) };
+  const companyProfile: CompanyProfile = resolvedCompanyProfileForLang(
+    { ...baseCompany, ...(input.companyProfile ?? {}) },
+    lang
+  );
 
   const customerProfile: CustomerProfile = input.customerProfile ?? {};
   const bankDetails: ProposalBankDetails = input.bankDetails ?? {};
@@ -508,7 +513,8 @@ export function summarizeProposalDeck(input: PremiumProposalPptInput): ProposalD
     : undefined;
 
   return {
-    honoredName: withHonorific(input.customerName),
+    honoredName:
+      lang === "hi" ? hindiHonoredDisplayName(withHonorific(input.customerName)) : withHonorific(input.customerName),
     installer: (input.installerName ?? "Harihar Solar").trim(),
     tagline: (input.installerTagline ?? "100% Local · Satna · Madhya Pradesh").trim(),
     contact: (input.installerContact ?? "+91-9993322267 · harihar@solar.com").trim(),

@@ -31,31 +31,35 @@ import { PROPOSAL_BRANDING_UPDATED_EVENT, readProposalBrandingSettings } from "@
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
 import { ATAL_GRIHA_JYOTI } from "@/lib/mp-tariff-2025-26";
 import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
+import { hindiHonoredDisplayName } from "@/lib/roman-name-to-devanagari";
+import { resolvedCompanyProfileForLang } from "@/lib/proposal-company-resolve";
+import { expertiseCategoriesCopy, solutionsForEveryScale, whyCustomersChooseUsTitle } from "@/lib/proposal-about-expertise";
 
 // ---------------------------------------------------------------------------
 // Connection-type expansion — gives "LT" → "LT — Low Tension (Residential)"
 // so the customer profile never reads as a bare two-letter code.
 // ---------------------------------------------------------------------------
-function expandConnectionType(raw: string | undefined | null): string {
+function expandConnectionType(raw: string | undefined | null, lang: ProposalLang = "en"): string {
   const v = (raw ?? "").trim();
   if (!v) return "—";
   const upper = v.toUpperCase();
+  const hi = lang === "hi";
   if (/domestic/i.test(v) && /lv\s*[-]?\s*1\s*\.?\s*2/i.test(v)) {
-    return "Domestic — LV1.2 (metered, single-phase typical)";
+    return hi
+      ? "घरेलू — LV1.2 (मीटर, सिंगल फेज़ सामान्य)"
+      : "Domestic — LV1.2 (metered, single-phase typical)";
   }
   if (/\bdomestic\b/i.test(v) && /light\s*and\s*fan/i.test(v)) {
-    return "Domestic — light & fan (residential)";
+    return hi ? "घरेलू — लाइट और पंखा (आवासीय)" : "Domestic — light & fan (residential)";
   }
-  // Exact code matches first
-  if (upper === "LT") return "LT — Low Tension (Residential)";
-  if (upper === "HT") return "HT — High Tension (Industrial)";
-  if (upper === "EHT" || upper === "EHV") return "EHT — Extra High Tension";
-  if (upper === "DS-I" || upper === "DS1") return "DS-I — Domestic Slab I";
-  if (upper === "DS-II" || upper === "DS2") return "DS-II — Domestic Slab II";
-  if (upper === "BPL") return "BPL — Below Poverty Line";
-  // Pattern-based expansion when the raw string starts with a code
-  if (/^lt\b/i.test(v)) return v.replace(/^lt\b/i, "LT — Low Tension");
-  if (/^ht\b/i.test(v)) return v.replace(/^ht\b/i, "HT — High Tension");
+  if (upper === "LT") return hi ? "LT — लो टेंशन (आवासीय)" : "LT — Low Tension (Residential)";
+  if (upper === "HT") return hi ? "HT — हाई टेंशन (औद्योगिक)" : "HT — High Tension (Industrial)";
+  if (upper === "EHT" || upper === "EHV") return hi ? "EHT — अति उच्च टेंशन" : "EHT — Extra High Tension";
+  if (upper === "DS-I" || upper === "DS1") return hi ? "DS-I — घरेलू स्लैब I" : "DS-I — Domestic Slab I";
+  if (upper === "DS-II" || upper === "DS2") return hi ? "DS-II — घरेलू स्लैब II" : "DS-II — Domestic Slab II";
+  if (upper === "BPL") return hi ? "BPL — गरीबी रेखा से नीचे" : "BPL — Below Poverty Line";
+  if (/^lt\b/i.test(v)) return hi ? v.replace(/^lt\b/i, "LT — लो टेंशन") : v.replace(/^lt\b/i, "LT — Low Tension");
+  if (/^ht\b/i.test(v)) return hi ? v.replace(/^ht\b/i, "HT — हाई टेंशन") : v.replace(/^ht\b/i, "HT — High Tension");
   return v;
 }
 
@@ -211,7 +215,8 @@ function StatTile({
   rawValue,
   tone = "ink",
   delay = 0,
-  dark = false
+  dark = false,
+  lang = "en"
 }: {
   label: string;
   value: string;
@@ -219,6 +224,7 @@ function StatTile({
   tone?: "ink" | "blue" | "green" | "rose";
   delay?: number;
   dark?: boolean;
+  lang?: ProposalLang;
 }) {
   const toneClass =
     tone === "blue" ? (dark ? "text-sky-300" : "text-sky-700") :
@@ -245,16 +251,26 @@ function StatTile({
           : "border-white/60 bg-white/80 backdrop-blur-sm shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
       }`}
     >
-      <p className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${dark ? "text-slate-400" : "text-slate-500"}`}>{label}</p>
+      <p
+        className={`text-[10px] font-semibold ${dark ? "text-slate-400" : "text-slate-500"} ${
+          lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
+        }`}
+      >
+        {label}
+      </p>
       <p className={`mt-2 break-words text-2xl font-bold leading-tight sm:text-3xl ${toneClass}`}>{displayValue}</p>
     </motion.div>
   );
 }
 
-function SectionHeader({ kicker, title, subtitle }: { kicker: string; title: string; subtitle?: string }) {
+function SectionHeader({ kicker, title, subtitle, lang = "en" }: { kicker: string; title: string; subtitle?: string; lang?: ProposalLang }) {
   return (
     <header className="mb-6">
-      <p className="text-xs font-bold uppercase tracking-[0.32em] text-sky-700">{kicker}</p>
+      <p
+        className={`text-xs text-sky-700 ${lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.32em]"}`}
+      >
+        {kicker}
+      </p>
       <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{title}</h2>
       {subtitle ? <p className="mt-1 text-sm text-slate-600 sm:text-base">{subtitle}</p> : null}
     </header>
@@ -501,20 +517,27 @@ function CtaButton({
 
 function HeroCover({
   D,
+  lang,
   summary,
   installerLogoUrl,
   location,
   siteImages
 }: {
   D: ProposalDict;
+  lang: ProposalLang;
   summary: ProposalDeckSummary;
   installerLogoUrl?: string;
   location?: string;
   siteImages?: string[];
 }) {
   const cp = summary.customerProfile;
-  const cmp = summary.companyProfile;
+  const cmp = resolvedCompanyProfileForLang(summary.companyProfile, lang);
   const heroBottomImage = siteImages?.[0];
+  const displayName = lang === "hi" ? hindiHonoredDisplayName(summary.honoredName) : summary.honoredName;
+  const taglineClass =
+    lang === "hi"
+      ? "truncate text-[11px] text-slate-500 sm:text-xs tracking-normal"
+      : "truncate text-[11px] uppercase tracking-[0.2em] text-slate-500 sm:text-xs";
 
   // Strict 12-col grid — every block declares its column span so nothing
   // floats or overlaps. On mobile the grid collapses to 1 column.
@@ -533,11 +556,13 @@ function HeroCover({
           )}
           <div className="min-w-0">
             <p className="truncate text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl">{summary.installer}</p>
-            <p className="truncate text-[11px] uppercase tracking-[0.2em] text-slate-500 sm:text-xs">{summary.tagline}</p>
+            <p className={taglineClass}>{summary.tagline}</p>
           </div>
         </div>
         <div className="col-span-12 sm:col-span-5 sm:text-right">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Contact</p>
+          <p className={`text-[10px] font-bold text-slate-400 ${lang === "hi" ? "tracking-normal" : "uppercase tracking-widest"}`}>
+            {D["hero.contactLabel"]}
+          </p>
           <p className="text-xs font-semibold text-slate-700 sm:text-sm">{summary.contact}</p>
         </div>
       </div>
@@ -546,7 +571,9 @@ function HeroCover({
       <div className="mt-7 sm:mt-9">
         <motion.p
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="text-[11px] font-bold uppercase tracking-[0.3em] text-sky-700 sm:text-xs"
+          className={`text-[11px] font-bold text-sky-700 sm:text-xs ${
+            lang === "hi" ? "tracking-normal" : "uppercase tracking-[0.3em]"
+          }`}
         >
           {D["slide.cover.kicker"]}
         </motion.p>
@@ -554,7 +581,7 @@ function HeroCover({
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.05 }}
           className="mt-2 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl lg:text-5xl"
         >
-          {summary.honoredName}
+          {displayName}
         </motion.h1>
         {location ? (
           <p className="mt-1 text-sm text-slate-600 sm:text-base">{location}</p>
@@ -567,7 +594,7 @@ function HeroCover({
           { l: D["profile.consumerId"], v: profileFieldOrDash(cp.consumerId) },
           { l: D["profile.meterNo"], v: profileFieldOrDash(cp.meterNumber) },
           { l: D["profile.connectionDate"], v: formatConnectionDate(cp.connectionDate) },
-          { l: D["profile.connectionType"], v: expandConnectionType(cp.connectionType) },
+          { l: D["profile.connectionType"], v: expandConnectionType(cp.connectionType, lang) },
           { l: D["profile.phase"], v: profileFieldOrDash(cp.phase) },
           { l: D["profile.sanctionedLoad"], v: cp.sanctionedLoadKw ? `${cp.sanctionedLoadKw} kW` : "—" }
         ].map((c, i) => (
@@ -577,7 +604,13 @@ function HeroCover({
             transition={{ duration: 0.35, delay: 0.05 + i * 0.04 }}
             className="min-w-0 rounded-xl border border-white/70 bg-white/85 px-3 py-2.5 backdrop-blur-sm shadow-[0_2px_10px_rgba(15,23,42,0.04)]"
           >
-            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{c.l}</p>
+            <p
+              className={`truncate text-[10px] font-semibold text-slate-500 ${
+                lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.16em]"
+              }`}
+            >
+              {c.l}
+            </p>
             <p className="mt-1 truncate text-[13px] font-bold leading-tight text-slate-900 sm:text-sm" title={c.v}>{c.v}</p>
           </motion.div>
         ))}
@@ -590,7 +623,13 @@ function HeroCover({
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mt-6 rounded-2xl border border-white/60 bg-white/70 p-4 backdrop-blur-sm shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:p-5"
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">About {summary.installer}</p>
+          <p
+            className={`text-[10px] font-bold text-emerald-700 ${
+              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.22em]"
+            }`}
+          >
+            {D["hero.aboutInstaller"].replace("%INSTALLER%", summary.installer)}
+          </p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-slate-700 sm:text-sm">
             {cmp.aboutUsParagraphs[0]}
           </p>
@@ -599,11 +638,11 @@ function HeroCover({
 
       {/* ── 5. SYSTEM SUMMARY — strict 5-col grid; no overlap ──────────── */}
       <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
-        <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} />
-        <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} />
-        <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} tone="blue" delay={0.15} />
-        <StatTile label={D["common.payback"]} value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`} tone="green" delay={0.2} />
-        <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} />
+        <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} lang={lang} />
+        <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} lang={lang} />
+        <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} tone="blue" delay={0.15} lang={lang} />
+        <StatTile label={D["common.payback"]} value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`} tone="green" delay={0.2} lang={lang} />
+        <StatTile label={D["common.lifeProfit"]} value={inrK(summary.lifetime25Profit)} tone={summary.lifetime25Profit > 0 ? "green" : "rose"} delay={0.25} lang={lang} />
       </div>
       <p className="mt-3 text-[10px] italic text-slate-500 sm:text-[11px]">{D["common.engineNote"]}</p>
 
@@ -619,7 +658,13 @@ function HeroCover({
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/10 to-transparent" />
           <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3 sm:bottom-4 sm:left-6 sm:right-6">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300 sm:text-xs">Engineered Locally</p>
+              <p
+                className={`text-[10px] font-bold text-emerald-300 sm:text-xs ${
+                  lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.28em]"
+                }`}
+              >
+                {D["hero.engineeredEyebrow"]}
+              </p>
               <p className="mt-0.5 text-base font-extrabold leading-tight text-white sm:text-lg">{summary.installer}</p>
             </div>
             <p className="text-right text-[10px] font-semibold text-white/80 sm:text-xs">{cmp.installationsDone} {cmp.installationsLabel}</p>
@@ -632,19 +677,25 @@ function HeroCover({
           transition={{ duration: 0.6, delay: 0.2 }}
           className="relative mt-7 overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-sky-900 to-emerald-900 p-5 text-white sm:mt-8 sm:p-7"
         >
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-emerald-300 sm:text-xs">Engineered Locally</p>
-          <p className="mt-1 text-lg font-extrabold tracking-tight sm:text-2xl">100% Local team, end-to-end EPC</p>
-          <p className="mt-1 text-xs text-white/70 sm:text-sm">Site survey · Design · Install · Net-meter · 1 yr aftercare.</p>
+          <p
+            className={`text-[10px] font-bold text-emerald-300 sm:text-xs ${
+              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.28em]"
+            }`}
+          >
+            {D["hero.engineeredEyebrow"]}
+          </p>
+          <p className="mt-1 text-lg font-extrabold tracking-tight sm:text-2xl">{D["hero.localTeamBold"]}</p>
+          <p className="mt-1 text-xs text-white/70 sm:text-sm">{D["hero.localTeamFine"]}</p>
         </motion.div>
       )}
     </section>
   );
 }
 
-function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary: ProposalDeckSummary; monthLbls: string[] }) {
+function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; summary: ProposalDeckSummary; monthLbls: string[]; lang: ProposalLang }) {
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} />
+      <SectionHeader kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
 
       {/* Bar chart with summer trap highlight */}
       <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-4 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
@@ -652,7 +703,7 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
       </div>
       {summary.mpSmartBillingCaption ? (
         <p className="mt-4 rounded-xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-xs leading-relaxed text-slate-800">
-          <span className="font-bold text-sky-900">MP smart billing: </span>
+          <span className="font-bold text-sky-900">{D["audit.mpSmartPrefix"]} </span>
           {summary.mpSmartBillingCaption}
         </p>
       ) : null}
@@ -673,37 +724,49 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
                 <tr>
                   <th
                     scope="col"
-                    className="sticky left-0 z-30 min-w-[3.5rem] whitespace-nowrap border-b border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider shadow-[4px_0_8px_-2px_rgba(0,0,0,0.25)] sm:static sm:z-auto sm:w-[10%] sm:px-2 sm:py-2 sm:text-[9px] sm:shadow-none"
+                    className={`sticky left-0 z-30 min-w-[3.5rem] whitespace-nowrap border-b border-slate-700 bg-slate-900 px-3 py-2.5 text-left text-[10px] font-bold shadow-[4px_0_8px_-2px_rgba(0,0,0,0.25)] sm:static sm:z-auto sm:w-[10%] sm:px-2 sm:py-2 sm:text-[9px] sm:shadow-none ${
+                      lang === "hi" ? "tracking-normal text-white" : "uppercase tracking-wider text-white"
+                    }`}
                   >
                     {D["audit.month"]}
                   </th>
                   <th
                     scope="col"
-                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[9%] sm:px-2 sm:py-2 sm:text-[9px]"
+                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[9%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                      lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
+                    }`}
                   >
                     {D["audit.units"]}
                   </th>
                   <th
                     scope="col"
-                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px]"
+                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                      lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
+                    }`}
                   >
                     {D["audit.energy"]}
                   </th>
                   <th
                     scope="col"
-                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[15%] sm:px-2 sm:py-2 sm:text-[9px]"
+                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[15%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                      lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
+                    }`}
                   >
                     {D["audit.fixed"]}
                   </th>
                   <th
                     scope="col"
-                    className="border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px]"
+                    className={`border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:w-[17%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                      lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
+                    }`}
                   >
                     {D["audit.dutyFuel"]}
                   </th>
                   <th
                     scope="col"
-                    className="min-w-[9rem] border-b border-slate-700 px-3 py-2 text-right text-[10px] font-bold uppercase tracking-wider sm:min-w-0 sm:w-[32%] sm:px-2 sm:py-2 sm:text-[9px]"
+                    className={`min-w-[9rem] border-b border-slate-700 px-3 py-2 text-right text-[10px] sm:min-w-0 sm:w-[32%] sm:px-2 sm:py-2 sm:text-[9px] ${
+                      lang === "hi" ? "font-bold tracking-normal text-white" : "font-bold uppercase tracking-wider text-white"
+                    }`}
                   >
                     {D["audit.netBill"]}
                   </th>
@@ -768,32 +831,59 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
       {/* Insight cards */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <div className="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-rose-100/50 p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-rose-700">{D["insight.summer.title"]}</p>
+          <p
+            className={`text-[10px] font-bold text-rose-700 ${
+              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
+            }`}
+          >
+            {D["insight.summer.title"]}
+          </p>
           <p className="mt-2 text-2xl font-bold text-rose-900 sm:text-3xl">
             <AnimatedNumber value={summary.summerPct} suffix="%" />
           </p>
           <p className="mt-1 text-xs text-rose-800">{D["insight.summer.sub"]}</p>
         </div>
         <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">{D["insight.fixed.title"]}</p>
+          <p
+            className={`text-[10px] font-bold text-amber-700 ${
+              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
+            }`}
+          >
+            {D["insight.fixed.title"]}
+          </p>
           <p className="mt-2 text-2xl font-bold text-amber-900 sm:text-3xl">
             <AnimatedINR value={summary.fixedAnnual} />
           </p>
           <p className="mt-1 text-xs text-amber-800">{D["insight.fixed.sub"]}</p>
         </div>
         <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-slate-100/50 p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">{D["insight.duty.title"]}</p>
+          <p
+            className={`text-[10px] font-bold text-slate-600 ${
+              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
+            }`}
+          >
+            {D["insight.duty.title"]}
+          </p>
           <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
             <AnimatedINR value={summary.auditTotals.duty + summary.auditTotals.fuel} />
           </p>
           <p className="mt-1 text-xs text-slate-700">{D["insight.duty.sub"]}</p>
         </div>
         <div className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">{D["insight.solar.title"]}</p>
+          <p
+            className={`text-[10px] font-bold text-emerald-700 ${
+              lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
+            }`}
+          >
+            {D["insight.solar.title"]}
+          </p>
           <p className="mt-2 text-2xl font-bold text-emerald-900 sm:text-3xl">
             <AnimatedNumber value={summary.totalReduction} suffix="%" />
           </p>
-          <p className="mt-1 text-xs text-emerald-800"><AnimatedINR value={summary.annualSaving} /> / yr</p>
+          <p className="mt-1 text-xs text-emerald-800">
+            <AnimatedINR value={summary.annualSaving} />
+            {D["common.perYr"]}
+          </p>
         </div>
       </div>
     </section>
@@ -803,11 +893,13 @@ function DeepAuditSection({ D, summary, monthLbls }: { D: ProposalDict; summary:
 function EconomicsSection({
   D,
   summary,
-  monthLbls
+  monthLbls,
+  lang
 }: {
   D: ProposalDict;
   summary: ProposalDeckSummary;
   monthLbls: string[];
+  lang: ProposalLang;
 }) {
   const monthlyGen = Math.round(summary.annualGen / 12);
   const [selectedTenure, setSelectedTenure] = useState<number | null>(summary.emi[1]?.tenureYears ?? null);
@@ -815,12 +907,18 @@ function EconomicsSection({
 
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.economics.kicker"]} title={D["slide.economics.title"]} subtitle={D["slide.economics.subtitle"]} />
+      <SectionHeader kicker={D["slide.economics.kicker"]} title={D["slide.economics.title"]} subtitle={D["slide.economics.subtitle"]} lang={lang} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Generation vs Usage */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{D["gen.title"]}</p>
+          <p
+            className={`text-xs text-slate-500 ${
+              lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.18em]"
+            }`}
+          >
+            {D["gen.title"]}
+          </p>
           <div className="mt-4">
             <GenVsUseChart
               labels={monthLbls}
@@ -832,11 +930,23 @@ function EconomicsSection({
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">{D["gen.annualGen"]}</p>
+              <p
+                className={`text-[10px] text-emerald-700 ${
+                  lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-wider"
+                }`}
+              >
+                {D["gen.annualGen"]}
+              </p>
               <p className="mt-1 text-lg font-bold text-emerald-900">{summary.annualGen.toLocaleString("en-IN")} u</p>
             </div>
             <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-sky-700">{D["gen.coverage"]}</p>
+              <p
+                className={`text-[10px] text-sky-700 ${
+                  lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-wider"
+                }`}
+              >
+                {D["gen.coverage"]}
+              </p>
               <p className="mt-1 text-lg font-bold text-sky-900">{summary.coverage}%</p>
             </div>
           </div>
@@ -845,7 +955,13 @@ function EconomicsSection({
         {/* EMI calculator */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{D["emi.title"]}</p>
+            <p
+              className={`text-xs text-slate-500 ${
+                lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.18em]"
+              }`}
+            >
+              {D["emi.title"]}
+            </p>
             <button
               type="button"
               onClick={() => setShowFinance((s) => !s)}
@@ -877,7 +993,10 @@ function EconomicsSection({
                   </div>
                   <div className="text-right">
                     <p className={`text-base font-bold ${selected ? "text-emerald-700" : "text-slate-900"}`}>
-                      {inr(row.monthlyEmi)}<span className="text-[11px] font-medium text-slate-500">/mo</span>
+                      {inr(row.monthlyEmi)}
+                      <span className="text-[11px] font-medium text-slate-500">
+                        {lang === "hi" ? "/माह" : "/mo"}
+                      </span>
                     </p>
                   </div>
                 </button>
@@ -891,10 +1010,10 @@ function EconomicsSection({
               transition={{ duration: 0.3 }}
               className="mt-4 rounded-xl bg-slate-900 p-4 text-white"
             >
-              <p className="text-xs font-bold uppercase tracking-wider text-sky-300">{D["emi.financeCta"]}</p>
+              <p className="text-xs font-bold tracking-wider text-sky-300">{D["emi.financeCta"]}</p>
               <p className="mt-2 text-xs text-slate-300">
                 {selectedTenure
-                  ? `${selectedTenure} ${D["emi.years"]} · ${inr(summary.emi.find((r) => r.tenureYears === selectedTenure)?.monthlyEmi ?? 0)}/mo`
+                  ? `${selectedTenure} ${D["emi.years"]} · ${inr(summary.emi.find((r) => r.tenureYears === selectedTenure)?.monthlyEmi ?? 0)}${lang === "hi" ? "/माह" : "/mo"}`
                   : D["emi.title"]}
               </p>
               <a
@@ -903,7 +1022,7 @@ function EconomicsSection({
                 rel="noopener noreferrer"
                 className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-xs font-bold text-white"
               >
-                <MessageCircle className="h-3.5 w-3.5" /> Connect with us
+                <MessageCircle className="h-3.5 w-3.5" /> {D["econ.connectCta"]}
               </a>
             </motion.div>
           ) : null}
@@ -920,9 +1039,9 @@ function EconomicsSection({
           />
         </div>
         <div className="grid gap-3 sm:col-span-2">
-          <StatTile label="25-yr Grid Cost" value={inr(summary.solarVsGrid.totalGrid)} tone="rose" />
-          <StatTile label="25-yr Solar Cost" value={inr(summary.solarVsGrid.totalSolar)} tone="blue" />
-          <StatTile label="Net Saving" value={inr(summary.solarVsGrid.netSaving)} tone="green" />
+          <StatTile label={D["econ.grid25"]} value={inr(summary.solarVsGrid.totalGrid)} tone="rose" lang={lang} />
+          <StatTile label={D["econ.solar25"]} value={inr(summary.solarVsGrid.totalSolar)} tone="blue" lang={lang} />
+          <StatTile label={D["econ.netSaving"]} value={inr(summary.solarVsGrid.netSaving)} tone="green" lang={lang} />
         </div>
       </div>
     </section>
@@ -952,7 +1071,7 @@ function TreeAnimation({ count, inView }: { count: number; inView: boolean }) {
   );
 }
 
-function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: ProposalDeckSummary }) {
+function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: ProposalDeckSummary; lang: ProposalLang }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const treeCount = useCountUp(summary.environmental.treeEquivalent, inView);
@@ -964,7 +1083,7 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
 
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.environment.kicker"]} title={D["slide.environment.title"]} subtitle={D["slide.environment.subtitle"]} />
+      <SectionHeader kicker={D["slide.environment.kicker"]} title={D["slide.environment.title"]} subtitle={D["slide.environment.subtitle"]} lang={lang} />
       <div ref={ref} className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -973,7 +1092,13 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
         >
           <Leaf className="h-6 w-6 text-emerald-600 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
           <p className="mt-3 text-3xl font-bold text-emerald-900">{co2Count}<span className="text-base font-medium"> t</span></p>
-          <p className="mt-1 text-[11px] uppercase tracking-widest text-emerald-700">{D["env.co2"]}</p>
+          <p
+            className={`mt-1 text-[11px] text-emerald-700 ${
+              lang === "hi" ? "font-semibold tracking-normal normal-case" : "font-semibold uppercase tracking-widest"
+            }`}
+          >
+            {D["env.co2"]}
+          </p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -982,7 +1107,13 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
         >
           <TreeDeciduous className="h-6 w-6 text-emerald-600 drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
           <p className="mt-3 text-3xl font-bold text-emerald-900">{treeCount.toLocaleString("en-IN")}</p>
-          <p className="mt-1 text-[11px] uppercase tracking-widest text-emerald-700">{D["env.trees"]}</p>
+          <p
+            className={`mt-1 text-[11px] text-emerald-700 ${
+              lang === "hi" ? "font-semibold tracking-normal normal-case" : "font-semibold uppercase tracking-widest"
+            }`}
+          >
+            {D["env.trees"]}
+          </p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -991,7 +1122,13 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
         >
           <Sun className="h-6 w-6 text-sky-600 drop-shadow-[0_0_8px_rgba(14,165,233,0.4)]" />
           <p className="mt-3 text-3xl font-bold text-sky-900">{genCount.toLocaleString("en-IN")}<span className="text-base font-medium"> u</span></p>
-          <p className="mt-1 text-[11px] uppercase tracking-widest text-sky-700">{D["env.solarYearly"]}</p>
+          <p
+            className={`mt-1 text-[11px] text-sky-700 ${
+              lang === "hi" ? "font-semibold tracking-normal normal-case" : "font-semibold uppercase tracking-widest"
+            }`}
+          >
+            {D["env.solarYearly"]}
+          </p>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -1000,7 +1137,13 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
         >
           <Sparkles className="h-6 w-6 text-violet-600 drop-shadow-[0_0_8px_rgba(139,92,246,0.4)]" />
           <p className="mt-3 text-3xl font-bold text-violet-900">{summary.coverage}%</p>
-          <p className="mt-1 text-[11px] uppercase tracking-widest text-violet-700">{D["env.coverage"]}</p>
+          <p
+            className={`mt-1 text-[11px] text-violet-700 ${
+              lang === "hi" ? "font-semibold tracking-normal normal-case" : "font-semibold uppercase tracking-widest"
+            }`}
+          >
+            {D["env.coverage"]}
+          </p>
         </motion.div>
       </div>
 
@@ -1014,17 +1157,27 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">Your 1-Year Carbon Offset</p>
+            <p
+              className={`text-xs text-emerald-300 ${
+                lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.32em]"
+              }`}
+            >
+              {D["env.offsetKicker"]}
+            </p>
             <p className="mt-3 text-2xl font-bold sm:text-3xl">
-              Equivalent to planting{" "}
-              <AnimatedNumber
-                value={yearlyTrees}
-                className="text-emerald-300"
-              />{" "}
-              trees 🌳
+              {(() => {
+                const [a, b] = D["env.offsetTreesLine"].split("%N%");
+                return (
+                  <>
+                    {a}
+                    <AnimatedNumber value={yearlyTrees} className="text-emerald-300" />
+                    {b ?? ""}
+                  </>
+                );
+              })()}
             </p>
             <p className="mt-2 text-sm text-emerald-200/80">
-              Over 25 years — <span className="font-bold text-emerald-300">{summary.environmental.treeEquivalent.toLocaleString("en-IN")} trees</span> worth of CO₂ absorbed.
+              {D["env.offsetSubLine"].replace("%T%", summary.environmental.treeEquivalent.toLocaleString("en-IN"))}
             </p>
           </div>
           <TreeDeciduous className="h-16 w-16 flex-shrink-0 text-emerald-400 opacity-30" />
@@ -1039,7 +1192,13 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
         transition={{ duration: 0.6, delay: 0.1 }}
         className="mt-4 rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white sm:p-10"
       >
-        <p className="text-xs font-bold uppercase tracking-[0.32em] text-emerald-300">{D["env.legacy.title"]}</p>
+        <p
+          className={`text-xs text-emerald-300 ${
+            lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.32em]"
+          }`}
+        >
+          {D["env.legacy.title"]}
+        </p>
         <p className="mt-3 text-base text-slate-300 sm:text-lg">{D["env.legacy.sub"]}</p>
       </motion.div>
     </section>
@@ -1048,52 +1207,30 @@ function EnvironmentSection({ D, summary }: { D: ProposalDict; summary: Proposal
 
 function CompanyProfileSection({
   D,
+  lang,
   summary,
   siteImages
 }: {
   D: ProposalDict;
+  lang: ProposalLang;
   summary: ProposalDeckSummary;
   siteImages?: string[];
 }) {
-  const cp = summary.companyProfile;
-  const expertiseCategories = [
-    {
-      icon: Home,
-      title: "Residential Solar",
-      subtitle: "Homes & Apartments",
-      color: "sky",
-      bullets: ["1–10 kW rooftop systems", "PM Surya Ghar subsidy eligible", "25-year performance warranty"],
-      img: siteImages?.[2]
-    },
-    {
-      icon: Building2,
-      title: "Commercial Solar",
-      subtitle: "Shops & Offices",
-      color: "violet",
-      bullets: ["10–100 kW on-grid systems", "Accelerated depreciation benefits", "Net metering + export income"],
-      img: siteImages?.[3]
-    },
-    {
-      icon: Factory,
-      title: "Industrial Solar",
-      subtitle: "Factories & Plants",
-      color: "amber",
-      bullets: ["100 kW+ ground/rooftop", "HT / LT connection solutions", "Custom energy audit + BOM"],
-      img: siteImages?.[4]
-    }
-  ];
+  const cp = resolvedCompanyProfileForLang(summary.companyProfile, lang);
+  const expertiseCategories = expertiseCategoriesCopy(lang);
+  const scale = solutionsForEveryScale(lang);
+  const trustTitle = whyCustomersChooseUsTitle(lang);
 
   return (
     <section className="mt-10 sm:mt-12">
-      <SectionHeader
-        kicker={D["slide.about.kicker"]}
-        title="Solutions for Every Scale"
-        subtitle="From home rooftops to industrial megawatts — we engineer the right system for you."
-      />
+      <SectionHeader kicker={D["slide.about.kicker"]} title={scale.title} subtitle={scale.subtitle} lang={lang} />
 
       {/* Three expertise cards — strict 3-column grid, equal heights */}
       <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
         {expertiseCategories.map((cat, i) => {
+          const icons = [Home, Building2, Factory] as const;
+          const CardIcon = icons[i] ?? Home;
+          const catImg = siteImages?.[2 + i];
           const colorMap: Record<string, string> = {
             sky: "border-sky-200/70 bg-gradient-to-br from-sky-50 to-white",
             violet: "border-violet-200/70 bg-gradient-to-br from-violet-50 to-white",
@@ -1116,34 +1253,40 @@ function CompanyProfileSection({
               transition={{ duration: 0.5, delay: 0.08 + i * 0.08 }}
               className={`flex flex-col overflow-hidden rounded-2xl border shadow-[0_4px_20px_rgba(15,23,42,0.06)] backdrop-blur-sm ${colorMap[cat.color]}`}
             >
-              {cat.img ? (
+              {catImg ? (
                 <div className="relative h-44 overflow-hidden sm:h-48">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={cat.img} alt={cat.title} className="h-full w-full object-cover" />
+                  <img src={catImg} alt={cat.title} className="h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
                     <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconMap[cat.color]} shadow-md`}>
-                      <cat.icon className="h-5 w-5 text-white" />
+                      <CardIcon className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-white">{cat.title}</p>
-                      <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-white/85">{cat.subtitle}</p>
+                      <p
+                        className={`truncate text-[10px] font-semibold text-white/85 ${
+                          lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wider"
+                        }`}
+                      >
+                        {cat.subtitle}
+                      </p>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className={`flex h-44 items-center justify-center ${iconMap[cat.color]} sm:h-48`}>
-                  <cat.icon className="h-20 w-20 text-white/30" />
+                  <CardIcon className="h-20 w-20 text-white/30" />
                 </div>
               )}
               <div className="flex flex-1 flex-col p-4">
-                {!cat.img ? (
+                {!catImg ? (
                   <>
                     <p className={`text-base font-bold ${textMap[cat.color]}`}>{cat.title}</p>
                     <p className="text-[11px] font-semibold text-slate-500">{cat.subtitle}</p>
                   </>
                 ) : null}
-                <ul className={`space-y-1.5 ${cat.img ? "" : "mt-3"}`}>
+                <ul className={`space-y-1.5 ${catImg ? "" : "mt-3"}`}>
                   {cat.bullets.map((b) => (
                     <li key={b} className="flex items-start gap-1.5 text-xs leading-relaxed text-slate-700">
                       <CheckCircle2 className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${textMap[cat.color]} opacity-70`} />
@@ -1163,7 +1306,13 @@ function CompanyProfileSection({
         transition={{ duration: 0.5, delay: 0.2 }}
         className="mt-5 rounded-2xl border border-white/60 bg-white/85 p-4 backdrop-blur-sm shadow-[0_4px_18px_rgba(15,23,42,0.05)] sm:p-5"
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Why customers choose us</p>
+        <p
+          className={`text-[10px] font-bold text-emerald-700 ${
+            lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.22em]"
+          }`}
+        >
+          {trustTitle}
+        </p>
         <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {cp.bullets.slice(0, 4).map((b, i) => (
             <motion.li
@@ -1193,7 +1342,13 @@ function CompanyProfileSection({
             transition={{ duration: 0.35, delay: 0.3 + i * 0.05 }}
             className={`rounded-xl border bg-gradient-to-br p-3 backdrop-blur-sm shadow-[0_2px_10px_rgba(15,23,42,0.04)] ${item.accent}`}
           >
-            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">{item.l}</p>
+            <p
+              className={`text-[9px] font-bold text-slate-500 ${
+                lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
+              }`}
+            >
+              {item.l}
+            </p>
             <p className="mt-1 truncate text-sm font-extrabold leading-tight" title={item.v}>{item.v}</p>
           </motion.div>
         ))}
@@ -1229,9 +1384,15 @@ function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang:
 
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.technical.kicker"]} title={D["slide.technical.title"]} />
+      <SectionHeader kicker={D["slide.technical.kicker"]} title={D["slide.technical.title"]} lang={lang} />
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{D["tech.architecture"]}</p>
+        <p
+          className={`text-xs text-slate-500 ${
+            lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-wider"
+          }`}
+        >
+          {D["tech.architecture"]}
+        </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-6 sm:gap-3">
           {blocks.map((b, i) => (
             <div key={i} className="rounded-xl border border-sky-200 bg-sky-50/40 p-3">
@@ -1242,7 +1403,13 @@ function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang:
         </div>
       </div>
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{D["tech.projectPlan"]}</p>
+        <p
+          className={`text-xs text-slate-500 ${
+            lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-wider"
+          }`}
+        >
+          {D["tech.projectPlan"]}
+        </p>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-5">
           {stages.map((s, i) => (
             <motion.div
@@ -1255,7 +1422,13 @@ function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang:
             >
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500 text-xs font-bold text-white">{i + 1}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{s.d}</span>
+                <span
+                  className={`text-[10px] font-bold text-slate-500 ${
+                    lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wider"
+                  }`}
+                >
+                  {s.d}
+                </span>
               </div>
               <p className="mt-2 text-sm font-bold text-slate-900">{s.t}</p>
               <p className="mt-1 text-[11px] text-slate-600">{s.s}</p>
@@ -1270,16 +1443,46 @@ function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang:
 function BomSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.bom.kicker"]} title={D["slide.bom.title"]} />
+      <SectionHeader kicker={D["slide.bom.kicker"]} title={D["slide.bom.title"]} lang={lang} />
       <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-900 text-white">
             <tr>
-              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider">#</th>
-              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider">{D["bom.component"]}</th>
-              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider">{D["bom.spec"]}</th>
-              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider">{D["bom.brand"]}</th>
-              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider">{D["bom.warranty"]}</th>
+              <th
+                className={`px-3 py-2 text-left text-[10px] font-bold ${
+                  lang === "hi" ? "tracking-normal" : "uppercase tracking-wider"
+                }`}
+              >
+                #
+              </th>
+              <th
+                className={`px-3 py-2 text-left text-[10px] font-bold ${
+                  lang === "hi" ? "tracking-normal" : "uppercase tracking-wider"
+                }`}
+              >
+                {D["bom.component"]}
+              </th>
+              <th
+                className={`px-3 py-2 text-left text-[10px] font-bold ${
+                  lang === "hi" ? "tracking-normal" : "uppercase tracking-wider"
+                }`}
+              >
+                {D["bom.spec"]}
+              </th>
+              <th
+                className={`px-3 py-2 text-left text-[10px] font-bold ${
+                  lang === "hi" ? "tracking-normal" : "uppercase tracking-wider"
+                }`}
+              >
+                {D["bom.brand"]}
+              </th>
+              <th
+                className={`px-3 py-2 text-left text-[10px] font-bold ${
+                  lang === "hi" ? "tracking-normal" : "uppercase tracking-wider"
+                }`}
+              >
+                {D["bom.warranty"]}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1315,12 +1518,12 @@ function BomSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang;
   );
 }
 
-function PaymentSection({ D, summary }: { D: ProposalDict; summary: ProposalDeckSummary }) {
+function PaymentSection({ D, summary, lang }: { D: ProposalDict; summary: ProposalDeckSummary; lang: ProposalLang }) {
   const colors = ["bg-sky-500", "bg-violet-500", "bg-emerald-500", "bg-amber-500"];
   const labelKeys: Array<keyof ProposalDict> = ["pay.advance", "pay.material", "pay.installation", "pay.commissioning"];
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.payment.kicker"]} title={D["slide.payment.title"]} />
+      <SectionHeader kicker={D["slide.payment.kicker"]} title={D["slide.payment.title"]} lang={lang} />
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex h-12 w-full">
           {summary.paymentMilestones.map((m, i) => (
@@ -1363,16 +1566,18 @@ function CommercialAndAmcSection({
   D,
   summary,
   selectedAmcYears,
-  onAmcChange
+  onAmcChange,
+  lang
 }: {
   D: ProposalDict;
   summary: ProposalDeckSummary;
   selectedAmcYears: 1 | 5 | 10;
   onAmcChange: (y: 1 | 5 | 10) => void;
+  lang: ProposalLang;
 }) {
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.commercial.kicker"]} title={D["slide.commercial.title"]} />
+      <SectionHeader kicker={D["slide.commercial.kicker"]} title={D["slide.commercial.title"]} lang={lang} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{D["commercial.gross"]}</p>
@@ -1440,7 +1645,7 @@ function ServiceAmcSection({ D, lang, summary }: { D: ProposalDict; lang: Propos
     : ["Water + power at the site", "Insurance & physical damage", "Internet connectivity", "Vandalism damage"];
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.amc.kicker"]} title={D["slide.amc.title"]} />
+      <SectionHeader kicker={D["slide.amc.kicker"]} title={D["slide.amc.title"]} lang={lang} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <div className="flex items-center gap-2">
@@ -1564,7 +1769,7 @@ function BankingSection({
 
   return (
     <section className="mt-12 sm:mt-16">
-      <SectionHeader kicker={D["slide.banking.kicker"]} title={D["slide.banking.title"]} />
+      <SectionHeader kicker={D["slide.banking.kicker"]} title={D["slide.banking.title"]} lang={lang} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/60 bg-white/80 backdrop-blur-sm p-5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex items-center gap-2">
@@ -1686,6 +1891,7 @@ function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; la
         subtitle={lang === "hi"
           ? "हम पहले सर्वे करते हैं — पैनल बेचना नहीं। यही पेशेवर अंतर है।"
           : "We survey first — we don't sell panels. That's the engineering difference."}
+        lang={lang}
       />
 
       {/* Top: Survey image + checklist (40/60 split) */}
@@ -1780,7 +1986,13 @@ function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; la
             >
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-emerald-500 text-[11px] font-bold text-white shadow-sm">{i + 1}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{s.d}</span>
+                <span
+                  className={`text-[10px] font-bold text-slate-500 ${
+                    lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wider"
+                  }`}
+                >
+                  {s.d}
+                </span>
               </div>
               <p className="mt-2 text-sm font-bold leading-tight text-slate-900">{s.t}</p>
               <p className="mt-1 text-[11px] leading-snug text-slate-600">{s.s}</p>
@@ -1799,7 +2011,9 @@ function ClosingSection({
   onShare,
   onDownload,
   installer,
-  downloading
+  downloading,
+  lang,
+  honoredDisplay
 }: {
   D: ProposalDict;
   summary: ProposalDeckSummary;
@@ -1808,6 +2022,8 @@ function ClosingSection({
   onDownload: () => void;
   installer: { name: string; contact: string; tagline: string };
   downloading: boolean;
+  lang: ProposalLang;
+  honoredDisplay: string;
 }) {
   return (
     <section className="mt-12 sm:mt-16">
@@ -1818,8 +2034,14 @@ function ClosingSection({
         transition={{ duration: 0.6 }}
         className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white sm:p-10"
       >
-        <p className="text-xs font-bold uppercase tracking-[0.32em] text-sky-300">{D["common.thankYou"]}</p>
-        <h3 className="mt-3 text-3xl font-bold sm:text-5xl">{summary.honoredName}!</h3>
+        <p
+          className={`text-xs text-sky-300 ${
+            lang === "hi" ? "font-bold tracking-normal" : "font-bold uppercase tracking-[0.32em]"
+          }`}
+        >
+          {D["common.thankYou"]}
+        </p>
+        <h3 className="mt-3 text-3xl font-bold sm:text-5xl">{honoredDisplay}!</h3>
         <p className="mt-3 text-base text-slate-300 sm:text-lg">{D["slide.closing.title"]}</p>
         <div className="mt-6 grid grid-cols-3 gap-3">
           {[3, 4, 5].map((i, idx) => {
@@ -1891,9 +2113,28 @@ export default function ProposalView({
 
   const D = dict(lang);
   const monthLbls = monthLabels(lang);
+  const honoredDisplay = useMemo(
+    () => (lang === "hi" ? hindiHonoredDisplayName(summary.honoredName) : summary.honoredName),
+    [lang, summary.honoredName]
+  );
 
   const whatsappText = useMemo(() => {
     const link = typeof window !== "undefined" ? `${window.location.origin}/proposal/${id}` : `/proposal/${id}`;
+    if (lang === "hi") {
+      return [
+        `नमस्ते ${honoredDisplay} 🌞`,
+        ``,
+        `आपके लिए ${summary.systemKw} kW सोलर प्रस्ताव तैयार है:`,
+        `• नेट लागत: ${inr(summary.netCost)} (PM सूर्य घर सब्सिडी ${inr(summary.pmSubsidy)} के बाद)`,
+        `• वार्षिक बचत: ${inr(summary.annualSaving)}`,
+        `• पेबैक: ${summary.paybackYears.toFixed(1)} वर्ष`,
+        `• 25 वर्ष की बचत: ${inr(summary.solarVsGrid.netSaving)}`,
+        ``,
+        `पूरा इंटरैक्टिव प्रस्ताव: ${link}`,
+        ``,
+        `— ${installer.name}`
+      ].join("\n");
+    }
     return [
       `Namaste ${summary.honoredName} 🌞`,
       ``,
@@ -1907,7 +2148,7 @@ export default function ProposalView({
       ``,
       `— ${installer.name}`
     ].join("\n");
-  }, [id, summary, installer.name]);
+  }, [id, summary, installer.name, lang, honoredDisplay]);
 
   async function downloadPpt() {
     setDownloading(true);
@@ -1945,8 +2186,8 @@ export default function ProposalView({
     <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="never">
       <div
         className={`proposal-document mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
-          darkMode ? "bg-slate-950 text-white" : "bg-transparent"
-        }`}
+          lang === "hi" ? "lang-hi " : ""
+        }${darkMode ? "bg-slate-950 text-white" : "bg-transparent"}`}
         data-theme={darkMode ? "dark" : "light"}
       >
       {/* Floating controls — hidden in print */}
@@ -1993,6 +2234,7 @@ export default function ProposalView({
       <div className="proposal-page" data-page="cover">
         <HeroCover
           D={D}
+          lang={lang}
           summary={summary}
           installerLogoUrl={displayInstallerLogoUrl || undefined}
           location={undefined}
@@ -2002,22 +2244,22 @@ export default function ProposalView({
 
       {/* PAGE 2 — THE EXPERTISE (Domestic / Commercial / Industrial verticals) */}
       <div className="proposal-page" data-page="expertise">
-        <CompanyProfileSection D={D} summary={summary} siteImages={siteImages} />
+        <CompanyProfileSection D={D} lang={lang} summary={summary} siteImages={siteImages} />
       </div>
 
       {/* PAGE 3 — BILL INTELLIGENCE (Audit + bar chart) */}
       <div className="proposal-page" data-page="bill-audit">
-        <DeepAuditSection D={D} summary={summary} monthLbls={monthLbls} />
+        <DeepAuditSection D={D} summary={summary} monthLbls={monthLbls} lang={lang} />
       </div>
 
       {/* PAGE 4 — ECONOMICS (Solar vs Grid, EMI, ROI) */}
       <div className="proposal-page" data-page="economics">
-        <EconomicsSection D={D} summary={summary} monthLbls={monthLbls} />
+        <EconomicsSection D={D} summary={summary} monthLbls={monthLbls} lang={lang} />
       </div>
 
       {/* PAGE 5 — ENVIRONMENT (Carbon offset + tree-planting equivalence) */}
       <div className="proposal-page" data-page="environment">
-        <EnvironmentSection D={D} summary={summary} />
+        <EnvironmentSection D={D} summary={summary} lang={lang} />
       </div>
 
       {/* PAGE 6 — TECHNICAL + BOM (single high-density page, 2 sections combined) */}
@@ -2040,8 +2282,14 @@ export default function ProposalView({
 
       {/* PAGE 9 — COMMERCIAL (Payment plan + Commercial terms combined) */}
       <div className="proposal-page" data-page="commercial">
-        <PaymentSection D={D} summary={summary} />
-        <CommercialAndAmcSection D={D} summary={summary} selectedAmcYears={selectedAmcYears} onAmcChange={setSelectedAmcYears} />
+        <PaymentSection D={D} summary={summary} lang={lang} />
+        <CommercialAndAmcSection
+          D={D}
+          summary={summary}
+          selectedAmcYears={selectedAmcYears}
+          onAmcChange={setSelectedAmcYears}
+          lang={lang}
+        />
       </div>
 
       {/* PAGE 10 — THE CLOSING (Banking + Thank You combined; QR perfectly visible) */}
@@ -2055,6 +2303,8 @@ export default function ProposalView({
           onDownload={downloadPpt}
           installer={installer}
           downloading={downloading}
+          lang={lang}
+          honoredDisplay={honoredDisplay}
         />
       </div>
 

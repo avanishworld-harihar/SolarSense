@@ -26,6 +26,8 @@ export type ProposalDict = {
   "common.thankYou": string;
   "common.continued": string;
   "common.page": string;
+  /** Short suffix after annual ₹ amounts (e.g. insight solar card). */
+  "common.perYr": string;
 
   // Slide titles.
   "slide.cover.kicker": string;
@@ -113,6 +115,29 @@ export type ProposalDict = {
   "env.coverage": string;
   "env.legacy.title": string;
   "env.legacy.sub": string;
+  /** Green card — small kicker above tree equivalence line. */
+  "env.offsetKicker": string;
+  /** Use %N% for 1-year tree count. */
+  "env.offsetTreesLine": string;
+  /** Use %T% for 25-year tree equivalent. */
+  "env.offsetSubLine": string;
+
+  // Hero (cover) chrome — web proposal.
+  "hero.contactLabel": string;
+  /** %INSTALLER% placeholder. */
+  "hero.aboutInstaller": string;
+  "hero.engineeredEyebrow": string;
+  "hero.localTeamBold": string;
+  "hero.localTeamFine": string;
+
+  // Economics — extra stat labels (web).
+  "econ.grid25": string;
+  "econ.solar25": string;
+  "econ.netSaving": string;
+  "econ.connectCta": string;
+
+  // Audit — MP smart billing caption (web).
+  "audit.mpSmartPrefix": string;
 
   // About / company profile.
   "about.aboutUs": string;
@@ -192,6 +217,7 @@ const EN: ProposalDict = {
   "common.thankYou": "Thank You",
   "common.continued": "continued",
   "common.page": "Page",
+  "common.perYr": "/ yr",
 
   "slide.cover.kicker": "Personalised Solar Proposal",
   "slide.audit.kicker": "Bill Intelligence",
@@ -270,6 +296,22 @@ const EN: ProposalDict = {
   "env.coverage": "Demand Coverage",
   "env.legacy.title": "Your Green Legacy",
   "env.legacy.sub": "What your rooftop gives back to the planet over 25 years.",
+  "env.offsetKicker": "Your 1-Year Carbon Offset",
+  "env.offsetTreesLine": "Equivalent to planting %N% trees 🌳",
+  "env.offsetSubLine": "Over 25 years — %T% trees worth of CO₂ absorbed.",
+
+  "hero.contactLabel": "Contact",
+  "hero.aboutInstaller": "About %INSTALLER%",
+  "hero.engineeredEyebrow": "Engineered Locally",
+  "hero.localTeamBold": "100% Local team, end-to-end EPC",
+  "hero.localTeamFine": "Site survey · Design · Install · Net-meter · 1 yr aftercare.",
+
+  "econ.grid25": "25-yr Grid Cost",
+  "econ.solar25": "25-yr Solar Cost",
+  "econ.netSaving": "Net Saving",
+  "econ.connectCta": "Connect with us",
+
+  "audit.mpSmartPrefix": "MP smart billing:",
 
   "about.aboutUs": "About Us",
   "about.founded": "Founded",
@@ -341,6 +383,7 @@ const HI: ProposalDict = {
   "common.thankYou": "धन्यवाद",
   "common.continued": "जारी",
   "common.page": "पृष्ठ",
+  "common.perYr": "/ वर्ष",
 
   "slide.cover.kicker": "व्यक्तिगत सोलर प्रस्ताव",
   "slide.audit.kicker": "बिल विश्लेषण",
@@ -419,6 +462,22 @@ const HI: ProposalDict = {
   "env.coverage": "मांग कवरेज",
   "env.legacy.title": "आपकी हरित विरासत",
   "env.legacy.sub": "25 वर्षों में आपकी छत द्वारा पृथ्वी को मिलने वाला योगदान।",
+  "env.offsetKicker": "1 वर्ष का कार्बन ऑफसेट",
+  "env.offsetTreesLine": "लगभग %N% पेड़ लगाने के बराबर 🌳",
+  "env.offsetSubLine": "25 वर्षों में — %T% पेड़ों के बराबर CO₂ अवशोषित।",
+
+  "hero.contactLabel": "संपर्क",
+  "hero.aboutInstaller": "%INSTALLER% के बारे में",
+  "hero.engineeredEyebrow": "स्थानीय इंजीनियरिंग",
+  "hero.localTeamBold": "100% स्थानीय टीम, एंड-टू-एंड EPC",
+  "hero.localTeamFine": "साइट सर्वे · डिज़ाइन · इंस्टॉल · नेट-मीटर · 1 वर्ष आफ्टरकेयर।",
+
+  "econ.grid25": "25 वर्ष — ग्रिड लागत",
+  "econ.solar25": "25 वर्ष — सोलर लागत",
+  "econ.netSaving": "शुद्ध बचत",
+  "econ.connectCta": "हमसे जुड़ें",
+
+  "audit.mpSmartPrefix": "MP स्मार्ट बिलिंग:",
 
   "about.aboutUs": "हमारे बारे में",
   "about.founded": "स्थापना",
