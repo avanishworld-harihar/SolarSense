@@ -34,7 +34,12 @@ import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
 import { hindiHonoredDisplayName } from "@/lib/roman-name-to-devanagari";
 import { resolvedCompanyProfileForLang } from "@/lib/proposal-company-resolve";
 import { PROPOSAL_PLATFORM_CREDIT } from "@/lib/platform-branding";
-import { expertiseCategoriesCopy, solutionsForEveryScale, whyCustomersChooseUsTitle } from "@/lib/proposal-about-expertise";
+import {
+  DEFAULT_EXPERTISE_CARD_IMAGES,
+  expertiseCategoriesCopy,
+  solutionsForEveryScale,
+  whyCustomersChooseUsTitle
+} from "@/lib/proposal-about-expertise";
 
 // ---------------------------------------------------------------------------
 // Connection-type expansion — gives "LT" → "LT — Low Tension (Residential)"
@@ -1314,7 +1319,7 @@ function CompanyProfileSection({
         {expertiseCategories.map((cat, i) => {
           const icons = [Home, Building2, Factory] as const;
           const CardIcon = icons[i] ?? Home;
-          const catImg = siteImages?.[2 + i];
+          const catImg = siteImages?.[2 + i] ?? DEFAULT_EXPERTISE_CARD_IMAGES[i];
           const colorMap: Record<string, string> = {
             sky: "border-sky-200/70 bg-gradient-to-br from-sky-50 to-white",
             violet: "border-violet-200/70 bg-gradient-to-br from-violet-50 to-white",
@@ -1337,40 +1342,33 @@ function CompanyProfileSection({
               transition={{ duration: 0.5, delay: 0.08 + i * 0.08 }}
               className={`flex flex-col overflow-hidden rounded-2xl border shadow-[0_4px_20px_rgba(15,23,42,0.06)] backdrop-blur-sm ${colorMap[cat.color]}`}
             >
-              {catImg ? (
-                <div className="relative h-44 overflow-hidden sm:h-48">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={catImg} alt={cat.title} className="h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconMap[cat.color]} shadow-md`}>
-                      <CardIcon className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-white">{cat.title}</p>
-                      <p
-                        className={`truncate text-[10px] font-semibold text-white/85 ${
-                          lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wider"
-                        }`}
-                      >
-                        {cat.subtitle}
-                      </p>
-                    </div>
+              <div className="relative h-48 overflow-hidden sm:h-52">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={catImg}
+                  alt={cat.title}
+                  className="h-full w-full object-cover object-center"
+                  style={{ objectPosition: i === 0 ? "center 28%" : i === 1 ? "center 32%" : "center 40%" }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconMap[cat.color]} shadow-md`}>
+                    <CardIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-white drop-shadow-sm">{cat.title}</p>
+                    <p
+                      className={`truncate text-[10px] font-semibold text-white/90 drop-shadow-sm ${
+                        lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-wider"
+                      }`}
+                    >
+                      {cat.subtitle}
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <div className={`flex h-44 items-center justify-center ${iconMap[cat.color]} sm:h-48`}>
-                  <CardIcon className="h-20 w-20 text-white/30" />
-                </div>
-              )}
+              </div>
               <div className="flex flex-1 flex-col p-4">
-                {!catImg ? (
-                  <>
-                    <p className={`text-base font-bold ${textMap[cat.color]}`}>{cat.title}</p>
-                    <p className="text-[11px] font-semibold text-slate-500">{cat.subtitle}</p>
-                  </>
-                ) : null}
-                <ul className={`space-y-1.5 ${catImg ? "" : "mt-3"}`}>
+                <ul className="space-y-1.5">
                   {cat.bullets.map((b) => (
                     <li key={b} className="flex items-start gap-1.5 text-xs leading-relaxed text-slate-700">
                       <CheckCircle2 className={`mt-0.5 h-3.5 w-3.5 flex-shrink-0 ${textMap[cat.color]} opacity-70`} />

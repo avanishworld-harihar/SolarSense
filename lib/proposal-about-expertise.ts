@@ -1,5 +1,12 @@
 import type { ProposalLang } from "@/lib/proposal-i18n";
 
+/** Stock photography (Pexels) — used when proposal has no site photos for expertise cards. */
+export const DEFAULT_EXPERTISE_CARD_IMAGES = [
+  "/proposal-expertise/residential-rooftop-solar.jpg",
+  "/proposal-expertise/commercial-rooftop-solar.jpg",
+  "/proposal-expertise/industrial-solar-scale.jpg"
+] as const;
+
 export type ExpertiseCardCopy = {
   title: string;
   subtitle: string;
