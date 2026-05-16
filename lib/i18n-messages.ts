@@ -42,7 +42,9 @@ export const EN = {
   dashboard_greetingName: "Hello, {name}!",
   dashboard_schedule: "Today’s schedule",
   dashboard_overview: "Overview",
+  dashboard_operationalInsights: "Operational insights",
   dashboard_projectSummaries: "Solar project summaries",
+  dashboard_projectActivity: "Project activity",
   dashboard_quickActions: "Quick actions",
   dashboard_quickActionsSub: "Shortcuts for your daily installer workflow",
   dashboard_addCustomerCta: "Add customer",
@@ -537,6 +539,8 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   metrics_proposalsSent: "भेजे गए प्रस्ताव",
   metrics_pending: "लंबित भुगतान",
 
+  dashboard_operationalInsights: "ऑपरेशनल इनसाइट्स",
+  dashboard_projectActivity: "प्रोजेक्ट गतिविधि",
   dashboard_schedule: "आज का शेड्यूल",
   dashboard_quickActionsSub: "इंस्टॉलर दैनिक वर्कफ़्लो के शॉर्टकट",
   dashboard_addCustomerCta: "ग्राहक जोड़ें",

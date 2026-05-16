@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { DashboardCommandCenter } from "@/components/dashboard-command-center";
+import { DashboardOperationalInsights } from "@/components/dashboard-operational-insights";
 import { DashboardSectionTitle } from "@/components/dashboard-section-title";
 import { OfflineDataNotice } from "@/components/offline-data-notice";
 import { GlassProjectCard, type GlassProjectSummary } from "@/components/glass-project-card";
-import { MetricCard } from "@/components/metric-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FloatingLabelSelect } from "@/components/ui/floating-label-input";
@@ -30,18 +30,7 @@ import {
   resolveDiscomCode,
   writeInstallerRegion
 } from "@/lib/installer-region-storage";
-import {
-  ClipboardList,
-  FileText,
-  FolderPlus,
-  IndianRupee,
-  MapPin,
-  Send,
-  Sun,
-  Upload,
-  UserPlus,
-  Wallet
-} from "lucide-react";
+import { FileText, FolderPlus, MapPin, Upload, UserPlus } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/use-online-status";
 import { buildMetricTrendLines, writeTrendBaseline, type MetricTrendLines } from "@/lib/dashboard-trends";
 import { useLanguage } from "@/lib/language-context";
@@ -134,7 +123,7 @@ function DashboardPageContent() {
     [installerDiscom, discomOptions]
   );
   const [metricTrends, setMetricTrends] = useState<MetricTrendLines | null>(null);
-  /** Only true “finger-first” pointers skip stagger — keeps entrance motion on mouse / hybrid laptops. */
+  /** Only true â€œfinger-firstâ€ pointers skip stagger â€” keeps entrance motion on mouse / hybrid laptops. */
   const [isPointerCoarse, setIsPointerCoarse] = useState(false);
 
   useEffect(() => {
@@ -169,7 +158,7 @@ function DashboardPageContent() {
     setInstallerDiscom((prev) => resolveDiscomCode(prev.trim(), discomOptions));
   }, [installerState, discomOptions]);
 
-  /** Purane installs: LS me state thi, DISCOM key nahi — seed sirf tab jab UI state LS se match ho. */
+  /** Purane installs: LS me state thi, DISCOM key nahi â€” seed sirf tab jab UI state LS se match ho. */
   useEffect(() => {
     if (!installerState.trim() || discomOptions.length === 0) return;
     let stateInLs = "";
@@ -222,31 +211,31 @@ function DashboardPageContent() {
       {
         id: "demo-1",
         name: "Sharma Residence (Ravi Sharma)",
-        detail: `${t("dashboard_demo_p1_detail")} • Demo data`,
+        detail: `${t("dashboard_demo_p1_detail")} â€¢ Demo data`,
         capacityKw: "5.4 kW",
         status: "active",
         installProgress: 60,
-        nextAction: `${t("dashboard_demo_p1_next")} • Demo`,
+        nextAction: `${t("dashboard_demo_p1_next")} â€¢ Demo`,
         updatedAt: _demoStale
       },
       {
         id: "demo-2",
         name: "Patel Commercial (Jignesh Patel)",
-        detail: `${t("dashboard_demo_p2_detail")} • Demo data`,
+        detail: `${t("dashboard_demo_p2_detail")} â€¢ Demo data`,
         capacityKw: "12 kW",
         status: "pending",
         installProgress: 35,
-        nextAction: `${t("dashboard_demo_p2_next")} • Demo`,
+        nextAction: `${t("dashboard_demo_p2_next")} â€¢ Demo`,
         updatedAt: _demoFresh
       },
       {
         id: "demo-3",
         name: "Green Valley School (Trust office)",
-        detail: `${t("dashboard_demo_p3_detail")} • Demo data`,
+        detail: `${t("dashboard_demo_p3_detail")} â€¢ Demo data`,
         capacityKw: "25 kW",
         status: "done",
         installProgress: 100,
-        nextAction: "Installation complete • Demo",
+        nextAction: "Installation complete â€¢ Demo",
         updatedAt: _demoFresh
       }
     ];
@@ -399,77 +388,14 @@ function DashboardPageContent() {
           </DashboardItem>
         )}
 
-        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-metrics">
-          <DashboardSectionTitle>{t("dashboard_overview")}</DashboardSectionTitle>
-          <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:gap-5 lg:grid-cols-3 lg:gap-6">
-          <MetricCard
-            icon={UserPlus}
-            iconTone="blue"
-            label={t("metrics_totalLeads")}
-            value={stats ? String(stats.totalLeads) : "0"}
-            countUpValue={stats?.totalLeads ?? 0}
-            countUpFormat={(n) => Math.round(n).toLocaleString("en-IN")}
-            loading={showMetricSkeleton}
-            trend={metricTrends?.totalLeads}
-          />
-          <MetricCard
-            icon={Send}
-            iconTone="green"
-            label={t("metrics_proposalsSent")}
-            value={stats ? String(stats.proposalsSent) : "0"}
-            countUpValue={stats?.proposalsSent ?? 0}
-            countUpFormat={(n) => Math.round(n).toLocaleString("en-IN")}
-            loading={showMetricSkeleton}
-            trend={metricTrends?.proposalsSent}
-          />
-          <MetricCard
-            icon={ClipboardList}
-            iconTone="amber"
-            label={t("metrics_orders")}
-            value={stats ? String(stats.orders) : "0"}
-            countUpValue={stats?.orders ?? 0}
-            countUpFormat={(n) => Math.round(n).toLocaleString("en-IN")}
-            loading={showMetricSkeleton}
-            trend={metricTrends?.orders}
-          />
-          <MetricCard
-            icon={Sun}
-            iconTone="solar"
-            label={t("metrics_installedKw")}
-            value={stats ? stats.installedKw.toLocaleString("en-IN") : "0"}
-            countUpValue={stats?.installedKw ?? 0}
-            countUpFormat={(n) => Math.round(n).toLocaleString("en-IN")}
-            loading={showMetricSkeleton}
-            trend={metricTrends?.installedKw}
-          />
-          <MetricCard
-            icon={IndianRupee}
-            iconTone="violet"
-            emphasis
-            label={t("metrics_revenue")}
-            value={stats ? `₹${Math.round(stats.revenue).toLocaleString("en-IN")}` : "₹0"}
-            countUpValue={stats?.revenue ?? 0}
-            countUpFormat={(n) => `₹${Math.round(n).toLocaleString("en-IN")}`}
-            loading={showMetricSkeleton}
-            trend={metricTrends?.revenue}
-          />
-          <MetricCard
-            icon={Wallet}
-            iconTone="rose"
-            alert
-            label={t("metrics_pending")}
-            value={stats ? `₹${Math.round(stats.pendingPayments).toLocaleString("en-IN")}` : "₹0"}
-            countUpValue={stats?.pendingPayments ?? 0}
-            countUpFormat={(n) => `₹${Math.round(n).toLocaleString("en-IN")}`}
-            loading={showMetricSkeleton}
-            trend={metricTrends?.pendingPayments}
-          />
-          </div>
+        <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-insights">
+          <DashboardSectionTitle>{t("dashboard_operationalInsights")}</DashboardSectionTitle>
+          <DashboardOperationalInsights stats={stats} trends={metricTrends} loading={showMetricSkeleton} />
         </DashboardItem>
 
         <DashboardItem animate={shouldAnimateDashboard} className="dashboard-zone-secondary">
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <DashboardSectionTitle tier="quiet">{t("dashboard_projectSummaries")}</DashboardSectionTitle>
+            <DashboardSectionTitle tier="quiet">{t("dashboard_projectActivity")}</DashboardSectionTitle>
             <Link
               href="/projects?view=hidden"
               className="shrink-0 text-[11px] font-bold uppercase tracking-wide text-indigo-600 underline-offset-4 hover:underline dark:text-indigo-300 sm:text-xs"
