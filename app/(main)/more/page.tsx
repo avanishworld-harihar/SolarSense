@@ -11,10 +11,14 @@ import {
 } from "@/lib/performance-mode";
 import {
   DEFAULT_PROPOSAL_BRANDING_SETTINGS,
+  parseProposalAmcYears,
   readProposalBrandingSettings,
+  type ProposalAmcYears,
+  type ProposalBrandingSettings,
   type ProposalThemePreset,
   writeProposalBrandingSettings
 } from "@/lib/proposal-branding-settings";
+import { ProposalImageUploader } from "@/components/proposal-image-uploader";
 import { useInstallerDiscoms } from "@/hooks/use-installer-discoms";
 import { supabase } from "@/lib/supabase";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
@@ -66,10 +70,17 @@ export default function MorePage() {
   const [companyName, setCompanyName] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName);
   const [companyContact, setCompanyContact] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact);
   const [companyEmail, setCompanyEmail] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerEmail);
+  const [amcYears, setAmcYears] = useState<ProposalAmcYears>(DEFAULT_PROPOSAL_BRANDING_SETTINGS.amcSelectedYears);
+  const [bankAccName, setBankAccName] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankAccountName);
+  const [bankAccNo, setBankAccNo] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankAccountNumber);
+  const [bankIfsc, setBankIfsc] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankIfsc);
+  const [bankBranch, setBankBranch] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankBranch);
+  const [bankUpi, setBankUpi] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankUpiId);
+  const [proposalSiteImages, setProposalSiteImages] = useState<string[]>(DEFAULT_PROPOSAL_BRANDING_SETTINGS.proposalSiteImages);
   const [companyLogo, setCompanyLogo] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerLogoUrl);
   const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.paymentQrCodeUrl);
-  const [personalizedBranding, setPersonalizedBranding] = useState(true);
-  const [themePreset, setThemePreset] = useState<ProposalThemePreset>("greenBlueClassic");
+  const [personalizedBranding, setPersonalizedBranding] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.personalizedBranding);
+  const [themePreset, setThemePreset] = useState<ProposalThemePreset>(DEFAULT_PROPOSAL_BRANDING_SETTINGS.themePreset);
   const [uploadingQr, setUploadingQr] = useState(false);
   const [lastRateReportAt, setLastRateReportAt] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -102,6 +113,13 @@ export default function MorePage() {
       setCompanyName(settings.installerName);
       setCompanyContact(settings.installerContact);
       setCompanyEmail(settings.installerEmail);
+      setAmcYears(parseProposalAmcYears(settings.amcSelectedYears));
+      setBankAccName(settings.bankAccountName);
+      setBankAccNo(settings.bankAccountNumber);
+      setBankIfsc(settings.bankIfsc);
+      setBankBranch(settings.bankBranch);
+      setBankUpi(settings.bankUpiId);
+      setProposalSiteImages(settings.proposalSiteImages ?? []);
       setCompanyLogo(settings.installerLogoUrl);
       setPaymentQrCodeUrl(settings.paymentQrCodeUrl ?? "");
       setPersonalizedBranding(settings.personalizedBranding);
@@ -272,7 +290,7 @@ export default function MorePage() {
     markSaved(`Performance mode set to ${PERFORMANCE_MODE_OPTIONS.find((o) => o.id === mode)?.label ?? mode}.`);
   }
 
-  function currentBrandingSettings() {
+  function brandingSnapshot(overrides: Partial<ProposalBrandingSettings> = {}): ProposalBrandingSettings {
     return {
       installerName: companyName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName,
       installerContact: companyContact.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact,
@@ -280,17 +298,25 @@ export default function MorePage() {
       installerLogoUrl: companyLogo.trim(),
       personalizedBranding,
       themePreset,
-      paymentQrCodeUrl: paymentQrCodeUrl.trim()
+      paymentQrCodeUrl: paymentQrCodeUrl.trim(),
+      amcSelectedYears: amcYears,
+      bankAccountName: bankAccName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankAccountName,
+      bankAccountNumber: bankAccNo.trim(),
+      bankIfsc: bankIfsc.trim(),
+      bankBranch: bankBranch.trim(),
+      bankUpiId: bankUpi.trim(),
+      proposalSiteImages,
+      ...overrides
     };
   }
 
   function saveCompanyProfile() {
-    writeProposalBrandingSettings(currentBrandingSettings());
+    writeProposalBrandingSettings(brandingSnapshot());
     markSaved("Company profile saved — used when you generate the next web proposal or PPT.");
   }
 
   function saveProposalStyles() {
-    writeProposalBrandingSettings(currentBrandingSettings());
+    writeProposalBrandingSettings(brandingSnapshot());
     markSaved("Proposal style updated with smooth preview settings.");
   }
 
@@ -304,7 +330,7 @@ export default function MorePage() {
       const payload = (await res.json()) as { ok?: boolean; url?: string; error?: string };
       if (!res.ok || !payload.ok || !payload.url) throw new Error(payload.error || "QR upload failed.");
       setPaymentQrCodeUrl(payload.url);
-      writeProposalBrandingSettings({ ...currentBrandingSettings(), paymentQrCodeUrl: payload.url });
+      writeProposalBrandingSettings(brandingSnapshot({ paymentQrCodeUrl: payload.url }));
       markSaved("Payment QR code uploaded and saved.");
     } catch (e) {
       markIssue(e instanceof Error ? e.message : "QR upload failed.");
@@ -382,15 +408,7 @@ export default function MorePage() {
       if (!res.ok || !payload.ok || !payload.url) throw new Error(payload.error || "Logo upload failed.");
       const nextUrl = payload.url;
       setCompanyLogo(nextUrl);
-      writeProposalBrandingSettings({
-        installerName: companyName.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerName,
-        installerContact: companyContact.trim() || DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerContact,
-        installerEmail: companyEmail.trim(),
-        installerLogoUrl: nextUrl,
-        personalizedBranding,
-        themePreset,
-        paymentQrCodeUrl: paymentQrCodeUrl.trim()
-      });
+      writeProposalBrandingSettings(brandingSnapshot({ installerLogoUrl: nextUrl }));
       markSaved("Logo uploaded and saved for proposals & header.");
     } catch (e) {
       markIssue(e instanceof Error ? e.message : "Logo upload failed.");
@@ -423,7 +441,7 @@ export default function MorePage() {
           )}
         </AnimatePresence>
 
-        <SectionCard icon={Building2} title="My Company Profile" subtitle="Installer as STAR — name, phone, email, and logo sync to the web proposal, PPT, and sales deck when you generate a proposal.">
+        <SectionCard icon={Building2} title="My Company Profile" subtitle="Name, phone, email, logo, AMC default, bank text, and site photos — all sync into the next web proposal or PPT you generate from Proposal.">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <LabeledInput label="Installer / Company name" value={companyName} onChange={setCompanyName} placeholder="Harihar Solar" />
             <LabeledInput label="Contact number" value={companyContact} onChange={setCompanyContact} placeholder="+91-9993322267" />
@@ -454,6 +472,48 @@ export default function MorePage() {
                 </span>
               </div>
             </div>
+            <div className="sm:col-span-2 mt-1 rounded-xl border border-slate-200/80 bg-white/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Default AMC plan</p>
+              <p className="mt-0.5 text-[11px] text-slate-600">Used on every generated web proposal and PPT.</p>
+              <div className="mt-2 inline-flex rounded-full border border-slate-300 bg-white p-0.5">
+                {([1, 5, 10] as const).map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    onClick={() => setAmcYears(y)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                      amcYears === y ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {y} yr{y === 1 ? "" : "s"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="sm:col-span-2 space-y-2 rounded-xl border border-slate-200/80 bg-white/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Banking (proposal slide)</p>
+              <p className="text-[11px] text-slate-600">Account and UPI text for the banking slide; payment QR is uploaded below.</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <LabeledInput label="Account name" value={bankAccName} onChange={setBankAccName} placeholder="Harihar Solar" />
+                <LabeledInput label="Account number" value={bankAccNo} onChange={setBankAccNo} placeholder="Account No." />
+                <LabeledInput label="IFSC" value={bankIfsc} onChange={setBankIfsc} placeholder="IFSC" />
+                <LabeledInput label="Branch" value={bankBranch} onChange={setBankBranch} placeholder="Branch" />
+                <LabeledInput label="UPI ID" value={bankUpi} onChange={setBankUpi} placeholder="e.g. harihar@hdfc" />
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <ProposalImageUploader
+                mode="sites"
+                label="Past installation photos"
+                hint="Up to 6 photos (JPEG / PNG / WebP). Shown on web proposal and deck — saved to your profile when you add or remove."
+                values={proposalSiteImages}
+                max={6}
+                onChange={(urls) => {
+                  setProposalSiteImages(urls);
+                  writeProposalBrandingSettings(brandingSnapshot({ proposalSiteImages: urls }));
+                }}
+              />
+            </div>
           </div>
           <button type="button" onClick={saveCompanyProfile} className="ss-cta-primary mt-2 w-full sm:w-auto">
             Save Company Profile
@@ -483,7 +543,7 @@ export default function MorePage() {
                   type="button"
                   onClick={() => {
                     setPaymentQrCodeUrl("");
-                    writeProposalBrandingSettings({ ...currentBrandingSettings(), paymentQrCodeUrl: "" });
+                    writeProposalBrandingSettings(brandingSnapshot({ paymentQrCodeUrl: "" }));
                     markSaved("Payment QR code removed.");
                   }}
                   className="ml-2 text-[11px] font-semibold text-rose-600 hover:underline"

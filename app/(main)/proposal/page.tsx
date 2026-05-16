@@ -19,7 +19,7 @@ import {
 } from "@/lib/bill-parse";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import { INSTALLER_REGION_EVENT, readInstallerRegion } from "@/lib/installer-region-storage";
-import { PROPOSAL_BRANDING_UPDATED_EVENT, formatInstallerContactLine, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
+import { formatInstallerContactLine, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast-center";
@@ -29,7 +29,6 @@ import {
   isBillMonthAlignedForOffset
 } from "@/lib/discom-billing-rules";
 import { mergeCustomerForProposal, type ManualProposalCustomer } from "@/lib/merge-proposal-customer";
-import { ProposalImageUploader } from "@/components/proposal-image-uploader";
 import { swrDiscomsWithOfflineCache, swrTariffWithOfflineCache } from "@/lib/proposal-swr-fetchers";
 import { CUSTOMERS_SWR_KEY, fetchCustomersLoose } from "@/lib/customers-client";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
@@ -213,20 +212,9 @@ export default function ProposalPage() {
   const [isCopyingSummary, setIsCopyingSummary] = useState(false);
   const [isWebProposalBusy, setIsWebProposalBusy] = useState(false);
   const [latestWebProposalUrl, setLatestWebProposalUrl] = useState<string | null>(null);
-  // Proposal Builder Settings — controls the 12-slide deck.
+  // Proposal Builder Settings — language + EMI only (logo, bank, AMC, site photos live in More > Company Profile).
   const [proposalLang, setProposalLang] = useState<"en" | "hi">("en");
-  const [amcSelectedYears, setAmcSelectedYears] = useState<1 | 5 | 10>(1);
   const [financeRatePct, setFinanceRatePct] = useState(7);
-  const [bankAccountName, setBankAccountName] = useState("Harihar Solar");
-  const [bankAccountNumber, setBankAccountNumber] = useState("");
-  const [bankIfsc, setBankIfsc] = useState("");
-  const [bankBranch, setBankBranch] = useState("");
-  const [bankUpiId, setBankUpiId] = useState("");
-  const [bankPaymentQrCodeUrl, setBankPaymentQrCodeUrl] = useState("");
-  // Site / past-installation photos (Supabase Storage URLs, max 6).
-  const [siteImageUrls, setSiteImageUrls] = useState<string[]>([]);
-  // Company logo (Supabase Storage public URL).
-  const [installerLogoUrl, setInstallerLogoUrl] = useState("");
   const [isSavingPipeline, setIsSavingPipeline] = useState(false);
   const [showProposalSettings, setShowProposalSettings] = useState(false);
   const [overrideSolarKw, setOverrideSolarKw] = useState(sessionSnap?.overrideSolarKw ?? "");
@@ -274,20 +262,6 @@ export default function ProposalPage() {
       localStorage.setItem(CLIENT_REF_STORAGE_KEY, ref);
     }
     setClientRef(ref);
-
-    // Pre-populate payment QR + company logo from branding (More > Company / Banking).
-    const applyBrandingFromStorage = () => {
-      try {
-        const branding = readProposalBrandingSettings();
-        if (branding.paymentQrCodeUrl) setBankPaymentQrCodeUrl(branding.paymentQrCodeUrl);
-        if (branding.installerLogoUrl?.trim()) setInstallerLogoUrl(branding.installerLogoUrl.trim());
-      } catch {
-        /* ignore */
-      }
-    };
-    applyBrandingFromStorage();
-    window.addEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, applyBrandingFromStorage);
-    return () => window.removeEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, applyBrandingFromStorage);
   }, []);
 
   useEffect(() => {
@@ -1116,13 +1090,13 @@ export default function ProposalPage() {
         }) ?? undefined
       );
     })();
-    const siteImages = siteImageUrls
+    const siteImages = (branding.proposalSiteImages ?? [])
       .map((s) => s.trim())
       .filter((s) => s.length > 0)
       .slice(0, 6);
     return {
       lang: proposalLang,
-      amcSelectedYears,
+      amcSelectedYears: branding.amcSelectedYears,
       financeOption: { interestRatePct: financeRatePct, tenuresYears: [3, 5, 7] as number[] },
       installerName: branding.installerName.trim() || undefined,
       installerContact: installerContactLine,
@@ -1135,15 +1109,15 @@ export default function ProposalPage() {
         sanctionedLoadKw
       },
       bankDetails: {
-        accountName: bankAccountName.trim() || undefined,
-        accountNumber: bankAccountNumber.trim() || undefined,
-        ifsc: bankIfsc.trim() || undefined,
-        branch: bankBranch.trim() || undefined,
-        upiId: bankUpiId.trim() || undefined,
-        paymentQrCodeUrl: bankPaymentQrCodeUrl.trim() || undefined
+        accountName: branding.bankAccountName.trim() || undefined,
+        accountNumber: branding.bankAccountNumber.trim() || undefined,
+        ifsc: branding.bankIfsc.trim() || undefined,
+        branch: branding.bankBranch.trim() || undefined,
+        upiId: branding.bankUpiId.trim() || undefined,
+        paymentQrCodeUrl: branding.paymentQrCodeUrl.trim() || undefined
       },
       siteImages: siteImages.length > 0 ? siteImages : undefined,
-      installerLogoUrl: installerLogoUrl.trim() || undefined
+      installerLogoUrl: branding.installerLogoUrl.trim() || undefined
     };
   }
 
@@ -1784,7 +1758,7 @@ export default function ProposalPage() {
             {t("proposal_payback")}: <span className="font-extrabold text-brand-700">{effectiveResult.paybackDisplay}</span>
           </p>
         </div>
-        {/* Proposal Builder Settings — controls the 12-slide deck */}
+        {/* Proposal language + EMI (logo, AMC, bank, site photos → More > Company Profile) */}
         <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
           <button
             type="button"
@@ -1799,85 +1773,44 @@ export default function ProposalPage() {
             </span>
           </button>
           {showProposalSettings ? (
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {/* Language */}
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Language</label>
-                <div className="mt-1 inline-flex rounded-full border border-slate-300 bg-white p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setProposalLang("en")}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${proposalLang === "en" ? "bg-slate-900 text-white" : "text-slate-600"}`}
-                  >
-                    English
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProposalLang("hi")}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold ${proposalLang === "hi" ? "bg-slate-900 text-white" : "text-slate-600"}`}
-                  >
-                    हिन्दी
-                  </button>
-                </div>
-              </div>
-              {/* AMC */}
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">AMC Plan</label>
-                <div className="mt-1 inline-flex rounded-full border border-slate-300 bg-white p-0.5">
-                  {[1, 5, 10].map((y) => (
+            <div className="mt-3 space-y-3">
+              <p className="text-[11px] leading-snug text-slate-600">
+                Company logo, AMC plan, bank details, payment QR, and past-installation photos are saved under{" "}
+                <span className="font-semibold text-slate-800">More → My Company Profile</span> and load automatically into
+                every proposal you generate here.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Language</label>
+                  <div className="mt-1 inline-flex rounded-full border border-slate-300 bg-white p-0.5">
                     <button
-                      key={y}
                       type="button"
-                      onClick={() => setAmcSelectedYears(y as 1 | 5 | 10)}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${amcSelectedYears === y ? "bg-emerald-600 text-white" : "text-slate-600"}`}
+                      onClick={() => setProposalLang("en")}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${proposalLang === "en" ? "bg-slate-900 text-white" : "text-slate-600"}`}
                     >
-                      {y} yr{y === 1 ? "" : "s"}
+                      English
                     </button>
-                  ))}
+                    <button
+                      type="button"
+                      onClick={() => setProposalLang("hi")}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${proposalLang === "hi" ? "bg-slate-900 text-white" : "text-slate-600"}`}
+                    >
+                      हिन्दी
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {/* Finance rate */}
-              <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">EMI Interest Rate (% p.a.)</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={20}
-                  step={0.5}
-                  value={financeRatePct}
-                  onChange={(e) => setFinanceRatePct(Number(e.target.value) || 0)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-                />
-              </div>
-              {/* Company logo — real upload (PNG / JPEG, ≤ 2 MB) */}
-              <div className="col-span-full">
-                <ProposalImageUploader
-                  mode="logo"
-                  label="Company Logo"
-                  hint="PNG or JPEG, square preferred, up to 2 MB. Used on every slide and the web proposal header."
-                  value={installerLogoUrl}
-                  onChange={setInstallerLogoUrl}
-                />
-              </div>
-              {/* Bank section */}
-              <div className="col-span-full grid gap-2 rounded-md bg-white p-2 sm:grid-cols-5">
-                <p className="col-span-full text-[10px] font-bold uppercase tracking-wider text-slate-500">Banking — for Slide 11 QR</p>
-                <input className="rounded-md border border-slate-300 px-2 py-1.5 text-xs" placeholder="Account Name" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} />
-                <input className="rounded-md border border-slate-300 px-2 py-1.5 text-xs" placeholder="Account No." value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} />
-                <input className="rounded-md border border-slate-300 px-2 py-1.5 text-xs" placeholder="IFSC" value={bankIfsc} onChange={(e) => setBankIfsc(e.target.value)} />
-                <input className="rounded-md border border-slate-300 px-2 py-1.5 text-xs" placeholder="Branch" value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} />
-                <input className="rounded-md border border-slate-300 px-2 py-1.5 text-xs" placeholder="UPI ID (e.g. harihar@hdfc)" value={bankUpiId} onChange={(e) => setBankUpiId(e.target.value)} />
-              </div>
-              {/* Past-installation photos — real multi-upload (max 6, ≤ 8 MB each) */}
-              <div className="col-span-full">
-                <ProposalImageUploader
-                  mode="sites"
-                  label="Past Installation Photos"
-                  hint="Up to 6 photos. JPEG / PNG / WebP, ≤ 8 MB each. Shown on the Banking slide gallery and the Closing slide."
-                  values={siteImageUrls}
-                  onChange={setSiteImageUrls}
-                  max={6}
-                />
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">EMI Interest Rate (% p.a.)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={20}
+                    step={0.5}
+                    value={financeRatePct}
+                    onChange={(e) => setFinanceRatePct(Number(e.target.value) || 0)}
+                    className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                  />
+                </div>
               </div>
             </div>
           ) : null}
