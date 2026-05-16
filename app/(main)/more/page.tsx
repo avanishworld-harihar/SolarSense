@@ -56,6 +56,13 @@ import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from
 
 const STORAGE_LAST_RATE_REPORT_AT = "ss_last_rate_report_at";
 
+const MORE_PAGE_NAV = [
+  { id: "more-section-brand", label: "Brand & proposals" },
+  { id: "more-section-tariff", label: "Tariff" },
+  { id: "more-section-app", label: "App" },
+  { id: "more-section-plans", label: "Plans" }
+] as const;
+
 export default function MorePage() {
   const { mode, localScript, setMode, setLocalPreference, t } = useLanguage();
   const { resolvedTheme, setTheme } = useTheme();
@@ -424,6 +431,11 @@ export default function MorePage() {
     return row?.status === "live" ? "Live now" : "Rolling out (English fallback safe)";
   }, [selectedLanguage]);
 
+  function scrollToMoreSection(id: (typeof MORE_PAGE_NAV)[number]["id"]) {
+    const el = typeof document !== "undefined" ? document.getElementById(id) : null;
+    el?.scrollIntoView({ behavior: lightMotion ? "auto" : "smooth", block: "start" });
+  }
+
   return (
     <>
       <div className="ss-page-shell">
@@ -441,138 +453,220 @@ export default function MorePage() {
           )}
         </AnimatePresence>
 
-        <SectionCard icon={Building2} title="My Company Profile" subtitle="Name, phone, email, logo, AMC default, bank text, and site photos — all sync into the next web proposal or PPT you generate from Proposal.">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <LabeledInput label="Installer / Company name" value={companyName} onChange={setCompanyName} placeholder="Harihar Solar" />
-            <LabeledInput label="Contact number" value={companyContact} onChange={setCompanyContact} placeholder="+91-9993322267" />
-            <div className="sm:col-span-2">
-              <LabeledInput label="Email" value={companyEmail} onChange={setCompanyEmail} placeholder="harihar@solar.com" />
+        <nav
+          className="flex flex-wrap gap-2 rounded-2xl border border-white/60 bg-white/80 p-2 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-slate-900/75"
+          aria-label="More page sections"
+        >
+          {MORE_PAGE_NAV.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => scrollToMoreSection(item.id)}
+              className="rounded-full border border-slate-200/90 bg-white/95 px-3 py-1.5 text-[11px] font-bold text-slate-700 transition hover:border-brand-400 hover:text-brand-900 dark:border-white/10 dark:bg-white/10 dark:text-slate-200 dark:hover:border-emerald-500/40"
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div id="more-section-brand" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
+        <SectionCard
+          icon={Building2}
+          title="Company & proposals"
+          subtitle="Contact, logo, AMC, bank text, payment QR, and site photos — saved here and picked up by the proposal builder."
+        >
+          <Subsection title="Contact" description="Name, phone, and email on proposals.">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <LabeledInput label="Installer / Company name" value={companyName} onChange={setCompanyName} placeholder="Harihar Solar" />
+              <LabeledInput label="Contact number" value={companyContact} onChange={setCompanyContact} placeholder="+91-9993322267" />
+              <div className="sm:col-span-2">
+                <LabeledInput label="Email" value={companyEmail} onChange={setCompanyEmail} placeholder="harihar@solar.com" />
+              </div>
             </div>
-            <div className="sm:col-span-2">
+          </Subsection>
+
+          <Subsection title="Logo" description="Cover and header. Paste a URL or upload a file (Supabase: installer-branding).">
+            <div className="space-y-2">
               <LabeledInput
-                label="Logo URL (big brand in PPT/PDF)"
+                label="Logo URL"
                 value={companyLogo}
                 onChange={setCompanyLogo}
                 placeholder="https://.../installer-logo.png"
               />
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-brand-300 bg-brand-50 px-4 text-xs font-bold text-brand-800 hover:bg-brand-100">
-                  {uploadingLogo ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                  Upload Logo File
+              <label className="inline-flex min-h-10 w-fit cursor-pointer items-center justify-center rounded-xl border border-brand-300 bg-brand-50 px-4 text-xs font-bold text-brand-800 hover:bg-brand-100">
+                {uploadingLogo ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                Upload logo file
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  className="hidden"
+                  onChange={(e) => void uploadLogo(e.target.files?.[0] ?? null)}
+                  disabled={uploadingLogo}
+                />
+              </label>
+            </div>
+          </Subsection>
+
+          <Subsection title="Default AMC" description="Shown on every new web proposal and PPT.">
+            <div className="inline-flex rounded-full border border-slate-300 bg-white p-0.5">
+              {([1, 5, 10] as const).map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => setAmcYears(y)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    amcYears === y ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {y} yr{y === 1 ? "" : "s"}
+                </button>
+              ))}
+            </div>
+          </Subsection>
+
+          <Subsection title="Bank account" description="Printed on the banking slide with your UPI ID.">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <LabeledInput label="Account name" value={bankAccName} onChange={setBankAccName} placeholder="Harihar Solar" />
+              <LabeledInput label="Account number" value={bankAccNo} onChange={setBankAccNo} placeholder="Account No." />
+              <LabeledInput label="IFSC" value={bankIfsc} onChange={setBankIfsc} placeholder="IFSC" />
+              <LabeledInput label="Branch" value={bankBranch} onChange={setBankBranch} placeholder="Branch" />
+              <LabeledInput label="UPI ID" value={bankUpi} onChange={setBankUpi} placeholder="e.g. harihar@hdfc" />
+            </div>
+          </Subsection>
+
+          <Subsection title="Payment QR" description="Optional. High-res UPI/bank QR replaces the auto-generated QR on the banking slide.">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="inline-flex min-h-10 w-fit cursor-pointer items-center justify-center rounded-xl border border-brand-300 bg-brand-50 px-4 text-xs font-bold text-brand-800 hover:bg-brand-100">
+                  {uploadingQr ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                  Upload QR image
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                    accept="image/png,image/jpeg,image/webp"
                     className="hidden"
-                    onChange={(e) => void uploadLogo(e.target.files?.[0] ?? null)}
-                    disabled={uploadingLogo}
+                    onChange={(e) => void uploadPaymentQr(e.target.files?.[0] ?? null)}
+                    disabled={uploadingQr}
                   />
                 </label>
-                <span className="text-[11px] font-semibold text-slate-600 sm:text-xs">
-                  Upload goes to Supabase Storage bucket: installer-branding
-                </span>
-              </div>
-            </div>
-            <div className="sm:col-span-2 mt-1 rounded-xl border border-slate-200/80 bg-white/60 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Default AMC plan</p>
-              <p className="mt-0.5 text-[11px] text-slate-600">Used on every generated web proposal and PPT.</p>
-              <div className="mt-2 inline-flex rounded-full border border-slate-300 bg-white p-0.5">
-                {([1, 5, 10] as const).map((y) => (
+                {paymentQrCodeUrl ? (
                   <button
-                    key={y}
                     type="button"
-                    onClick={() => setAmcYears(y)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                      amcYears === y ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"
-                    }`}
+                    onClick={() => {
+                      setPaymentQrCodeUrl("");
+                      writeProposalBrandingSettings(brandingSnapshot({ paymentQrCodeUrl: "" }));
+                      markSaved("Payment QR code removed.");
+                    }}
+                    className="block text-left text-[11px] font-semibold text-rose-600 hover:underline"
                   >
-                    {y} yr{y === 1 ? "" : "s"}
+                    Remove QR
                   </button>
-                ))}
+                ) : null}
               </div>
+              {paymentQrCodeUrl ? (
+                <div className="flex flex-col items-center gap-2 sm:items-end">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={paymentQrCodeUrl}
+                    alt="Payment QR preview"
+                    className="h-28 w-28 rounded-xl border border-slate-200 object-contain p-1 shadow-sm"
+                  />
+                  <p className="text-[10px] font-semibold text-emerald-700">Shows on proposal banking slide</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-6 sm:py-4">
+                  <QrCode className="h-7 w-7 text-slate-300" />
+                  <p className="text-[11px] text-slate-400">Preview after upload</p>
+                </div>
+              )}
             </div>
-            <div className="sm:col-span-2 space-y-2 rounded-xl border border-slate-200/80 bg-white/60 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Banking (proposal slide)</p>
-              <p className="text-[11px] text-slate-600">Account and UPI text for the banking slide; payment QR is uploaded below.</p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <LabeledInput label="Account name" value={bankAccName} onChange={setBankAccName} placeholder="Harihar Solar" />
-                <LabeledInput label="Account number" value={bankAccNo} onChange={setBankAccNo} placeholder="Account No." />
-                <LabeledInput label="IFSC" value={bankIfsc} onChange={setBankIfsc} placeholder="IFSC" />
-                <LabeledInput label="Branch" value={bankBranch} onChange={setBankBranch} placeholder="Branch" />
-                <LabeledInput label="UPI ID" value={bankUpi} onChange={setBankUpi} placeholder="e.g. harihar@hdfc" />
-              </div>
-            </div>
-            <div className="sm:col-span-2">
-              <ProposalImageUploader
-                mode="sites"
-                label="Past installation photos"
-                hint="Up to 6 photos (JPEG / PNG / WebP). Shown on web proposal and deck — saved to your profile when you add or remove."
-                values={proposalSiteImages}
-                max={6}
-                onChange={(urls) => {
-                  setProposalSiteImages(urls);
-                  writeProposalBrandingSettings(brandingSnapshot({ proposalSiteImages: urls }));
-                }}
-              />
-            </div>
-          </div>
-          <button type="button" onClick={saveCompanyProfile} className="ss-cta-primary mt-2 w-full sm:w-auto">
-            Save Company Profile
+          </Subsection>
+
+          <Subsection title="Site photos" description="Up to 6 install photos (JPEG / PNG / WebP) for the deck and web proposal.">
+            <ProposalImageUploader
+              mode="sites"
+              label="Past installation photos"
+              hint="Saved with your profile when you add or remove."
+              values={proposalSiteImages}
+              max={6}
+              onChange={(urls) => {
+                setProposalSiteImages(urls);
+                writeProposalBrandingSettings(brandingSnapshot({ proposalSiteImages: urls }));
+              }}
+            />
+          </Subsection>
+
+          <button type="button" onClick={saveCompanyProfile} className="ss-cta-primary w-full sm:w-auto">
+            Save company profile
           </button>
         </SectionCard>
 
-        <SectionCard icon={QrCode} title="Banking & Payments" subtitle="Upload your Payment QR code once — it appears on every web proposal Banking slide.">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Payment QR Code</p>
-              <p className="text-[11px] font-medium text-slate-500">
-                Upload your UPI / bank QR code. It replaces the auto-generated UPI QR on the proposal Banking slide — higher resolution, easier to scan.
-              </p>
-              <label className="inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-brand-300 bg-brand-50 px-4 text-xs font-bold text-brand-800 hover:bg-brand-100">
-                {uploadingQr ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                Upload QR Image
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={(e) => void uploadPaymentQr(e.target.files?.[0] ?? null)}
-                  disabled={uploadingQr}
-                />
-              </label>
-              {paymentQrCodeUrl && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentQrCodeUrl("");
-                    writeProposalBrandingSettings(brandingSnapshot({ paymentQrCodeUrl: "" }));
-                    markSaved("Payment QR code removed.");
-                  }}
-                  className="ml-2 text-[11px] font-semibold text-rose-600 hover:underline"
-                >
-                  Remove QR
-                </button>
-              )}
+        <SectionCard
+          icon={Palette}
+          title="Proposal look"
+          subtitle="Installer-led branding and theme presets for new web proposals and PPTs."
+        >
+          <div className="rounded-xl border border-white/50 bg-white/60 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-extrabold text-brand-900 sm:text-sm">Installer as star</p>
+                <p className="text-[11px] font-medium text-slate-600 sm:text-xs">
+                  Keeps Sol.52 minimal in the footer and your logo prominent.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPersonalizedBranding((v) => !v);
+                  markSaved(`Personalized branding ${!personalizedBranding ? "enabled" : "disabled"}.`);
+                }}
+                className={cn(
+                  "inline-flex h-8 min-w-20 items-center justify-center rounded-full px-3 text-xs font-bold transition",
+                  personalizedBranding ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"
+                )}
+              >
+                {personalizedBranding ? "ON" : "OFF"}
+              </button>
             </div>
-            {paymentQrCodeUrl ? (
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Preview</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={paymentQrCodeUrl}
-                  alt="Payment QR preview"
-                  className="h-32 w-32 rounded-xl border border-slate-200 object-contain p-1 shadow-sm"
-                />
-                <p className="text-[10px] text-emerald-700 font-semibold">✓ Will show on proposal Banking slide</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-4">
-                <QrCode className="h-8 w-8 text-slate-300" />
-                <p className="text-[11px] text-slate-400">QR preview will appear here</p>
-              </div>
-            )}
           </div>
-        </SectionCard>
 
-        <SectionCard icon={ReceiptText} title="Tariff Center" subtitle="Keep numbers trustworthy — transparent tariff signal builds buyer confidence.">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <ThemePresetCard
+              title="Green/Blue Classic"
+              desc="Trusted enterprise tone"
+              active={themePreset === "greenBlueClassic"}
+              onClick={() => {
+                setThemePreset("greenBlueClassic");
+                markSaved("Classic Green/Blue style selected.");
+              }}
+            />
+            <ThemePresetCard
+              title="Green/Blue Vivid"
+              desc="High-energy conversion look"
+              active={themePreset === "greenBlueVivid"}
+              onClick={() => {
+                setThemePreset("greenBlueVivid");
+                markSaved("Vivid Green/Blue style selected.");
+              }}
+            />
+          </div>
+
+          <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/80 p-3">
+            <p className="text-xs font-semibold text-indigo-900 sm:text-sm">
+              Proposals use Montserrat-first typography with the preset you pick here.
+            </p>
+          </div>
+          <button type="button" onClick={saveProposalStyles} className="ss-cta-primary mt-1 w-full sm:w-auto">
+            Save proposal styles
+          </button>
+        </SectionCard>
+        </div>
+
+        <div id="more-section-tariff" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
+        <SectionCard
+          icon={ReceiptText}
+          title="Tariff Center"
+          subtitle="Figures follow your saved state / DISCOM. Log a rate change when DISCOM publishes new tariffs."
+        >
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <InfoChip label="Active tariff" value={tariff.discomLabel} />
             <InfoChip label="Model source" value={tariff.source === "fallback" ? "Verified fallback" : "Live DB"} />
@@ -654,129 +748,69 @@ export default function MorePage() {
             </div>
           </motion.a>
         ) : null}
+        </div>
 
-        <SectionCard
-          icon={Palette}
-          title="Proposal Styles"
-          subtitle="Sales psychology: big installer branding + consistent visual identity = higher trust and faster yes."
-        >
-          <div className="rounded-xl border border-white/50 bg-white/60 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs font-extrabold text-brand-900 sm:text-sm">Installer as Star</p>
-                <p className="text-[11px] font-medium text-slate-600 sm:text-xs">
-                  Personalized Branding keeps Sol.52 tiny footer and installer logo dominant.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setPersonalizedBranding((v) => !v);
-                  markSaved(`Personalized branding ${!personalizedBranding ? "enabled" : "disabled"}.`);
-                }}
-                className={cn(
-                  "inline-flex h-8 min-w-20 items-center justify-center rounded-full px-3 text-xs font-bold transition",
-                  personalizedBranding ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"
-                )}
-              >
-                {personalizedBranding ? "ON" : "OFF"}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <ThemePresetCard
-              title="Green/Blue Classic"
-              desc="Trusted enterprise tone"
-              active={themePreset === "greenBlueClassic"}
-              onClick={() => {
-                setThemePreset("greenBlueClassic");
-                markSaved("Classic Green/Blue style selected.");
-              }}
-            />
-            <ThemePresetCard
-              title="Green/Blue Vivid"
-              desc="High-energy conversion look"
-              active={themePreset === "greenBlueVivid"}
-              onClick={() => {
-                setThemePreset("greenBlueVivid");
-                markSaved("Vivid Green/Blue style selected.");
-              }}
-            />
-          </div>
-
-          <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/80 p-3">
-            <p className="text-xs font-semibold text-indigo-900 sm:text-sm">
-              <strong>Visual consistency:</strong> Proposal now stays Montserrat-first with Green/Blue theme presets.
-            </p>
-          </div>
-          <button type="button" onClick={saveProposalStyles} className="ss-cta-primary mt-1 w-full sm:w-auto">
-            Save Proposal Styles
-          </button>
-        </SectionCard>
-
-        <SectionCard icon={Settings2} title="App Settings" subtitle="High-signal controls: language, theme, and app install confidence.">
-          <div className="rounded-xl border border-brand-200/60 bg-brand-50/40 p-3 dark:border-white/10 dark:bg-white/[0.04]">
-            <div className="flex items-start gap-2">
-              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100">
-                <MapPin className="h-4 w-4" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1 space-y-2">
-                <div>
-                  <p className="text-xs font-extrabold text-brand-900 dark:text-foreground">Operating region</p>
-                  <p className="text-[11px] font-semibold text-slate-600 dark:text-muted-foreground">
-                    Set once from the dashboard; after that the setup card hides. Change your state / UT here anytime — proposals and tariff defaults follow this.
-                  </p>
-                </div>
-                <FloatingLabelSelect
-                  label="State / UT"
-                  containerClassName="my-1"
-                  suppressHydrationWarning
-                  value={installerState}
-                  onChange={(e) => setInstallerState(e.target.value)}
-                  className="h-11"
-                >
-                  <option value="">Select state / UT…</option>
-                  {INDIAN_STATES_AND_UTS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </FloatingLabelSelect>
-                <FloatingLabelSelect
-                  label={t("dashboard_selectDiscom")}
-                  containerClassName="my-1"
-                  suppressHydrationWarning
-                  value={installerDiscom}
-                  disabled={!installerState.trim()}
-                  onChange={(e) => setInstallerDiscom(e.target.value)}
-                  className="h-11 disabled:opacity-60"
-                  aria-label={t("dashboard_selectDiscom")}
-                >
-                  {!installerState.trim() ? (
-                    <option value="">{t("dashboard_selectDiscom")}</option>
-                  ) : discomListLoading && discomSelectOptions.length === 0 ? (
-                    <option value="">{t("dashboard_loadingDiscoms")}</option>
-                  ) : (
-                    <>
+        <div id="more-section-app" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
+        <SectionCard icon={Settings2} title="App settings" subtitle="Region, language, appearance, and performance for this device.">
+          <Subsection
+            title="Operating region"
+            description="Same as dashboard setup — DISCOM list comes from your state; proposals use this context."
+          >
+            <div className="rounded-xl border border-brand-200/60 bg-brand-50/40 p-3 dark:border-white/10 dark:bg-white/[0.04]">
+              <div className="flex items-start gap-2">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100">
+                  <MapPin className="h-4 w-4" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <FloatingLabelSelect
+                    label="State / UT"
+                    containerClassName="my-1"
+                    suppressHydrationWarning
+                    value={installerState}
+                    onChange={(e) => setInstallerState(e.target.value)}
+                    className="h-11"
+                  >
+                    <option value="">Select state / UT…</option>
+                    {INDIAN_STATES_AND_UTS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </FloatingLabelSelect>
+                  <FloatingLabelSelect
+                    label={t("dashboard_selectDiscom")}
+                    containerClassName="my-1"
+                    suppressHydrationWarning
+                    value={installerDiscom}
+                    disabled={!installerState.trim()}
+                    onChange={(e) => setInstallerDiscom(e.target.value)}
+                    className="h-11 disabled:opacity-60"
+                    aria-label={t("dashboard_selectDiscom")}
+                  >
+                    {!installerState.trim() ? (
                       <option value="">{t("dashboard_selectDiscom")}</option>
-                      {discomSelectOptions.map((d) => (
-                        <option key={d.id} value={d.code}>
-                          {d.name} ({d.code})
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </FloatingLabelSelect>
-                <button type="button" onClick={saveOperatingRegion} className="ss-cta-primary w-full sm:w-auto">
-                  Save operating region
-                </button>
+                    ) : discomListLoading && discomSelectOptions.length === 0 ? (
+                      <option value="">{t("dashboard_loadingDiscoms")}</option>
+                    ) : (
+                      <>
+                        <option value="">{t("dashboard_selectDiscom")}</option>
+                        {discomSelectOptions.map((d) => (
+                          <option key={d.id} value={d.code}>
+                            {d.name} ({d.code})
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </FloatingLabelSelect>
+                  <button type="button" onClick={saveOperatingRegion} className="ss-cta-primary w-full sm:w-auto">
+                    Save operating region
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </Subsection>
 
-          <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-600">Language (6 options)</p>
+          <Subsection title="Language" description={`Current support: ${supportLevel}.`}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {LANGUAGE_OPTIONS.map((opt) => (
                 <button
@@ -800,12 +834,10 @@ export default function MorePage() {
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[11px] font-semibold text-slate-600">Language support status: {supportLevel}</p>
-          </div>
+          </Subsection>
 
-          <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-600">Light / Dark Mode</p>
-            <div className="flex gap-2">
+          <Subsection title="Theme" description="Light or dark for this device.">
+            <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -833,44 +865,47 @@ export default function MorePage() {
                 Dark
               </button>
             </div>
-          </div>
+          </Subsection>
 
-          <div className="rounded-xl border border-white/60 bg-white/70 p-3">
-            <p className="text-xs font-bold text-slate-700">PWA Status</p>
-            <p className="mt-1 text-sm font-extrabold text-brand-900">{pwaStatus}</p>
-          </div>
-
-          <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-600">Performance Mode</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {PERFORMANCE_MODE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => updatePerformanceMode(opt.id)}
-                  className={cn(
-                    "rounded-xl border px-3 py-2 text-left transition",
-                    performanceMode === opt.id
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-900"
-                      : "border-slate-200 bg-white/80 text-slate-700 hover:border-emerald-300"
-                  )}
-                >
-                  <p className="text-xs font-extrabold">{opt.label}</p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-500">{opt.description}</p>
-                </button>
-              ))}
+          <Subsection title="Install & speed" description="Whether the app can install as a PWA, and how heavy motion is on this device.">
+            <div className="rounded-xl border border-white/60 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.06]">
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-200">PWA status</p>
+              <p className="mt-1 text-sm font-extrabold text-brand-900 dark:text-foreground">{pwaStatus}</p>
             </div>
-          </div>
+            <div>
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-600 dark:text-slate-400">Performance mode</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {PERFORMANCE_MODE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => updatePerformanceMode(opt.id)}
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-left transition",
+                      performanceMode === opt.id
+                        ? "border-emerald-400 bg-emerald-50 text-emerald-900"
+                        : "border-slate-200 bg-white/80 text-slate-700 hover:border-emerald-300 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200"
+                    )}
+                  >
+                    <p className="text-xs font-extrabold">{opt.label}</p>
+                    <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">{opt.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Subsection>
         </SectionCard>
+        </div>
 
-        <SectionCard icon={CreditCard} title="Subscription" subtitle="Plan clarity improves intent and reduces price hesitation.">
+        <div id="more-section-plans" className="scroll-mt-28 space-y-4 sm:scroll-mt-32">
+        <SectionCard icon={CreditCard} title="Subscription" subtitle="Plans for when you outgrow the trial.">
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             <PlanCard title="Trial" price="Free 30 days" detail="Full Pro access to build habit fast" accent="blue" />
             <PlanCard title="Pro" price="₹299 / month" detail="Unlimited proposals for growing teams" accent="green" />
             <PlanCard title="Business" price="₹999 / month" detail="3 users + white-label control" accent="violet" />
           </div>
           <p className="text-[11px] font-semibold text-slate-600 sm:text-xs">
-            Suggestion: keep Pro highlighted to maximize conversion (best value anchor).
+            Pro is the usual pick for active proposal teams.
           </p>
         </SectionCard>
 
@@ -878,12 +913,33 @@ export default function MorePage() {
           <div className="flex items-start gap-2">
             <Sparkles className="mt-0.5 h-4 w-4 text-amber-500" />
             <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-              Silicon Valley UX principle: one clear action per block, instant feedback, and no hidden state.
+              Save company profile before generating a proposal so the customer link picks up the latest details.
             </p>
           </div>
         </div>
+        </div>
       </div>
     </>
+  );
+}
+
+function Subsection({
+  title,
+  description,
+  children
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="border-t border-slate-200/80 pt-4 first:border-t-0 first:pt-0 dark:border-white/10">
+      <h3 className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">{title}</h3>
+      {description ? (
+        <p className="mt-1 text-[11px] leading-snug text-slate-600 dark:text-slate-400">{description}</p>
+      ) : null}
+      <div className="mt-3 space-y-3">{children}</div>
+    </div>
   );
 }
 
