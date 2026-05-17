@@ -27,16 +27,16 @@ export function WorkspacePageHero({
   return (
     <header
       className={cn(
-        "workspace-page-hero glass-panel-premium overflow-hidden p-5 sm:p-6 md:p-7",
+        "workspace-page-hero workspace-glass overflow-hidden p-5 sm:p-6 md:p-7",
         `workspace-page-hero--${tone}`,
         className
       )}
     >
       <div className="relative z-[1] flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="ws-type-eyebrow">{eyebrow}</p>
-          <h1 className="ws-type-greeting mt-2 text-balance">{title}</h1>
-          {subtitle ? <p className="ws-type-body mt-2 max-w-2xl">{subtitle}</p> : null}
+          <p className="ws-type-eyebrow workspace-type-eyebrow">{eyebrow}</p>
+          <h1 className="ws-type-greeting workspace-type-greeting mt-2 text-balance">{title}</h1>
+          {subtitle ? <p className="ws-type-body workspace-type-body mt-2 max-w-2xl">{subtitle}</p> : null}
         </div>
         {action ? <div className="w-full shrink-0 sm:w-auto">{action}</div> : null}
       </div>
