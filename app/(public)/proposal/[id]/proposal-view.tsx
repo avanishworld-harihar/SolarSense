@@ -835,52 +835,25 @@ function HeroCover({
   );
 }
 
-function DeepAuditSection({
-  D,
-  summary,
-  monthLbls,
-  lang,
-  part = "all"
-}: {
-  D: ProposalDict;
-  summary: ProposalDeckSummary;
-  monthLbls: string[];
-  lang: ProposalLang;
-  part?: "chart" | "table" | "all";
-}) {
-  const showChart = part === "all" || part === "chart";
-  const showTable = part === "all" || part === "table";
-
+function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; summary: ProposalDeckSummary; monthLbls: string[]; lang: ProposalLang }) {
   return (
-    <ProposalJourneySection id={part === "table" ? "bill-audit-table" : "bill-audit"}>
-      {showChart ? (
-        <>
-          <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
+    <ProposalJourneySection id="bill-audit" className="proposal-bill-audit-section">
+      <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
 
-          <ProposalPanel className="sm:p-6">
-            <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
-          </ProposalPanel>
-          {summary.mpSmartBillingCaption ? (
-            <p className="mt-4 rounded-xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-xs leading-relaxed text-slate-800">
-              <span className="font-bold text-sky-900">{D["audit.mpSmartPrefix"]} </span>
-              {summary.mpSmartBillingCaption}
-            </p>
-          ) : null}
-        </>
-      ) : null}
-
-      {showTable ? (
-      <>
-      {part === "table" ? (
-        <p
-          className={`mb-4 text-sm font-bold text-slate-800 ${lang === "hi" ? "tracking-normal" : "uppercase tracking-wide"}`}
-        >
-          {D["slide.audit.title"]} — {lang === "hi" ? "मासिक विवरण" : "month-wise breakdown"}
+      <ProposalPanel className="proposal-audit-chart-panel sm:p-6">
+        <div className="proposal-audit-chart-wrap">
+          <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
+        </div>
+      </ProposalPanel>
+      {summary.mpSmartBillingCaption ? (
+        <p className="proposal-audit-mp-caption mt-4 rounded-xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-xs leading-relaxed text-slate-800">
+          <span className="font-bold text-sky-900">{D["audit.mpSmartPrefix"]} </span>
+          {summary.mpSmartBillingCaption}
         </p>
       ) : null}
 
       {/* Month-wise table — min width, swipe hint, sticky month column, stacked net bill on mobile */}
-      <div className={part === "table" ? "" : "mt-6"}>
+      <div className="proposal-audit-table-block mt-6">
         <p
           className="mb-2 flex items-start gap-2 rounded-xl border border-slate-200/90 bg-slate-50 px-3 py-2.5 text-[11px] leading-snug text-slate-700 shadow-sm lg:hidden print:hidden"
           role="note"
@@ -1002,7 +975,7 @@ function DeepAuditSection({
       </div>
 
       {/* Insight cards */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <div className="proposal-audit-insights mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <div className="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-rose-100/50 p-4 shadow-sm">
           <p
             className={`text-[10px] font-bold text-rose-700 ${
@@ -1059,8 +1032,6 @@ function DeepAuditSection({
           </p>
         </div>
       </div>
-      </>
-      ) : null}
     </ProposalJourneySection>
   );
 }
@@ -2468,13 +2439,9 @@ export default function ProposalView({
 
       <JourneyBridge text={journeyBridge(lang, "afterTrust")} lang={lang} />
 
-      {/* PAGE 3 — BILL INTELLIGENCE (Audit + bar chart) */}
+      {/* PAGE 3 — BILL INTELLIGENCE (chart + table + insights, one print page) */}
       <div className="proposal-page" data-page="bill-audit">
-        <DeepAuditSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} part="chart" />
-      </div>
-
-      <div className="proposal-page" data-page="bill-audit-table">
-        <DeepAuditSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} part="table" />
+        <DeepAuditSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} />
       </div>
 
       <JourneyBridge text={journeyBridge(lang, "afterBill")} lang={lang} />
