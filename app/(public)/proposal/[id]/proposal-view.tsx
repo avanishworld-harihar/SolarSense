@@ -361,8 +361,8 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
               initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 1 }}
               animate={animateReady ? { height: `${target}%`, opacity: 1 } : undefined}
               transition={{ type: "spring", delay: i * 0.018, stiffness: 120, damping: 20, mass: 0.9 }}
-              className={`proposal-chart-bar w-full max-w-[2.25rem] rounded-t-[3px] sm:max-w-none ${
-                isPeak ? "proposal-chart-bar--peak bg-rose-600" : "bg-sky-600"
+              className={`proposal-chart-bar w-full max-w-[2.25rem] sm:max-w-none ${
+                isPeak ? "proposal-chart-bar--glass-peak" : "proposal-chart-bar--glass"
               }`}
               aria-label={`${safeLabels[i]}: ${v}`}
             />
