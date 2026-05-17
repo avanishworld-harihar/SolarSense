@@ -1118,7 +1118,10 @@ export default function ProposalPage() {
         paymentQrCodeUrl: branding.paymentQrCodeUrl.trim() || undefined
       },
       siteImages: siteImages.length > 0 ? siteImages : undefined,
-      installerLogoUrl: branding.installerLogoUrl.trim() || undefined
+      installerLogoUrl: branding.installerLogoUrl.trim() || undefined,
+      companyProfile: {
+        gstNumber: branding.companyGstNumber.trim() || undefined
+      }
     };
   }
 

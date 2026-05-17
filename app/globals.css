@@ -2410,8 +2410,8 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     break-before: page !important;
     page-break-after: auto;
     break-after: auto;
-    page-break-inside: avoid;
-    break-inside: avoid-page;
+    page-break-inside: auto;
+    break-inside: auto;
     background: white !important;
     border: none !important;
     border-radius: 0 !important;
@@ -2419,10 +2419,8 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
-    /* Cap the content area so it never overflows past A4 useable region:
-       297mm - 2×12mm margins ≈ 273mm usable. */
-    max-height: 273mm;
-    overflow: hidden;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .proposal-page:first-child {
@@ -2512,6 +2510,22 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     max-height: 70mm;
     object-fit: cover;
     image-rendering: -webkit-optimize-contrast;
+  }
+
+  /* Installer logo — no white box, no crop, larger on cover */
+  .proposal-page img.proposal-print-logo {
+    display: block !important;
+    max-height: 32mm !important;
+    height: 32mm !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+    object-position: left center !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
   }
 
   /* Hero bottom-bleed image — taller, full width */

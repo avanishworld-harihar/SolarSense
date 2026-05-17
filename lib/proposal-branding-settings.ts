@@ -31,6 +31,8 @@ export type ProposalBrandingSettings = {
   bankUpiId: string;
   /** Past installation photo URLs (max 6) for web proposal + deck. */
   proposalSiteImages: string[];
+  /** GSTIN shown on proposal About / commercial slides (set in More → Company profile). */
+  companyGstNumber: string;
 };
 
 const STORAGE_KEY = "ss_proposal_branding_settings_v1";
@@ -64,7 +66,8 @@ export const DEFAULT_PROPOSAL_BRANDING_SETTINGS: ProposalBrandingSettings = {
   bankIfsc: "",
   bankBranch: "",
   bankUpiId: "",
-  proposalSiteImages: []
+  proposalSiteImages: [],
+  companyGstNumber: ""
 };
 
 function parseSiteImages(raw: unknown): string[] {
@@ -102,7 +105,9 @@ export function readProposalBrandingSettings(): ProposalBrandingSettings {
       bankIfsc: typeof parsed.bankIfsc === "string" ? parsed.bankIfsc.trim() : "",
       bankBranch: typeof parsed.bankBranch === "string" ? parsed.bankBranch.trim() : "",
       bankUpiId: typeof parsed.bankUpiId === "string" ? parsed.bankUpiId.trim() : "",
-      proposalSiteImages: parseSiteImages(parsed.proposalSiteImages)
+      proposalSiteImages: parseSiteImages(parsed.proposalSiteImages),
+      companyGstNumber:
+        typeof parsed.companyGstNumber === "string" ? parsed.companyGstNumber.trim().toUpperCase() : ""
     };
   } catch {
     return { ...DEFAULT_PROPOSAL_BRANDING_SETTINGS };

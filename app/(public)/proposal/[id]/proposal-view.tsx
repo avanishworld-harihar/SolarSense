@@ -618,27 +618,27 @@ function HeroCover({
             darkMode ? "border-white/15" : "border-slate-200/80"
           }`}
         >
-          <div className="col-span-12 flex items-center gap-3 sm:col-span-7">
+          <div className="col-span-12 flex min-w-0 items-center sm:col-span-7">
             {installerLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={installerLogoUrl}
-                alt={summary.installer}
-                className={`h-12 w-12 flex-shrink-0 rounded-2xl border object-contain p-1 shadow-sm sm:h-14 sm:w-14 ${
-                  darkMode ? "border-white/15 bg-white/95" : "border-slate-200/90 bg-white"
-                }`}
+                alt=""
+                className="proposal-print-logo h-16 w-auto max-w-[min(320px,80vw)] object-contain object-left sm:h-20 sm:max-w-[380px] print:h-[4.5rem] print:max-w-[min(72mm,100%)]"
               />
             ) : (
               <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-sky-500 to-emerald-600 text-white shadow-md sm:h-14 sm:w-14">
                 <Sun className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
             )}
-            <div className="min-w-0">
-              <p className={`truncate text-lg font-bold tracking-tight sm:text-xl ${darkMode ? "text-white" : "text-slate-900"}`}>
-                {summary.installer}
-              </p>
-              <p className={darkMode ? `${taglineClass} text-slate-400` : taglineClass}>{summary.tagline}</p>
-            </div>
+            {!installerLogoUrl ? (
+              <motion.div className="min-w-0">
+                <p className={`truncate text-lg font-bold tracking-tight sm:text-xl ${darkMode ? "text-white" : "text-slate-900"}`}>
+                  {summary.installer}
+                </p>
+                <p className={darkMode ? `${taglineClass} text-slate-400` : taglineClass}>{summary.tagline}</p>
+              </motion.div>
+            ) : null}
           </div>
           <div className={`col-span-12 sm:col-span-5 sm:text-right ${darkMode ? "text-slate-200" : ""}`}>
             <p className={`text-[10px] font-semibold ${darkMode ? "text-slate-500" : "text-slate-400"} ${lang === "hi" ? "tracking-normal" : "uppercase tracking-wide"}`}>
@@ -835,25 +835,54 @@ function HeroCover({
   );
 }
 
-function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; summary: ProposalDeckSummary; monthLbls: string[]; lang: ProposalLang }) {
-  return (
-    <ProposalJourneySection id="bill-audit">
-      <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
+function DeepAuditSection({
+  D,
+  summary,
+  monthLbls,
+  lang,
+  part = "all"
+}: {
+  D: ProposalDict;
+  summary: ProposalDeckSummary;
+  monthLbls: string[];
+  lang: ProposalLang;
+  part?: "chart" | "table" | "all";
+}) {
+  const showChart = part === "all" || part === "chart";
+  const showTable = part === "all" || part === "table";
 
-      <ProposalPanel className="sm:p-6">
-        <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
-      </ProposalPanel>
-      {summary.mpSmartBillingCaption ? (
-        <p className="mt-4 rounded-xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-xs leading-relaxed text-slate-800">
-          <span className="font-bold text-sky-900">{D["audit.mpSmartPrefix"]} </span>
-          {summary.mpSmartBillingCaption}
+  return (
+    <ProposalJourneySection id={part === "table" ? "bill-audit-table" : "bill-audit"}>
+      {showChart ? (
+        <>
+          <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
+
+          <ProposalPanel className="sm:p-6">
+            <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
+          </ProposalPanel>
+          {summary.mpSmartBillingCaption ? (
+            <p className="mt-4 rounded-xl border border-sky-200/80 bg-sky-50/90 px-4 py-3 text-xs leading-relaxed text-slate-800">
+              <span className="font-bold text-sky-900">{D["audit.mpSmartPrefix"]} </span>
+              {summary.mpSmartBillingCaption}
+            </p>
+          ) : null}
+        </>
+      ) : null}
+
+      {showTable ? (
+      <>
+      {part === "table" ? (
+        <p
+          className={`mb-4 text-sm font-bold text-slate-800 ${lang === "hi" ? "tracking-normal" : "uppercase tracking-wide"}`}
+        >
+          {D["slide.audit.title"]} — {lang === "hi" ? "मासिक विवरण" : "month-wise breakdown"}
         </p>
       ) : null}
 
       {/* Month-wise table — min width, swipe hint, sticky month column, stacked net bill on mobile */}
-      <div className="mt-6">
+      <div className={part === "table" ? "" : "mt-6"}>
         <p
-          className="mb-2 flex items-start gap-2 rounded-xl border border-slate-200/90 bg-slate-50 px-3 py-2.5 text-[11px] leading-snug text-slate-700 shadow-sm lg:hidden"
+          className="mb-2 flex items-start gap-2 rounded-xl border border-slate-200/90 bg-slate-50 px-3 py-2.5 text-[11px] leading-snug text-slate-700 shadow-sm lg:hidden print:hidden"
           role="note"
         >
           <ChevronsLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" aria-hidden />
@@ -1030,6 +1059,8 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           </p>
         </div>
       </div>
+      </>
+      ) : null}
     </ProposalJourneySection>
   );
 }
@@ -1498,7 +1529,9 @@ function CompanyProfileSection({
           { l: D["about.founded"], v: cp.founded, accent: "from-sky-50 to-white border-sky-200/70 text-sky-900" },
           { l: D["about.installations"], v: cp.installationsDone, accent: "from-emerald-50 to-white border-emerald-200/70 text-emerald-900" },
           { l: D["about.locations"], v: cp.locations, accent: "from-violet-50 to-white border-violet-200/70 text-violet-900" },
-          { l: D["about.gst"], v: cp.gstNumber, accent: "from-amber-50 to-white border-amber-200/70 text-amber-900" }
+          ...(cp.gstNumber?.trim()
+            ? [{ l: D["about.gst"], v: cp.gstNumber.trim(), accent: "from-amber-50 to-white border-amber-200/70 text-amber-900" }]
+            : [])
         ].map((item, i) => (
           <motion.div
             key={item.l}
@@ -2265,17 +2298,31 @@ export default function ProposalView({
   const [darkMode, setDarkMode] = useState(true);
   /** Prefer snapshot from DB; if missing (older proposals), fall back to this browser's saved branding. */
   const [displayInstallerLogoUrl, setDisplayInstallerLogoUrl] = useState("");
+  const [companyGstFromBranding, setCompanyGstFromBranding] = useState(() =>
+    typeof window !== "undefined" ? readProposalBrandingSettings().companyGstNumber?.trim() ?? "" : ""
+  );
 
   useEffect(() => {
     const sync = () => {
+      const branding = readProposalBrandingSettings();
       const fromServer = installerLogoUrl?.trim() ?? "";
-      const fromLocal = readProposalBrandingSettings().installerLogoUrl?.trim() ?? "";
+      const fromLocal = branding.installerLogoUrl?.trim() ?? "";
       setDisplayInstallerLogoUrl(fromServer || fromLocal);
+      setCompanyGstFromBranding(branding.companyGstNumber?.trim() ?? "");
     };
     sync();
     window.addEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, sync);
     return () => window.removeEventListener(PROPOSAL_BRANDING_UPDATED_EVENT, sync);
   }, [installerLogoUrl]);
+
+  const displaySummary = useMemo(() => {
+    const gst = companyGstFromBranding;
+    if (gst === (summary.companyProfile.gstNumber?.trim() ?? "")) return summary;
+    return {
+      ...summary,
+      companyProfile: { ...summary.companyProfile, gstNumber: gst }
+    };
+  }, [summary, companyGstFromBranding]);
 
   const D = dict(lang);
   const monthLbls = monthLabels(lang);
@@ -2404,7 +2451,7 @@ export default function ProposalView({
         <HeroCover
           D={D}
           lang={lang}
-          summary={summary}
+          summary={displaySummary}
           installerLogoUrl={displayInstallerLogoUrl || undefined}
           location={undefined}
           siteImages={siteImages}
@@ -2416,36 +2463,40 @@ export default function ProposalView({
 
       {/* PAGE 2 — THE EXPERTISE (Domestic / Commercial / Industrial verticals) */}
       <div className="proposal-page" data-page="expertise">
-        <CompanyProfileSection D={D} lang={lang} summary={summary} siteImages={siteImages} />
+        <CompanyProfileSection D={D} lang={lang} summary={displaySummary} siteImages={siteImages} />
       </div>
 
       <JourneyBridge text={journeyBridge(lang, "afterTrust")} lang={lang} />
 
       {/* PAGE 3 — BILL INTELLIGENCE (Audit + bar chart) */}
       <div className="proposal-page" data-page="bill-audit">
-        <DeepAuditSection D={D} summary={summary} monthLbls={monthLbls} lang={lang} />
+        <DeepAuditSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} part="chart" />
+      </div>
+
+      <div className="proposal-page" data-page="bill-audit-table">
+        <DeepAuditSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} part="table" />
       </div>
 
       <JourneyBridge text={journeyBridge(lang, "afterBill")} lang={lang} />
 
       {/* PAGE 4 — ECONOMICS (Solar vs Grid, EMI, ROI) */}
       <div className="proposal-page" data-page="economics">
-        <EconomicsSection D={D} summary={summary} monthLbls={monthLbls} lang={lang} />
+        <EconomicsSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} />
       </div>
 
       <JourneyBridge text={journeyBridge(lang, "afterSavings")} lang={lang} />
 
       {/* PAGE 5 — ENVIRONMENT (Carbon offset + tree-planting equivalence) */}
       <div className="proposal-page" data-page="environment">
-        <EnvironmentSection D={D} summary={summary} lang={lang} />
+        <EnvironmentSection D={D} summary={displaySummary} lang={lang} />
       </div>
 
       <JourneyBridge text={journeyBridge(lang, "afterImpact")} lang={lang} />
 
       {/* PAGE 6 — TECHNICAL + BOM (single high-density page, 2 sections combined) */}
       <div className="proposal-page" data-page="technical-bom">
-        <TechnicalProposalSection D={D} lang={lang} summary={summary} />
-        <BomSection D={D} lang={lang} summary={summary} />
+        <TechnicalProposalSection D={D} lang={lang} summary={displaySummary} />
+        <BomSection D={D} lang={lang} summary={displaySummary} />
       </div>
 
       <JourneyBridge
@@ -2466,17 +2517,17 @@ export default function ProposalView({
 
       {/* PAGE 8 — AMC SERVICE (Aftercare detail) */}
       <div className="proposal-page" data-page="amc">
-        <ServiceAmcSection D={D} lang={lang} summary={summary} />
+        <ServiceAmcSection D={D} lang={lang} summary={displaySummary} />
       </div>
 
       <JourneyBridge text={journeyBridge(lang, "afterSupport")} lang={lang} />
 
       {/* PAGE 9 — COMMERCIAL (Payment plan + Commercial terms combined) */}
       <div className="proposal-page" data-page="commercial">
-        <PaymentSection D={D} summary={summary} lang={lang} />
+        <PaymentSection D={D} summary={displaySummary} lang={lang} />
         <CommercialAndAmcSection
           D={D}
-          summary={summary}
+          summary={displaySummary}
           selectedAmcYears={selectedAmcYears}
           onAmcChange={setSelectedAmcYears}
           lang={lang}
@@ -2487,10 +2538,10 @@ export default function ProposalView({
 
       {/* PAGE 10 — THE CLOSING (Banking + Thank You combined; QR perfectly visible) */}
       <div className="proposal-page" data-page="closing">
-        <BankingSection D={D} summary={summary} siteImages={siteImages} proposalId={id} lang={lang} />
+        <BankingSection D={D} summary={displaySummary} siteImages={siteImages} proposalId={id} lang={lang} />
         <ClosingSection
           D={D}
-          summary={summary}
+          summary={displaySummary}
           siteImages={siteImages}
           onShare={shareWhatsApp}
           onDownload={downloadPpt}

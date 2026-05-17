@@ -142,7 +142,7 @@ export function JourneyBridge({ text, lang = "en" }: { text: string; lang?: "en"
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-20px" }}
       transition={{ duration: 0.4 }}
-      className="proposal-journey-bridge my-6 sm:my-8"
+      className="proposal-journey-bridge my-6 sm:my-8 print:hidden"
       role="note"
     >
       <p className={cn("text-sm font-medium leading-relaxed sm:text-[15px]", lang === "hi" && "tracking-normal")}>{text}</p>

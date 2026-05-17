@@ -372,7 +372,7 @@ export function defaultCompanyProfile(lang: "en" | "hi" = "en"): CompanyProfile 
         "हम भारत में निर्मित Tier-1 मॉड्यूल (Adani / Waaree), BIS-प्रमाणित ऑन-ग्रिड इनवर्टर और गैल्वनाइज्ड माउंटिंग का ही उपयोग करते हैं — कोई हरकत नहीं।"
       ],
       founded: "2020",
-      gstNumber: "23AFRFS3815B1Z4",
+      gstNumber: "",
       locations: "सतना · रीवा · जबलपुर · कटनी",
       installationsDone: "200+",
       installationsLabel: "सिस्टम स्थापित",
@@ -390,7 +390,7 @@ export function defaultCompanyProfile(lang: "en" | "hi" = "en"): CompanyProfile 
       "We use only Indian-made Tier-1 modules (Adani / Waaree), BIS-certified on-grid inverters and galvanized mounting — no shortcuts."
     ],
     founded: "2020",
-    gstNumber: "23AFRFS3815B1Z4",
+    gstNumber: "",
     locations: "Satna · Rewa · Jabalpur · Katni",
     installationsDone: "200+",
     installationsLabel: "Systems installed",

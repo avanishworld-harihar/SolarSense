@@ -77,6 +77,7 @@ export default function MorePage() {
   const [bankBranch, setBankBranch] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankBranch);
   const [bankUpi, setBankUpi] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.bankUpiId);
   const [proposalSiteImages, setProposalSiteImages] = useState<string[]>(DEFAULT_PROPOSAL_BRANDING_SETTINGS.proposalSiteImages);
+  const [companyGst, setCompanyGst] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.companyGstNumber);
   const [companyLogo, setCompanyLogo] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.installerLogoUrl);
   const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.paymentQrCodeUrl);
   const [personalizedBranding, setPersonalizedBranding] = useState(DEFAULT_PROPOSAL_BRANDING_SETTINGS.personalizedBranding);
@@ -120,6 +121,7 @@ export default function MorePage() {
       setBankBranch(settings.bankBranch);
       setBankUpi(settings.bankUpiId);
       setProposalSiteImages(settings.proposalSiteImages ?? []);
+      setCompanyGst(settings.companyGstNumber ?? "");
       setCompanyLogo(settings.installerLogoUrl);
       setPaymentQrCodeUrl(settings.paymentQrCodeUrl ?? "");
       setPersonalizedBranding(settings.personalizedBranding);
@@ -306,6 +308,7 @@ export default function MorePage() {
       bankBranch: bankBranch.trim(),
       bankUpiId: bankUpi.trim(),
       proposalSiteImages,
+      companyGstNumber: companyGst.trim().toUpperCase(),
       ...overrides
     };
   }
@@ -453,6 +456,17 @@ export default function MorePage() {
               <LabeledInput label="Contact number" value={companyContact} onChange={setCompanyContact} placeholder="+91-9993322267" />
               <div className="sm:col-span-2">
                 <LabeledInput label="Email" value={companyEmail} onChange={setCompanyEmail} placeholder="harihar@solar.com" />
+              </div>
+              <div className="sm:col-span-2">
+                <LabeledInput
+                  label="GSTIN (GST number)"
+                  value={companyGst}
+                  onChange={(v) => setCompanyGst(v.toUpperCase())}
+                  placeholder="e.g. 23AAAAA0000A1Z5"
+                />
+                <p className="mt-1 text-[11px] font-medium text-slate-500">
+                  Printed on web proposals and PPT — leave blank until registered.
+                </p>
               </div>
             </div>
           </Subsection>
