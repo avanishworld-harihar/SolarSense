@@ -14,6 +14,7 @@ import { useLanguage } from "@/lib/language-context";
 import { formatPipelineDisplayName, type PipelineProjectRow } from "@/lib/supabase";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
 import { OPS_STAGE_ORDER } from "@/lib/project-pipeline-stage";
+import { WorkspacePage, WorkspacePageHero, WorkspaceStaggerItem } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -302,26 +303,22 @@ function ProjectsBoard() {
 
   return (
     <>
-      <div className="ss-page-shell">
-        <Card className="page-lite-item overflow-hidden border-amber-200/50 bg-gradient-to-br from-amber-50/90 via-white to-slate-50 p-0 dark:border-amber-500/20 dark:from-amber-950/40 dark:via-[#0c1017] dark:to-[#080b10]">
-          <CardHeader className="border-b border-amber-200/40 p-4 sm:p-5 dark:border-amber-500/15">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-800 dark:text-amber-300">{t("projects_opsModuleTag")}</p>
-            <CardTitle className="mt-1 ss-section-headline text-lg text-slate-900 sm:text-xl dark:text-slate-50">
-              {t("projects_opsPipelineTitle")}
-            </CardTitle>
-            <CardDescription className="ss-section-subline mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {t("projects_opsPipelineSub")}
-            </CardDescription>
-            <div className="mt-4 rounded-lg border border-amber-200/50 bg-white/80 px-2 py-2 dark:border-amber-500/20 dark:bg-[#0c1017]/80">
-              <WorkflowLifecycleStrip surface="projects" />
-            </div>
-          </CardHeader>
-        </Card>
+      <WorkspacePage tone="projects">
+        <WorkspaceStaggerItem>
+          <WorkspacePageHero
+            tone="projects"
+            eyebrow={t("projects_opsModuleTag")}
+            title={t("projects_opsPipelineTitle")}
+            subtitle={t("projects_opsPipelineSub")}
+            footer={<WorkflowLifecycleStrip surface="projects" />}
+          />
+        </WorkspaceStaggerItem>
 
+        <WorkspaceStaggerItem>
         <div
           role="tablist"
           aria-label="Projects view"
-          className="page-lite-item flex flex-wrap gap-1.5 rounded-2xl border border-white/55 bg-white/55 p-1 shadow-[0_8px_24px_rgba(11,34,64,0.08)] backdrop-blur-md dark:border-white/10 dark:bg-slate-900/55 sm:gap-2 sm:p-1.5"
+          className="workspace-filter-rail"
         >
           {TAB_DEFS.map((tab) => {
             const isActive = view === tab.id;
@@ -333,10 +330,8 @@ function ProjectsBoard() {
                 type="button"
                 onClick={() => setView(tab.id)}
                 className={cn(
-                  "inline-flex flex-1 min-w-fit items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-extrabold tracking-tight transition-all sm:text-sm",
-                  isActive
-                    ? "bg-gradient-to-br from-brand-600 to-indigo-600 text-white shadow-[0_8px_22px_rgba(67,56,202,0.32)]"
-                    : "text-slate-700 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/[0.05]"
+                  "workspace-filter-pill flex-1 min-w-fit justify-center py-2 sm:text-sm",
+                  isActive ? "workspace-filter-pill--active" : "workspace-filter-pill--idle"
                 )}
               >
                 <span>{tab.fallback}</span>
@@ -354,6 +349,7 @@ function ProjectsBoard() {
             );
           })}
         </div>
+        </WorkspaceStaggerItem>
 
         <p className="page-lite-item -mt-1 px-1 text-xs font-semibold text-slate-500 dark:text-slate-400 sm:text-sm">
           {view === "active" ? t("projects_opsBoardHint") : activeTabDef.description}
@@ -426,7 +422,7 @@ function ProjectsBoard() {
             onDeleteProject={(p) => setDeleteProjectTarget(p)}
           />
         )}
-      </div>
+      </WorkspacePage>
 
       {projectModal === "edit" && editProjectId && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-[12px] sm:items-center sm:p-4">

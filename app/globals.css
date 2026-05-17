@@ -148,7 +148,107 @@
 
 @layer components {
   .ss-page-shell {
-    @apply page-lite-sequence space-y-4 sm:space-y-5 md:space-y-6;
+    @apply page-lite-sequence space-y-5 sm:space-y-6 md:space-y-7;
+  }
+
+  /* --------------------------------------------------------------------------
+     Workspace pages — Dashboard DNA for Customers, Projects, Proposals, More
+     -------------------------------------------------------------------------- */
+  .workspace-page {
+    @apply relative mx-auto w-full min-w-0 max-w-[88rem] space-y-5 sm:space-y-6 md:space-y-7;
+  }
+
+  .workspace-page > * + * {
+    position: relative;
+  }
+
+  .workspace-page-hero {
+    @apply relative isolate;
+  }
+
+  .workspace-page-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  .workspace-page-hero--customers::before {
+    background:
+      radial-gradient(ellipse 70% 55% at 12% 0%, rgba(99, 102, 241, 0.14), transparent 62%),
+      radial-gradient(ellipse 55% 45% at 88% 20%, rgba(14, 165, 233, 0.1), transparent 58%);
+  }
+
+  .workspace-page-hero--projects::before {
+    background:
+      radial-gradient(ellipse 70% 55% at 10% 0%, rgba(245, 158, 11, 0.16), transparent 62%),
+      radial-gradient(ellipse 50% 45% at 90% 15%, rgba(249, 115, 22, 0.08), transparent 58%);
+  }
+
+  .workspace-page-hero--proposals::before {
+    background:
+      radial-gradient(ellipse 75% 60% at 50% 0%, rgba(16, 185, 129, 0.18), transparent 65%),
+      radial-gradient(ellipse 45% 40% at 100% 30%, rgba(56, 189, 248, 0.12), transparent 55%);
+  }
+
+  .workspace-page-hero--settings::before {
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 0%, rgba(148, 163, 184, 0.12), transparent 60%),
+      radial-gradient(ellipse 50% 45% at 80% 10%, rgba(100, 116, 139, 0.08), transparent 55%);
+  }
+
+  .workspace-page-hero--workflow::before {
+    background:
+      radial-gradient(ellipse 65% 50% at 15% 0%, rgba(14, 165, 233, 0.12), transparent 60%),
+      radial-gradient(ellipse 55% 45% at 85% 20%, rgba(16, 185, 129, 0.1), transparent 58%);
+  }
+
+  .workspace-surface {
+    @apply glass-panel-premium rounded-[1.15rem] p-4 sm:p-5;
+  }
+
+  .workspace-surface-quiet {
+    @apply glass-panel-quiet rounded-[1.15rem] p-3 sm:p-4;
+  }
+
+  .workspace-filter-rail {
+    @apply flex flex-wrap gap-1.5 rounded-[1.05rem] border border-white/70 bg-white/45 p-1 shadow-[0_8px_24px_rgba(11,34,64,0.06)] backdrop-blur-lg dark:border-white/10 dark:bg-slate-900/55 sm:gap-2 sm:p-1.5;
+  }
+
+  .workspace-filter-pill {
+    @apply inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all sm:text-xs;
+  }
+
+  .workspace-filter-pill--active {
+    @apply border-transparent bg-gradient-to-br from-brand-600 to-indigo-600 text-white shadow-[0_8px_22px_rgba(67,56,202,0.28)];
+  }
+
+  .workspace-filter-pill--idle {
+    @apply border-slate-200/80 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-300;
+  }
+
+  .workspace-cta-primary {
+    @apply glass-hero-cta inline-flex min-h-11 w-full items-center justify-center rounded-xl px-5 py-3 text-sm font-bold sm:w-auto;
+  }
+
+  /* Bridge legacy ss-* cards to Dashboard glass inside workspace pages */
+  .workspace-page .ss-card:not(.workspace-page-hero) {
+    @apply glass-panel-premium border-0 shadow-none;
+  }
+
+  .workspace-page .ss-card-subtle {
+    @apply glass-panel-quiet border-0 shadow-none;
+  }
+
+  .workspace-page .ss-section-headline {
+    @apply font-semibold tracking-tight text-slate-800 dark:text-[#E6EDF6];
+  }
+
+  .workspace-page .ss-section-subline {
+    @apply ws-type-body mt-1;
   }
 
   .ss-page-backdrop {
@@ -3145,4 +3245,121 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
 
 .proposal-hub-hint {
   color: rgb(100 116 139);
+}
+
+/* Proposals hub — light mode aligns with workspace glass; .dark keeps cinematic shell */
+html:not(.dark) .proposal-hub.workspace-page--proposals {
+  --hub-bg: transparent;
+  --hub-surface: rgba(255, 255, 255, 0.82);
+  --hub-surface-2: rgba(248, 250, 252, 0.96);
+  --hub-border: rgba(15, 23, 42, 0.1);
+  --hub-glow: rgba(16, 185, 129, 0.14);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-header {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(240, 253, 250, 0.75) 100%);
+  box-shadow:
+    0 12px 34px rgba(11, 34, 64, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-title,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-analytics-value {
+  color: rgb(15 23 42);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-subtitle,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-eyebrow,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-back,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-hint,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-workspace-eyebrow {
+  color: rgb(71 85 105);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-back:hover {
+  color: rgb(15 23 42);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-analytics-tile {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-analytics-tile:hover {
+  border-color: rgba(15, 23, 42, 0.14);
+  box-shadow: 0 8px 24px rgba(11, 34, 64, 0.1);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-analytics-icon {
+  background: rgba(15, 23, 42, 0.05);
+  color: rgb(71 85 105);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-lifecycle {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-shell {
+  box-shadow: 0 16px 40px rgba(11, 34, 64, 0.1);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-shell-list {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-shell-workspace {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(241, 245, 249, 0.85) 100%);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-list-group-head {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-deal-row {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-deal-row:hover {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(11, 34, 64, 0.08);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-deal-row--active {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.12), rgba(255, 255, 255, 0.7));
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25), 0 8px 24px rgba(16, 185, 129, 0.1);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-workspace-empty,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-empty {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-error {
+  color: rgb(190 18 60);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-metric,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-workspace-next,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-intel {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-progress-track {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-cta-secondary {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: rgb(30 41 59) !important;
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-cta-ghost {
+  color: rgb(71 85 105) !important;
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-cta-ghost:hover {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: rgb(15 23 42) !important;
 }

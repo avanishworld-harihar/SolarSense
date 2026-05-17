@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { computeProposalHubStats } from "@/lib/proposal-hub-insights";
 import { useLanguage } from "@/lib/language-context";
 import type { ProposalStatus } from "@/lib/proposal-status";
+import { WorkspacePage } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -97,7 +98,7 @@ export default function ProposalsHubPage() {
   const intelTitle = uiLang === "hi" ? "अगला कदम" : "Recommended next";
 
   return (
-    <motion.div className="proposal-hub pb-6 md:pb-8">
+    <WorkspacePage tone="proposals" stagger={false} className="proposal-hub pb-6 md:pb-8">
       <ProposalHubHeader
         variant="workspace"
         title={t("proposals_title")}
@@ -217,6 +218,6 @@ export default function ProposalsHubPage() {
           </div>
         </>
       ) : null}
-    </motion.div>
+    </WorkspacePage>
   );
 }

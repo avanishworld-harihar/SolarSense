@@ -27,6 +27,7 @@ import {
 } from "@/lib/lead-status";
 import { LEAD_SURVEY_STATUS_OPTIONS } from "@/lib/proposal-survey-gate";
 import { removeLeadFollowUp } from "@/lib/lead-followup-storage";
+import { WorkspacePage, WorkspacePageHero, WorkspaceStaggerItem } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import {
@@ -489,7 +490,7 @@ function CustomersPageContent() {
 
   return (
     <>
-      <div className="ss-page-shell">
+      <WorkspacePage tone="customers">
         <OfflineDataNotice
           show={!online && data !== undefined}
           cacheAgeMs={getCustomersCacheAgeMs()}
@@ -502,35 +503,31 @@ function CustomersPageContent() {
           </div>
         )}
 
-        <div className="page-lite-item overflow-hidden rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-slate-50 shadow-sm dark:border-indigo-500/25 dark:from-indigo-950/35 dark:via-[#0c1017] dark:to-[#080b10]">
-          <div className="border-b border-indigo-200/50 p-4 sm:p-5 md:p-6 dark:border-indigo-500/15">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-700 dark:text-indigo-300">{t("customers_sectionLabel")}</p>
-              <h2 className="ss-section-headline mt-1 font-display text-slate-900 dark:text-slate-50">{t("customers_heading")}</h2>
-              <p className="ss-section-subline max-w-xl text-slate-600 dark:text-slate-400">{t("customers_sub")}</p>
-            </div>
-            <button
-              type="button"
-              className="ss-cta-primary mt-2 w-full shrink-0 rounded-2xl px-5 py-3 sm:mt-0 sm:w-auto sm:py-3.5"
-              onClick={() => {
-                setEditLeadId(null);
-                setLeadModal("add");
-              }}
-            >
-              {t("customers_addLeadCta")}
-            </button>
-          </div>
-        </div>
-        </div>
+        <WorkspaceStaggerItem>
+          <WorkspacePageHero
+            tone="customers"
+            eyebrow={t("customers_sectionLabel")}
+            title={t("customers_heading")}
+            subtitle={t("customers_sub")}
+            action={
+              <button
+                type="button"
+                className="workspace-cta-primary"
+                onClick={() => {
+                  setEditLeadId(null);
+                  setLeadModal("add");
+                }}
+              >
+                {t("customers_addLeadCta")}
+              </button>
+            }
+            footer={<WorkflowLifecycleStrip surface="crm" />}
+          />
+        </WorkspaceStaggerItem>
 
-        <div className="page-lite-item rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 dark:border-white/10 dark:bg-[#0c1017]/90">
-          <WorkflowLifecycleStrip surface="crm" />
-        </div>
-
-        <div className="page-lite-item md:max-lg:grid md:max-lg:grid-cols-1 md:max-lg:items-start md:max-lg:gap-5 md:max-lg:landscape:grid-cols-[minmax(0,46%)_minmax(0,1fr)]">
+        <WorkspaceStaggerItem className="md:max-lg:grid md:max-lg:grid-cols-1 md:max-lg:items-start md:max-lg:gap-5 md:max-lg:landscape:grid-cols-[minmax(0,46%)_minmax(0,1fr)]">
           <div className="min-w-0 space-y-4">
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <div className="workspace-filter-rail">
           {(
             [
               { key: "all", label: t("customers_filterAll") },
@@ -546,10 +543,8 @@ function CustomersPageContent() {
                 type="button"
                 onClick={() => setStageFilter(opt.key)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all sm:text-xs",
-                  isActive
-                    ? "border-brand-700 bg-brand-700 text-white"
-                    : "border-slate-200/80 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-300"
+                  "workspace-filter-pill",
+                  isActive ? "workspace-filter-pill--active" : "workspace-filter-pill--idle"
                 )}
                 aria-pressed={isActive}
               >
@@ -581,8 +576,8 @@ function CustomersPageContent() {
           <div className="hidden min-h-[min(70vh,520px)] md:max-lg:block lg:hidden">
             <CustomerWorkspacePane customer={workspaceCustomer} onStatusChange={handleStatusChange} />
           </div>
-        </div>
-      </div>
+        </WorkspaceStaggerItem>
+      </WorkspacePage>
 
       {leadModal !== "none" && (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/50 backdrop-blur-[12px] p-0 sm:items-center sm:p-4">

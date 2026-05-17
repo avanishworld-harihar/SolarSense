@@ -33,6 +33,7 @@ import {
 } from "@/lib/installer-region-storage";
 import type { LocalScriptLocale } from "@/lib/state-to-locale";
 import { getFallbackTariffContext } from "@/lib/tariff-engine";
+import { WorkspacePage, WorkspacePageHero, WorkspaceStaggerItem } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -429,7 +430,16 @@ export default function MorePage() {
 
   return (
     <>
-      <div className="ss-page-shell">
+      <WorkspacePage tone="settings" stagger={false}>
+        <WorkspaceStaggerItem>
+          <WorkspacePageHero
+            tone="settings"
+            eyebrow="Workspace"
+            title="More"
+            subtitle="Company profile, region, language, performance, and plans — expand a section below."
+          />
+        </WorkspaceStaggerItem>
+
         <AnimatePresence>
           {successMessage && (
             <motion.div
@@ -909,7 +919,7 @@ export default function MorePage() {
           </div>
         </div>
         </MoreGroup>
-      </div>
+      </WorkspacePage>
     </>
   );
 }
@@ -939,8 +949,8 @@ function MoreGroup({
       {...(defaultOpen ? { defaultOpen: true } : {})}
     >
       <summary className="flex cursor-pointer list-none items-start gap-3 p-4 sm:p-5">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100">
-          <Icon className="h-4 w-4" aria-hidden />
+        <span className="ws-icon-well ws-icon-well--indigo shrink-0" aria-hidden>
+          <Icon className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-extrabold text-brand-900 dark:text-foreground sm:text-base">{title}</span>
