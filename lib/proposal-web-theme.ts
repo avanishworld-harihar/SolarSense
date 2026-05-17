@@ -1,17 +1,19 @@
 export type ProposalWebTheme = "dark" | "light";
 
-const STORAGE_KEY = "ss_proposal_web_theme_v1";
+const STORAGE_KEY = "ss_proposal_web_theme_v2";
 
-/** Default for web proposals — dark premium deck. */
+/** Default for web proposals — light document; user opts into dark via toggle. */
 export function defaultProposalWebTheme(): ProposalWebTheme {
-  return "dark";
+  return "light";
 }
 
 export function readProposalWebTheme(): ProposalWebTheme {
   if (typeof window === "undefined") return defaultProposalWebTheme();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw === "light" ? "light" : "dark";
+    if (raw === "dark") return "dark";
+    if (raw === "light") return "light";
+    return defaultProposalWebTheme();
   } catch {
     return defaultProposalWebTheme();
   }

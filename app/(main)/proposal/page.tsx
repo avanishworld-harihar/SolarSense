@@ -1,6 +1,6 @@
 "use client";
 
-import { BillAnalysisCharts } from "@/components/bill-analysis-charts";
+import dynamic from "next/dynamic";
 import { useLanguage } from "@/lib/language-context";
 import {
   applyTariffCategoryOverride,
@@ -37,6 +37,14 @@ import { cn } from "@/lib/utils";
 import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
+
+const BillAnalysisCharts = dynamic(
+  () => import("@/components/bill-analysis-charts").then((m) => ({ default: m.BillAnalysisCharts })),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-48 w-full rounded-2xl" />
+  }
+);
 
 const PIPELINE_SWR_KEY = "/api/pipeline";
 const CLIENT_REF_STORAGE_KEY = "ss_device_ref";
@@ -280,17 +288,20 @@ export default function ProposalPage() {
     localStorage.setItem(LEARNED_BILL_PROFILE_KEY, JSON.stringify(learnedBillProfiles));
   }, [learnedBillProfiles]);
 
-  // Persist session across tab switches (instant, no network needed).
+  // Persist session across tab switches — debounced so typing does not freeze the UI.
   useEffect(() => {
-    saveSession({
-      manual,
-      monthlyUnits,
-      latestBill,
-      additionalBills,
-      auditedMonthTotals,
-      overrideSolarKw,
-      overridePanels
-    });
+    const timer = window.setTimeout(() => {
+      saveSession({
+        manual,
+        monthlyUnits,
+        latestBill,
+        additionalBills,
+        auditedMonthTotals,
+        overrideSolarKw,
+        overridePanels
+      });
+    }, 400);
+    return () => window.clearTimeout(timer);
   }, [manual, monthlyUnits, latestBill, additionalBills, auditedMonthTotals, overrideSolarKw, overridePanels]);
 
   useEffect(() => {
@@ -301,42 +312,6 @@ export default function ProposalPage() {
     };
     window.addEventListener(INSTALLER_REGION_EVENT, sync);
     return () => window.removeEventListener(INSTALLER_REGION_EVENT, sync);
-  }, []);
-
-  /**
-   * Mobile fallback pull-to-refresh: when user drags down from top, force a
-   * hard reload so proposal state resets (matches browser refresh intent).
-   */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    let startY = 0;
-    let armed = false;
-    let triggered = false;
-    const THRESHOLD = 90;
-    const onTouchStart = (e: TouchEvent) => {
-      if (window.scrollY > 0) {
-        armed = false;
-        return;
-      }
-      startY = e.touches[0]?.clientY ?? 0;
-      armed = true;
-      triggered = false;
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (!armed || triggered) return;
-      if (window.scrollY > 0) return;
-      const y = e.touches[0]?.clientY ?? 0;
-      if (y - startY > THRESHOLD) {
-        triggered = true;
-        window.location.reload();
-      }
-    };
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
-    return () => {
-      window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener("touchmove", onTouchMove);
-    };
   }, []);
 
   useEffect(() => {

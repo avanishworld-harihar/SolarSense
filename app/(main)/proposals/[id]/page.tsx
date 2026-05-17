@@ -22,8 +22,9 @@ export default async function ProposalManagePage({ params }: PageProps) {
   if (!pricing) {
     const summary = summarizeProposalDeck(proposal.ppt_input);
     await ensureProposalPricingRow(defaultProposalPricingFromDeck(proposal.id, proposal.ppt_input, summary));
-    await persistProposalDeckAfterPricingChange(proposal.id);
     pricing = await getProposalPricingByProposalId(proposal.id);
+    // Sync deck in background — do not block first paint on a second full proposal read + write.
+    void persistProposalDeckAfterPricingChange(proposal.id);
   }
 
   const merged = mergeProposalPricingIntoPptInput(proposal.ppt_input, pricing);

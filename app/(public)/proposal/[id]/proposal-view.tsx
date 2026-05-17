@@ -102,24 +102,57 @@ function formatConnectionDate(raw: string | undefined | null): string {
 // ---------------------------------------------------------------------------
 // Count-up animation hook
 // ---------------------------------------------------------------------------
+function normalizeCountTarget(target: number): number {
+  return Math.max(0, Math.round(Number.isFinite(target) ? target : 0));
+}
+
+/** While count-up is at 0 (print / not yet in view), show the real metric instead of "0". */
+function displayCountUp(counted: number, target: number): number {
+  const t = normalizeCountTarget(target);
+  if (t <= 0) return 0;
+  return counted > 0 ? counted : t;
+}
+
 function useCountUp(target: number, inView: boolean, duration = 1.4) {
+  const safeTarget = normalizeCountTarget(target);
   const [value, setValue] = useState(0);
   const reduced = useReducedMotion();
+
   useEffect(() => {
-    if (reduced) { setValue(target); return; }
+    const snap = () => setValue(safeTarget);
+    window.addEventListener("beforeprint", snap);
+    const mq = window.matchMedia("print");
+    const onPrintChange = () => {
+      if (mq.matches) snap();
+    };
+    mq.addEventListener("change", onPrintChange);
+    if (mq.matches) snap();
+    return () => {
+      window.removeEventListener("beforeprint", snap);
+      mq.removeEventListener("change", onPrintChange);
+    };
+  }, [safeTarget]);
+
+  useEffect(() => {
+    if (reduced) {
+      setValue(safeTarget);
+      return;
+    }
     if (!inView) return;
     let start: number | null = null;
-    let raf: number;
+    let raf = 0;
+    setValue(0);
     const animate = (ts: number) => {
       if (!start) start = ts;
       const progress = Math.min((ts - start) / (duration * 1000), 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(eased * target));
+      setValue(Math.round(eased * safeTarget));
       if (progress < 1) raf = requestAnimationFrame(animate);
     };
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [inView, target, duration, reduced]);
+  }, [inView, safeTarget, duration, reduced]);
+
   return value;
 }
 
@@ -127,9 +160,10 @@ function AnimatedINR({ value, prefix = "₹", className }: { value: number; pref
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-20px" });
   const counted = useCountUp(value, inView);
+  const shown = displayCountUp(counted, value);
   return (
     <span ref={ref} className={className}>
-      {prefix}{counted.toLocaleString("en-IN")}
+      {prefix}{shown.toLocaleString("en-IN")}
     </span>
   );
 }
@@ -138,9 +172,10 @@ function AnimatedNumber({ value, suffix = "", className }: { value: number; suff
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-20px" });
   const counted = useCountUp(value, inView);
+  const shown = displayCountUp(counted, value);
   return (
     <span ref={ref} className={className}>
-      {counted.toLocaleString("en-IN")}{suffix}
+      {shown.toLocaleString("en-IN")}{suffix}
     </span>
   );
 }
@@ -1250,13 +1285,17 @@ function TreeAnimation({ count, inView }: { count: number; inView: boolean }) {
 
 function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: ProposalDeckSummary; lang: ProposalLang }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  const treeCount = useCountUp(summary.environmental.treeEquivalent, inView);
-  const co2Count = useCountUp(summary.environmental.lifetimeCo2TonsSaved, inView);
-  const genCount = useCountUp(summary.annualGen, inView);
+  const inView = useInView(ref, { once: true, amount: 0.12 });
+  const env = summary.environmental;
+  const treeCountRaw = useCountUp(env.treeEquivalent, inView);
+  const co2CountRaw = useCountUp(env.lifetimeCo2TonsSaved, inView);
+  const genCountRaw = useCountUp(summary.annualGen, inView);
+  const treeCount = displayCountUp(treeCountRaw, env.treeEquivalent);
+  const co2Count = displayCountUp(co2CountRaw, env.lifetimeCo2TonsSaved);
+  const genCount = displayCountUp(genCountRaw, summary.annualGen);
 
   // 1-year tree equivalent
-  const yearlyTrees = Math.round(summary.environmental.treeEquivalent / 25);
+  const yearlyTrees = Math.round(env.treeEquivalent / 25);
 
   return (
     <ProposalJourneySection id="environment">
@@ -1354,7 +1393,7 @@ function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: Pr
               })()}
             </p>
             <p className="mt-2 text-sm text-emerald-200/80">
-              {D["env.offsetSubLine"].replace("%T%", summary.environmental.treeEquivalent.toLocaleString("en-IN"))}
+              {D["env.offsetSubLine"].replace("%T%", treeCount.toLocaleString("en-IN"))}
             </p>
           </div>
           <TreeDeciduous className="h-16 w-16 flex-shrink-0 text-emerald-400 opacity-30" />
@@ -2270,7 +2309,7 @@ export default function ProposalView({
   const [downloading, setDownloading] = useState(false);
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
   const [selectedAmcYears, setSelectedAmcYears] = useState<1 | 5 | 10>(1);
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   /** Prefer snapshot from DB; if missing (older proposals), fall back to this browser's saved branding. */
   const [displayInstallerLogoUrl, setDisplayInstallerLogoUrl] = useState("");
 
@@ -2384,7 +2423,7 @@ export default function ProposalView({
   // document is constrained to A4 width (`max-w-[210mm]`) for a real "document"
   // feel; on mobile the sections stack vertically full-bleed.
   return (
-    <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="never">
+    <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="user">
       <div
         className={`proposal-document proposal-journey-connected mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
           lang === "hi" ? "lang-hi " : ""
