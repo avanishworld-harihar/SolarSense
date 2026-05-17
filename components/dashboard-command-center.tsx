@@ -173,36 +173,39 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
       <div className="glass-command-reflect pointer-events-none absolute inset-0 rounded-[inherit]" aria-hidden />
       <div className="glass-hero-noise pointer-events-none absolute inset-0 opacity-[0.2]" aria-hidden />
 
-      <div className="relative flex flex-col gap-5 p-5 sm:gap-6 sm:p-6 md:p-7">
-        {/* Status rail — not a marketing hero */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/50 pb-4 dark:border-white/10">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-            <span className="ws-type-eyebrow text-slate-500 dark:text-[#8B949E]">
-              {uiLang === "hi" ? "वर्कस्पेस" : "Workspace"}
-            </span>
-            <span className="hidden h-3 w-px bg-slate-300/80 sm:block dark:bg-white/15" aria-hidden />
-            <span className="text-xs font-medium text-slate-500 dark:text-[#8B949E]">
-              {t("dashboard_greetingName", { name })} · {dateStr}
-            </span>
-            {isLive ? (
-              <span className="ws-live-pill inline-flex items-center gap-1.5">
-                <span className="ws-live-dot" aria-hidden />
-                {uiLang === "hi" ? "लाइव" : "Live"}
-              </span>
-            ) : loading ? (
-              <span className="ws-live-pill ws-live-pill--muted">{uiLang === "hi" ? "सिंक" : "Sync"}</span>
-            ) : null}
+      <motion.div className="relative flex flex-col gap-5 p-5 sm:gap-6 sm:p-6 md:p-7 lg:gap-7 lg:p-8 xl:p-9">
+        {/* Status rail — workspace label + greeting + actions */}
+        <div className="flex flex-col gap-3 border-b border-white/50 pb-4 dark:border-white/10 sm:flex-row sm:items-end sm:justify-between lg:gap-4 lg:pb-5">
+          <div className="min-w-0 space-y-1.5 lg:space-y-2">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-2.5">
+              <span className="ws-type-eyebrow">{uiLang === "hi" ? "वर्कस्पेस" : "Workspace"}</span>
+              {isLive ? (
+                <span className="ws-live-pill inline-flex items-center gap-1.5">
+                  <span className="ws-live-dot" aria-hidden />
+                  {uiLang === "hi" ? "लाइव" : "Live"}
+                </span>
+              ) : loading ? (
+                <span className="ws-live-pill ws-live-pill--muted">{uiLang === "hi" ? "सिंक" : "Sync"}</span>
+              ) : null}
+            </div>
+            <p className="ws-type-greeting text-balance">
+              {t("dashboard_greetingName", { name })}
+              <span className="ws-type-greeting-meta"> · {dateStr}</span>
+            </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 lg:gap-2.5">
             <Link
               href="/customers?add=1"
-              className="glass-hero-cta-secondary hidden rounded-lg px-3 py-2 text-xs font-semibold sm:inline-flex"
+              className="glass-hero-cta-secondary hidden rounded-lg px-3 py-2 text-xs font-semibold sm:inline-flex lg:px-4 lg:py-2.5 lg:text-sm"
             >
               {t("dashboard_addCustomerCta")}
             </Link>
-            <Link href="/proposal" className="glass-hero-cta group inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white">
+            <Link
+              href="/proposal"
+              className="glass-hero-cta group inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white lg:px-5 lg:py-3 lg:text-base"
+            >
               {t("actions_newProposal")}
-              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
+              <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5 lg:h-4 lg:w-4" aria-hidden />
             </Link>
           </div>
         </div>
@@ -231,8 +234,8 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
                   i > 0 && "glass-pipeline-segment--divider"
                 )}
               >
-                <span className={cn("ws-icon-well h-8 w-8 shrink-0 sm:h-9 sm:w-9", `ws-icon-well--${seg.tone}`)} aria-hidden>
-                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={2.25} />
+                <span className={cn("ws-icon-well h-8 w-8 shrink-0 sm:h-9 sm:w-9 lg:h-10 lg:w-10", `ws-icon-well--${seg.tone}`)} aria-hidden>
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-[1.125rem] lg:w-[1.125rem]" strokeWidth={2.25} />
                 </span>
                 <span className="min-w-0">
                   <span className="glass-pipeline-segment-value tabular-nums">{val}</span>
@@ -264,8 +267,8 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
                 {urgentFollowUps.map((row) => (
                   <li key={row.id}>
                     <Link href={row.href} className="glass-urgent-row group flex items-center justify-between gap-2 rounded-lg px-2.5 py-2">
-                      <span className="min-w-0 truncate text-xs font-semibold text-slate-800 dark:text-white">{row.name}</span>
-                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                      <span className="min-w-0 truncate text-xs font-semibold text-slate-800 dark:text-white lg:text-sm">{row.name}</span>
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 lg:text-[11px]">
                         {uiLang === "hi" ? "रुका" : "Stale"}
                       </span>
                     </Link>
@@ -282,11 +285,11 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
                 <span className="ws-icon-well ws-icon-well--emerald mb-2" aria-hidden>
                   <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
                 </span>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t("metrics_revenue")}</p>
+                <p className="glass-pulse-stat-label">{t("metrics_revenue")}</p>
                 {loading && !stats ? (
-                  <Skeleton className="mt-1.5 h-6 w-20 rounded" />
+                  <Skeleton className="mt-1.5 h-6 w-20 rounded lg:h-7 lg:w-24" />
                 ) : (
-                  <p className="mt-1 text-base font-semibold tabular-nums tracking-tight text-emerald-900 dark:text-emerald-100">
+                  <p className="glass-pulse-stat-value text-emerald-900 dark:text-emerald-100">
                     {stats ? formatInr(stats.revenue) : "—"}
                   </p>
                 )}
@@ -295,11 +298,11 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
                 <span className={cn("ws-icon-well mb-2", stats && stats.pendingPayments > 0 ? "ws-icon-well--rose" : "ws-icon-well--indigo")} aria-hidden>
                   <CircleDollarSign className="h-4 w-4" strokeWidth={2.25} />
                 </span>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{t("metrics_pending")}</p>
+                <p className="glass-pulse-stat-label">{t("metrics_pending")}</p>
                 {loading && !stats ? (
-                  <Skeleton className="mt-1.5 h-6 w-20 rounded" />
+                  <Skeleton className="mt-1.5 h-6 w-20 rounded lg:h-7 lg:w-24" />
                 ) : (
-                  <p className="mt-1 text-base font-semibold tabular-nums tracking-tight text-brand-950 dark:text-white">
+                  <p className="glass-pulse-stat-value text-brand-950 dark:text-white">
                     {stats ? formatInr(stats.pendingPayments) : "—"}
                   </p>
                 )}
@@ -307,7 +310,7 @@ export function DashboardCommandCenter({ name = "Avanish", stats, loading, class
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </header>
   );
 }

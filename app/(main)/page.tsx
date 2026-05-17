@@ -369,7 +369,7 @@ function DashboardPageContent() {
         {installerSaved && (
           <DashboardItem animate={shouldAnimateDashboard}>
             <Card className="border-solar-200/80 bg-solar-50/90 backdrop-blur-sm">
-              <CardContent className="p-3 text-xs font-semibold leading-snug text-solar-800 sm:p-4 sm:text-sm">
+              <CardContent className="p-3 text-xs font-semibold leading-snug text-solar-800 sm:p-4 sm:text-sm lg:text-base">
                 {installerDiscom.trim()
                   ? t("dashboard_activeRegion", { state: installerState, discom: installerDiscom })
                   : t("dashboard_activeState", { state: installerState })}

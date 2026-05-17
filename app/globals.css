@@ -437,7 +437,7 @@
   }
 
   .ws-conversion-metric-value {
-    @apply text-2xl font-bold tabular-nums tracking-tight;
+    @apply text-2xl font-bold tabular-nums tracking-tight lg:text-[1.65rem] xl:text-3xl;
   }
 
   .ws-conversion-bar {
@@ -542,7 +542,7 @@
   }
 
   .ws-insight-panel-title {
-    @apply min-w-0 text-[11px] font-bold uppercase leading-snug tracking-[0.12em] text-slate-600 sm:tracking-[0.14em] dark:text-[#8B949E];
+    @apply min-w-0 text-[11px] font-bold uppercase leading-snug tracking-[0.12em] text-slate-600 sm:tracking-[0.14em] lg:text-xs xl:text-[13px] dark:text-[#8B949E];
   }
 
   .ws-business-insights-grid {
@@ -672,15 +672,27 @@
 
   /* —— Workspace typography —— */
   .ws-type-eyebrow {
-    @apply text-[10px] font-bold uppercase tracking-[0.24em];
+    @apply text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500 dark:text-[#8B949E] lg:text-[11px] lg:tracking-[0.22em] xl:text-xs;
+  }
+
+  .ws-type-greeting {
+    @apply font-sans text-base font-semibold leading-snug tracking-tight text-brand-950 dark:text-[#E6EDF6] sm:text-lg lg:text-[1.35rem] lg:leading-tight xl:text-2xl;
+  }
+
+  .ws-type-greeting-meta {
+    @apply font-medium text-slate-500 dark:text-[#8B949E] lg:text-base xl:text-lg;
   }
 
   .ws-type-hero {
-    @apply font-sans text-[1.75rem] font-semibold leading-[1.12] tracking-[-0.02em] sm:text-[2rem];
+    @apply font-sans text-[1.75rem] font-semibold leading-[1.12] tracking-[-0.02em] sm:text-[2rem] lg:text-[2.25rem] xl:text-[2.5rem];
   }
 
   .ws-type-status-headline {
-    @apply border-l-[3px] border-l-teal-500/80 pl-3 text-lg font-semibold leading-snug tracking-[-0.015em] text-brand-950 sm:text-xl dark:border-l-teal-400/70 dark:text-[#E6EDF6];
+    @apply border-l-[3px] border-l-teal-500/80 pl-3 text-lg font-semibold leading-snug tracking-[-0.015em] text-brand-950 sm:text-xl lg:text-[1.35rem] lg:leading-snug xl:text-2xl dark:border-l-teal-400/70 dark:text-[#E6EDF6];
+  }
+
+  .ws-type-caption {
+    @apply text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-[#8B949E] lg:text-[11px] lg:tracking-wide xl:text-xs;
   }
 
   .glass-status-focus {
@@ -781,31 +793,31 @@
   }
 
   .ws-type-subline {
-    @apply text-sm font-medium text-slate-500 dark:text-[#8B949E];
+    @apply text-sm font-medium text-slate-500 dark:text-[#8B949E] lg:text-[0.9375rem] xl:text-base;
   }
 
   .ws-type-label {
-    @apply text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-[#8B949E];
+    @apply text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-[#8B949E] lg:text-[11px] lg:tracking-[0.14em] xl:text-xs;
   }
 
   .ws-type-body {
-    @apply text-sm font-medium leading-relaxed text-slate-700 dark:text-[#C9D1D9];
+    @apply text-sm font-medium leading-relaxed text-slate-700 dark:text-[#C9D1D9] lg:text-[0.9375rem] lg:leading-relaxed xl:text-base;
   }
 
   .ws-type-metric {
-    @apply text-lg font-semibold tabular-nums tracking-tight text-brand-950 dark:text-white;
+    @apply text-lg font-semibold tabular-nums tracking-tight text-brand-950 dark:text-white lg:text-xl;
   }
 
   .ws-type-metric-lg {
-    @apply text-[1.35rem] font-semibold leading-none tracking-tight sm:text-2xl;
+    @apply text-[1.35rem] font-semibold leading-none tracking-tight sm:text-2xl lg:text-[1.65rem] xl:text-3xl;
   }
 
   .ws-type-chip-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500;
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 lg:text-[11px] xl:text-xs;
   }
 
   .ws-live-pill {
-    @apply rounded-full border border-emerald-300/50 bg-emerald-50/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-800;
+    @apply rounded-full border border-emerald-300/50 bg-emerald-50/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-800 lg:px-2.5 lg:py-1 lg:text-[10px] xl:text-[11px];
   }
 
   .ws-live-pill--muted {
@@ -938,7 +950,30 @@
   }
 
   .glass-pipeline-segment {
-    @apply relative flex flex-1 items-center gap-3 px-3 py-3.5 transition-[background,transform,box-shadow] duration-200 sm:px-4 sm:py-4;
+    @apply relative flex flex-1 items-center gap-3 px-3 py-3.5 transition-[background,transform,box-shadow] duration-200 sm:px-4 sm:py-4 lg:gap-3.5 lg:px-5 lg:py-4;
+  }
+
+  @media (min-width: 1024px) {
+    .glass-command-center > .relative.flex.flex-col {
+      gap: 1.75rem;
+    }
+
+    .glass-status-focus {
+      padding: 1rem 1.15rem 1rem 0.75rem;
+    }
+
+    .glass-command-inset {
+      padding: 1.125rem 1.35rem;
+    }
+
+    .glass-panel-premium.p-4,
+    .glass-panel-premium.sm\:p-5 {
+      padding: 1.35rem 1.5rem;
+    }
+
+    .ws-intel-trend-row {
+      @apply px-3.5 py-3 text-sm;
+    }
   }
 
   .glass-pipeline-segment:hover {
@@ -990,11 +1025,19 @@
   }
 
   .glass-pipeline-segment-value {
-    @apply block text-base font-semibold leading-none tracking-tight text-brand-950 sm:text-lg dark:text-white;
+    @apply block text-base font-semibold leading-none tracking-tight text-brand-950 sm:text-lg lg:text-xl xl:text-2xl dark:text-white;
   }
 
   .glass-pipeline-segment-label {
-    @apply mt-1 block text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500;
+    @apply mt-1 block text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500 lg:text-[10px] lg:tracking-[0.12em] xl:text-[11px];
+  }
+
+  .glass-pulse-stat-label {
+    @apply text-[9px] font-bold uppercase tracking-wider text-slate-500 lg:text-[10px] xl:text-[11px];
+  }
+
+  .glass-pulse-stat-value {
+    @apply mt-1 text-base font-semibold tabular-nums tracking-tight lg:text-lg xl:text-xl;
   }
 
   .glass-command-sheen {
@@ -1174,7 +1217,7 @@
   }
 
   .glass-quick-action-compact {
-    @apply inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold;
+    @apply inline-flex w-full min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold lg:text-[0.9375rem] xl:text-base;
     border: 1px solid rgba(255, 255, 255, 0.65);
     background: rgba(255, 255, 255, 0.5);
     color: #0f4c5c;

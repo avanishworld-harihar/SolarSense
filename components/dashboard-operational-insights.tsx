@@ -61,7 +61,7 @@ function InsightPanel({
     <article className={cn("glass-panel-premium flex min-w-0 flex-col p-4 sm:p-5", spanClass)}>
       <div className="mb-3 flex items-start gap-2.5">
         <span className={cn("ws-icon-well shrink-0", `ws-icon-well--${iconTone}`)} aria-hidden>
-          <Icon className="h-4 w-4" strokeWidth={2.25} />
+          <Icon className="h-4 w-4 lg:h-[1.125rem] lg:w-[1.125rem]" strokeWidth={2.25} />
         </span>
         <h3 className="ws-insight-panel-title">{title}</h3>
       </div>
@@ -110,7 +110,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
       >
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="ws-conversion-metric">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <p className="ws-type-caption">
               {uiLang === "hi" ? "लीड → प्रस्ताव" : "Lead → proposal"}
             </p>
             <p className="ws-conversion-metric-value text-sky-900 dark:text-sky-100">
@@ -124,7 +124,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
             </div>
           </div>
           <div className="ws-conversion-metric">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <p className="ws-type-caption">
               {uiLang === "hi" ? "प्रस्ताव → ऑर्डर" : "Proposal → order"}
             </p>
             <p className="ws-conversion-metric-value text-emerald-900 dark:text-emerald-100">
@@ -165,7 +165,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
               key={alert.id}
               className={cn("rounded-xl border px-3 py-2.5", alertTone[alert.tone] ?? alertTone.sky)}
             >
-              <p className="text-xs font-bold text-slate-800 dark:text-white">{alert.title}</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-white lg:text-sm">{alert.title}</p>
               <p className="mt-0.5 text-[11px] leading-snug text-slate-600 dark:text-[#8B949E]">{alert.body}</p>
               {alert.href && alert.cta ? (
                 <Link
@@ -201,7 +201,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-800 dark:text-white">{row.name}</p>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-[#8B949E]">{row.subtitle}</p>
+                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-[#8B949E] lg:text-sm">{row.subtitle}</p>
                   </div>
                   {row.stale ? (
                     <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
@@ -263,7 +263,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
       >
         <div className="space-y-2">
           <div className={trendRowClass(model.collectionTrend.revenueTrend, "revenue")}>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+            <p className="ws-type-caption">
               {uiLang === "hi" ? "राजस्व ट्रेंड" : "Revenue trend"}
             </p>
             <p className="mt-1 text-xs font-semibold leading-snug text-slate-800 dark:text-white">
@@ -271,7 +271,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
             </p>
           </div>
           <div className={trendRowClass(model.collectionTrend.pendingTrend, "pending")}>
-            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+            <p className="ws-type-caption">
               {uiLang === "hi" ? "लंबित ट्रेंड" : "Outstanding trend"}
             </p>
             <p className="mt-1 text-xs font-semibold leading-snug text-slate-800 dark:text-white">
@@ -306,7 +306,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
           <ul className="space-y-2">
             {model.overdue.items.map((item) => (
               <li key={item.id} className={cn("rounded-xl border px-3 py-2.5", overdueTone[item.tone] ?? overdueTone.amber)}>
-                <p className="text-xs font-bold text-slate-800 dark:text-white">{item.title}</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-white lg:text-sm">{item.title}</p>
                 <p className="mt-0.5 text-[11px] leading-snug text-slate-600 dark:text-[#8B949E]">{item.body}</p>
                 {item.href && item.cta ? (
                   <Link
@@ -364,7 +364,7 @@ export function DashboardOperationalInsights({ stats, trends, loading, className
         <div className="ws-business-insights-grid">
           {model.businessInsights.map((insight) => (
             <div key={insight.id} className={cn("ws-business-insight h-full", `ws-business-insight--${insight.tone}`)}>
-              <p className="text-xs font-bold text-slate-800 dark:text-white">{insight.title}</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-white lg:text-sm">{insight.title}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-[#8B949E]">{insight.body}</p>
               {insight.href && insight.cta ? (
                 <Link

@@ -27,7 +27,7 @@ export function DashboardGreeting({ name = "Avanish", className }: DashboardGree
       />
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="min-w-0">
-          <h1 className="font-sans text-2xl font-bold leading-snug tracking-tight text-brand-950 dark:text-[#FFFFFF]">
+          <h1 className="ws-type-hero font-bold text-brand-950 dark:text-[#FFFFFF]">
             {t("dashboard_greetingName", { name })}
           </h1>
           <div className="mt-2.5 flex flex-col gap-2.5 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
