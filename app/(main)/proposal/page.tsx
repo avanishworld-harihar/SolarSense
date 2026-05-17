@@ -33,6 +33,7 @@ import { mergeCustomerForProposal, type ManualProposalCustomer } from "@/lib/mer
 import { swrDiscomsWithOfflineCache, swrTariffWithOfflineCache } from "@/lib/proposal-swr-fetchers";
 import { CUSTOMERS_SWR_KEY, fetchCustomersLoose } from "@/lib/customers-client";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
+import { ProposalQuickPreview } from "@/components/proposal/proposal-quick-preview";
 import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
@@ -593,6 +594,10 @@ export default function ProposalPage() {
   );
 
   const leadSelected = Boolean(selectedLeadId);
+  const activeLead = useMemo(
+    () => customers.find((c) => c.id === selectedLeadId) ?? null,
+    [customers, selectedLeadId]
+  );
 
   useEffect(() => {
     setAdditionalBills((prev) => {
@@ -1235,6 +1240,10 @@ export default function ProposalPage() {
       }
       const json = (await response.json()) as { ok: boolean; id?: string; shareUrl?: string; persisted?: boolean };
       if (!json.ok) throw new Error("Web proposal could not be created");
+      if (json.persisted === false) {
+        toast.error("Save failed", t("proposal_persistFailed"));
+        return;
+      }
       const shareUrl = json.shareUrl || (json.id ? `${window.location.origin}/proposal/${json.id}` : null);
       if (!shareUrl) throw new Error("No share URL returned");
       setLatestWebProposalUrl(shareUrl);
@@ -1396,14 +1405,19 @@ export default function ProposalPage() {
         <p className="text-[11px] font-medium leading-snug text-slate-600 sm:text-xs">{t("proposal_step1LeadHint")}</p>
       </div>
 
-      {leadSelected ? (
-        <div className="ss-card-subtle border-indigo-100 bg-indigo-50/50 p-4 sm:p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-800">{t("proposal_leadContactBlockTitle")}</p>
-          <p className="mt-1 text-base font-extrabold text-slate-900 sm:text-lg dark:text-slate-50">{manual.leadContactName}</p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-700">
-            {t("proposal_leadPhoneLabel")}: {manual.leadPhone || "—"}
-          </p>
-        </div>
+      {leadSelected && manual.leadContactName ? (
+        <ProposalQuickPreview
+          customerName={manual.leadContactName}
+          city={activeLead?.city ?? manual.city}
+          discom={activeLead?.discom ?? manual.discom}
+          systemKw={effectiveResult.solarKw}
+          annualSavingsInr={effectiveResult.annualSavings}
+          netCostInr={effectiveResult.netCost}
+          paybackLabel={effectiveResult.paybackDisplay}
+          billOptionalHint={t("proposal_quickPathHint")}
+          onGenerate={() => void generateWebProposal()}
+          busy={isWebProposalBusy}
+        />
       ) : null}
 
       <div className="ss-step-card">

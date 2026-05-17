@@ -1,6 +1,7 @@
 "use client";
 
 import { ProposalHubActionsSheet } from "@/components/proposals/proposal-hub-actions-sheet";
+import type { ProposalShareMetrics } from "@/lib/proposal-share-actions";
 import { ProposalStatusBadge } from "@/components/proposal-status-badge";
 import { Button } from "@/components/ui/button";
 import type { ProposalStatus } from "@/lib/proposal-status";
@@ -216,6 +217,15 @@ export function ProposalListCard({
         proposalId={id}
         labels={labels}
         annualSavingInr={annualSavingInr}
+        shareMetrics={
+          {
+            customerName,
+            systemKw,
+            netCostInr: finalInr ?? 0,
+            annualSavingInr: annualSavingInr ?? 0,
+            paybackLabel: "—"
+          } satisfies ProposalShareMetrics
+        }
       />
     </article>
   );

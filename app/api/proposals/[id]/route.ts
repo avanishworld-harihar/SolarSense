@@ -3,7 +3,7 @@ import { z } from "zod";
 import { mergeProposalPricingIntoPptInput } from "@/lib/proposal-pricing-merge";
 import { getProposalPricingByProposalId } from "@/lib/proposal-pricing-store";
 import { proposalStatusSchema } from "@/lib/proposal-status";
-import { getProposalById, trackProposalView, updateProposalStatus } from "@/lib/proposals-store";
+import { deleteProposal, getProposalById, trackProposalView, updateProposalStatus } from "@/lib/proposals-store";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,25 @@ const UUID_RX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const patchBodySchema = z.object({
   proposal_status: proposalStatusSchema
 });
+
+export async function DELETE(_req: NextRequest, ctx: RouteCtx) {
+  try {
+    const { id } = await ctx.params;
+    if (!id || !UUID_RX.test(id.trim())) {
+      return NextResponse.json({ ok: false, error: "invalid_id" }, { status: 400 });
+    }
+    const proposal = await getProposalById(id.trim());
+    if (!proposal) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    const ok = await deleteProposal(proposal.id);
+    if (!ok) return NextResponse.json({ ok: false, error: "delete_failed" }, { status: 503 });
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { ok: false, error: error instanceof Error ? error.message : "delete_failed" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(req: NextRequest, ctx: RouteCtx) {
   try {

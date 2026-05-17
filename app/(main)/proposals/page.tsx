@@ -7,6 +7,7 @@ import { ProposalWorkspacePreview } from "@/components/proposals/proposal-worksp
 import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { countHiddenByDedupe, dedupeLatestProposals } from "@/lib/proposal-hub-dedupe";
 import { computeProposalHubStats } from "@/lib/proposal-hub-insights";
 import { useLanguage } from "@/lib/language-context";
 import type { ProposalStatus } from "@/lib/proposal-status";
@@ -33,8 +34,17 @@ async function fetchProposals(url: string) {
 
 export default function ProposalsHubPage() {
   const { t, locale } = useLanguage();
-  const { data, error, isLoading } = useSWR(PROPOSALS_SWR_KEY, fetchProposals, { revalidateOnFocus: true, dedupingInterval: 15_000 });
-  const rows = data?.ok && Array.isArray(data.data) ? data.data : [];
+  const { data, error, isLoading, mutate } = useSWR(PROPOSALS_SWR_KEY, fetchProposals, {
+    revalidateOnFocus: true,
+    dedupingInterval: 15_000
+  });
+  const allRows = data?.ok && Array.isArray(data.data) ? data.data : [];
+  const [showAllVersions, setShowAllVersions] = useState(false);
+  const rows = useMemo(
+    () => (showAllVersions ? allRows : dedupeLatestProposals(allRows)),
+    [allRows, showAllVersions]
+  );
+  const hiddenCount = useMemo(() => countHiddenByDedupe(allRows, rows), [allRows, rows]);
   const [focusId, setFocusId] = useState<string | null>(null);
   const pipelineRef = useRef<HTMLElement>(null);
   const workspaceRef = useRef<HTMLElement>(null);
@@ -71,10 +81,20 @@ export default function ProposalsHubPage() {
       moreActions: t("proposals_cardMoreActions"),
       sheetClose: t("proposals_sheetClose"),
       duplicateProposal: t("proposals_cardDuplicate"),
-      archiveProposal: t("proposals_cardArchive")
+      archiveProposal: t("proposals_cardArchive"),
+      deleteProposal: t("proposals_deleteProposal"),
+      deleteConfirm: t("proposals_deleteConfirm"),
+      deleteDone: t("proposals_deleteDone"),
+      deleteFailed: t("proposals_deleteFailed"),
+      sendDone: t("proposals_sendDone"),
+      pptFailed: t("proposals_pptFailed")
     }),
     [t]
   );
+
+  const refreshList = useCallback(() => {
+    void mutate();
+  }, [mutate]);
 
   const pipelineLabels = useMemo(
     () => ({
@@ -183,8 +203,24 @@ export default function ProposalsHubPage() {
         </div>
       ) : null}
 
-      {!isLoading && rows.length > 0 ? (
+      {!isLoading && allRows.length > 0 ? (
         <>
+          <div className="proposal-hub-list-controls mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/60 bg-white/40 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                checked={showAllVersions}
+                onChange={(e) => setShowAllVersions(e.target.checked)}
+              />
+              {showAllVersions ? t("proposals_showAllVersions") : t("proposals_showLatestOnly")}
+            </label>
+            {!showAllVersions && hiddenCount > 0 ? (
+              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                {t("proposals_hiddenVersionsHint", { n: hiddenCount })}
+              </p>
+            ) : null}
+          </div>
           <p className="proposal-hub-hint mt-5 hidden text-xs text-slate-500 lg:block">{t("proposals_hubSplitHint")}</p>
 
           {/* Phone: list + workspace stack — scroll back anytime, no trapped detail screen */}
@@ -213,6 +249,7 @@ export default function ProposalsHubPage() {
                 statusLabel={cardLabels.statusLabel}
                 groupCountLabel={pipelineLabels.groupCount}
                 pipelineLabel={pipelineLabels.pipeline}
+                showVersionTag={showAllVersions}
               />
             </section>
             <section
@@ -233,6 +270,8 @@ export default function ProposalsHubPage() {
                 intelTitle={intelTitle}
                 layout="mobile"
                 onScrollToPipeline={scrollToPipeline}
+                onDeleted={refreshList}
+                onSent={refreshList}
               />
             </section>
           </div>
@@ -256,6 +295,7 @@ export default function ProposalsHubPage() {
                 groupCountLabel={pipelineLabels.groupCount}
                 pipelineLabel={pipelineLabels.pipeline}
                 className="h-full min-h-0"
+                showVersionTag={showAllVersions}
               />
             </div>
             <div className="proposal-hub-shell-workspace flex h-full min-h-0 flex-col overflow-hidden">
@@ -270,6 +310,8 @@ export default function ProposalsHubPage() {
                 lang={uiLang}
                 intelTitle={intelTitle}
                 layout="pane"
+                onDeleted={refreshList}
+                onSent={refreshList}
               />
             </div>
           </div>

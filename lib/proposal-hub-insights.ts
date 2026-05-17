@@ -5,6 +5,7 @@ export type ProposalHubRow = {
   customer_name: string;
   generated_at: string;
   system_kw: number;
+  lead_id?: string | null;
   final_amount_inr: number | null;
   panel_brand: string | null;
   annual_saving_inr: number | null;

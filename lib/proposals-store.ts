@@ -258,6 +258,20 @@ export async function updateProposalStatus(proposalId: string, status: ProposalS
   return true;
 }
 
+/** Hard-delete a proposal row (proposal_pricing cascades). */
+export async function deleteProposal(proposalId: string): Promise<boolean> {
+  const client = rwClient();
+  if (!client) return false;
+  const id = proposalId.trim();
+  if (!id) return false;
+  const { error } = await client.from("proposals").delete().eq("id", id);
+  if (error) {
+    console.warn("[proposals-store] deleteProposal:", error.message);
+    return false;
+  }
+  return true;
+}
+
 export async function trackProposalView(id: string): Promise<void> {
   const client = rwClient();
   if (!client) return;

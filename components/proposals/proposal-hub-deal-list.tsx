@@ -34,7 +34,8 @@ export function ProposalHubDealList({
   statusLabel,
   groupCountLabel,
   pipelineLabel,
-  className
+  className,
+  showVersionTag = false
 }: {
   rows: ProposalHubDealRow[];
   focusId: string | null;
@@ -43,6 +44,8 @@ export function ProposalHubDealList({
   groupCountLabel: (n: number) => string;
   pipelineLabel: string;
   className?: string;
+  /** When true, show short id so duplicate test rows are distinguishable */
+  showVersionTag?: boolean;
 }) {
   const grouped = groupRows(rows);
   const reduced = useReducedMotion();
@@ -106,6 +109,12 @@ export function ProposalHubDealList({
                             <span>{row.system_kw} kW</span>
                             <span className="proposal-hub-text-secondary">·</span>
                             <span className="truncate">{formatShortDate(row.generated_at)}</span>
+                            {showVersionTag ? (
+                              <>
+                                <span className="proposal-hub-text-secondary">·</span>
+                                <span className="font-mono text-[10px] opacity-70">{row.id.slice(0, 8)}</span>
+                              </>
+                            ) : null}
                           </p>
                         </div>
                         <div className="hidden shrink-0 flex-col items-end sm:flex">

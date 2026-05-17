@@ -180,6 +180,10 @@ export const EN = {
   proposal_step2BillUploads: "Step 2: Upload two bills (Latest + Previous)",
   proposal_step2BillUploadsSub:
     "Optional — auto-fills consumer ID, bill name, units. Manual entry still works.",
+  proposal_quickPathHint:
+    "No bill needed — we estimate from CRM monthly bill / requirement. Upload bills later to refine the audit.",
+  proposal_persistFailed:
+    "Proposal could not be saved to the server. Check Supabase env (SUPABASE_SERVICE_ROLE_KEY) and try again.",
   proposal_latestCard: "Latest bill",
   proposal_latestSubShort: "PDF / photo",
   proposal_previousCard: "Previous bill",
@@ -371,6 +375,15 @@ export const EN = {
   proposals_cardPreviewPublic: "Preview public link",
   proposals_cardDuplicate: "Duplicate",
   proposals_cardArchive: "Archive",
+  proposals_deleteProposal: "Delete proposal",
+  proposals_deleteConfirm: "Remove this proposal from your list? This cannot be undone.",
+  proposals_deleteDone: "Proposal removed",
+  proposals_deleteFailed: "Could not delete proposal",
+  proposals_sendDone: "WhatsApp opened with customer link",
+  proposals_pptFailed: "PPT download failed",
+  proposals_showLatestOnly: "Latest per customer",
+  proposals_showAllVersions: "Show all versions",
+  proposals_hiddenVersionsHint: "{n} older copies hidden — turn on “Show all versions” to remove them.",
   proposals_cardGenerateQuote: "PDF quote",
   proposals_cardPdfQuote: "PDF quote",
   proposals_cardSend: "Send",

@@ -5,6 +5,8 @@ import { ProposalHubIntelPanel } from "@/components/proposals/proposal-hub-intel
 import type { ProposalListCardProps } from "@/components/proposals/proposal-list-card";
 import { Button } from "@/components/ui/button";
 import { hubNextActionHint, statusProgressPct, statusVisual } from "@/lib/proposal-hub-insights";
+import { shareMetricsFromHubRow } from "@/lib/proposal-hub-share";
+import { markProposalSent, openWhatsAppWithProposal } from "@/lib/proposal-share-actions";
 import { normalizeProposalStatus } from "@/lib/proposal-status";
 import { cn } from "@/lib/utils";
 import { motion, useReducedMotion } from "framer-motion";
@@ -39,7 +41,9 @@ export function ProposalWorkspacePreview({
   intelTitle = "Recommended next",
   layout = "pane",
   onScrollToPipeline,
-  onBack
+  onBack,
+  onDeleted,
+  onSent
 }: {
   row: ProposalHubDealRow | null;
   labels: ProposalListCardProps["labels"];
@@ -55,6 +59,8 @@ export function ProposalWorkspacePreview({
   /** Mobile: scroll back to pipeline list */
   onScrollToPipeline?: () => void;
   onBack?: () => void;
+  onDeleted?: () => void;
+  onSent?: () => void;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const reduced = useReducedMotion();
@@ -226,9 +232,10 @@ export function ProposalWorkspacePreview({
               size="lg"
               className="proposal-hub-cta-secondary min-h-11 w-full gap-2 font-semibold sm:w-auto"
               onClick={() => {
-                const url = `${typeof window !== "undefined" ? window.location.origin : ""}${publicHref}`;
-                const text = encodeURIComponent(`Solar proposal: ${url}`);
-                window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+                openWhatsAppWithProposal(shareMetricsFromHubRow(row), row.id);
+                void markProposalSent(row.id).then((ok) => {
+                  if (ok) onSent?.();
+                });
               }}
             >
               <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
@@ -263,6 +270,9 @@ export function ProposalWorkspacePreview({
         proposalId={row.id}
         labels={labels}
         annualSavingInr={row.annual_saving_inr}
+        shareMetrics={shareMetricsFromHubRow(row)}
+        onDeleted={onDeleted}
+        onSent={onSent}
       />
     </>
   );

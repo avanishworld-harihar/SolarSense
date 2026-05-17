@@ -15,6 +15,7 @@ import type { ProposalPricingRow } from "@/lib/proposal-pricing-schema";
 import type { PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import { getProposalLayout } from "@/lib/proposal-layout-merge";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
+import { markProposalSent, openWhatsAppWithProposal, type ProposalShareMetrics } from "@/lib/proposal-share-actions";
 import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
 import type { ProposalStatus } from "@/lib/proposal-status";
 import { PROPOSAL_STATUS_ORDER } from "@/lib/proposal-status";
@@ -128,9 +129,26 @@ export function ProposalManageClient({
       duplicate: t("proposals_cardDuplicate"),
       archive: t("proposals_cardArchive"),
       jumpToPricing: t("proposals_detail_jumpToPricing"),
-      comingSoon: t("proposals_comingSoon")
+      comingSoon: t("proposals_comingSoon"),
+      deleteProposal: t("proposals_deleteProposal"),
+      deleteConfirm: t("proposals_deleteConfirm"),
+      deleteDone: t("proposals_deleteDone"),
+      deleteFailed: t("proposals_deleteFailed"),
+      sendDone: t("proposals_sendDone"),
+      pptFailed: t("proposals_pptFailed")
     }),
     [t]
+  );
+
+  const shareMetrics: ProposalShareMetrics = useMemo(
+    () => ({
+      customerName,
+      systemKw: summary.systemKw,
+      netCostInr: summary.netCost,
+      annualSavingInr: Math.max(0, annualSavingInr || summary.annualSaving),
+      paybackLabel: summary.paybackYears > 0 ? `${summary.paybackYears} years` : "—"
+    }),
+    [customerName, summary, annualSavingInr]
   );
 
   const onPricingSaved = useCallback((row: ProposalPricingRow) => {
@@ -206,7 +224,13 @@ export function ProposalManageClient({
                 variant="default"
                 size="lg"
                 className="min-h-11 w-full gap-2 font-semibold sm:w-auto sm:min-w-[12rem]"
-                onClick={() => toast.info(t("proposals_comingSoon"), t("proposals_cardSend"))}
+                onClick={() => {
+                  openWhatsAppWithProposal(shareMetrics, proposalId);
+                  void markProposalSent(proposalId).then((ok) => {
+                    if (ok) setProposalStatus("sent");
+                  });
+                  toast.success(t("proposals_cardSend"), t("proposals_sendDone"));
+                }}
               >
                 <MessageCircle className="h-4 w-4" aria-hidden />
                 {t("proposals_detail_primarySend")}
@@ -239,6 +263,8 @@ export function ProposalManageClient({
         proposalId={proposalId}
         labels={sheetLabels}
         primaryIsSend={primaryIsSend}
+        shareMetrics={shareMetrics}
+        onSent={() => setProposalStatus("sent")}
       />
 
       <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#0c1017] sm:p-7">
