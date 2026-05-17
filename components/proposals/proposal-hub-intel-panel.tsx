@@ -18,9 +18,9 @@ export function ProposalHubIntelPanel({
   const reduced = useReducedMotion();
   if (!row) {
     return (
-      <div className="proposal-hub-intel rounded-xl border border-dashed p-4 text-center text-xs text-slate-500">
+      <motion.div className="proposal-hub-intel rounded-xl border border-dashed p-4 text-center text-xs proposal-hub-text-muted">
         {lang === "hi" ? "सूची से एक डील चुनें" : "Select a deal to see recommendations"}
-      </div>
+      </motion.div>
     );
   }
 
@@ -36,15 +36,15 @@ export function ProposalHubIntelPanel({
       className="proposal-hub-intel rounded-xl border p-4 sm:p-5"
       aria-label={title}
     >
-      <motion.div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-emerald-400/90">
+      <div className="proposal-hub-text-accent flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide">
         <Sparkles className="h-3.5 w-3.5" aria-hidden />
         {title}
-      </motion.div>
+      </div>
 
       <div className="mt-4">
-        <div className="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+        <div className="proposal-hub-text-muted flex items-center justify-between gap-2 text-[11px]">
           <span>{lang === "hi" ? "डील प्रगति" : "Deal progress"}</span>
-          <span className="font-semibold tabular-nums text-slate-300">{pct}%</span>
+          <span className="proposal-hub-text-primary font-semibold tabular-nums">{pct}%</span>
         </div>
         <div className="proposal-hub-progress-track mt-2 h-1.5 overflow-hidden rounded-full">
           <motion.div
@@ -65,14 +65,14 @@ export function ProposalHubIntelPanel({
           intel.tone === "neutral" && "proposal-hub-intel-callout--neutral"
         )}
       >
-        <p className="text-sm font-semibold text-slate-100">{intel.title}</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-slate-400">{intel.body}</p>
+        <p className="proposal-hub-text-primary text-sm font-semibold">{intel.title}</p>
+        <p className="proposal-hub-text-secondary mt-1.5 text-xs leading-relaxed">{intel.body}</p>
       </div>
 
       {row.annual_saving_inr != null && row.annual_saving_inr > 0 ? (
-        <p className="mt-3 text-[11px] text-slate-500">
+        <p className="proposal-hub-text-muted mt-3 text-[11px]">
           {lang === "hi" ? "अनुमानित वार्षिक बचत" : "Est. annual saving"}:{" "}
-          <span className="font-semibold tabular-nums text-emerald-300">
+          <span className="proposal-hub-text-accent font-semibold tabular-nums">
             ₹{Math.round(row.annual_saving_inr).toLocaleString("en-IN")}
           </span>
         </p>

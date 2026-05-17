@@ -82,26 +82,26 @@ export function ProposalWorkspacePreview({
           {paneEyebrow ? <p className="proposal-hub-workspace-eyebrow text-[10px] font-bold uppercase tracking-[0.2em]">{paneEyebrow}</p> : null}
           <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-2xl font-bold tracking-tight text-slate-50 sm:text-3xl">{row.customer_name}</h2>
+              <h2 className="proposal-hub-text-primary text-2xl font-bold tracking-tight sm:text-3xl">{row.customer_name}</h2>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                 <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1", vis.pillClass)}>
                   <span className={cn("h-1.5 w-1.5 rounded-full", vis.dotClass)} aria-hidden />
                   {labels.statusLabel(st)}
                 </span>
-                <span className="text-slate-500">{formatShortDate(row.generated_at)}</span>
+                <span className="proposal-hub-text-muted">{formatShortDate(row.generated_at)}</span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <p className="proposal-hub-text-muted text-[10px] font-semibold uppercase tracking-wide">
                 {lang === "hi" ? "प्रगति" : "Health"}
               </p>
-              <p className="mt-0.5 text-lg font-bold tabular-nums text-emerald-300">{pct}%</p>
+              <p className="proposal-hub-text-accent mt-0.5 text-lg font-bold tabular-nums">{pct}%</p>
             </div>
           </div>
         </header>
 
         <section aria-labelledby="hub-commercial-heading" className="shrink-0">
-          <h3 id="hub-commercial-heading" className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          <h3 id="hub-commercial-heading" className="proposal-hub-text-muted text-[10px] font-bold uppercase tracking-[0.18em]">
             {summaryTitle}
           </h3>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -117,8 +117,13 @@ export function ProposalWorkspacePreview({
                   "wide" in m && m.wide && "col-span-2 sm:col-span-1"
                 )}
               >
-                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">{m.label}</p>
-                <p className={cn("mt-1 truncate text-lg font-bold tabular-nums tracking-tight", m.accent ? "text-emerald-300" : "text-slate-100")}>
+                <p className="proposal-hub-text-muted text-[10px] font-medium uppercase tracking-wide">{m.label}</p>
+                <p
+                  className={cn(
+                    "mt-1 truncate text-lg font-bold tabular-nums tracking-tight",
+                    m.accent ? "proposal-hub-text-metric-accent" : "proposal-hub-text-metric"
+                  )}
+                >
                   {m.value}
                 </p>
               </motion.div>
@@ -129,10 +134,10 @@ export function ProposalWorkspacePreview({
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_minmax(200px,0.42fr)]">
           <section className="proposal-hub-workspace-next rounded-xl border p-4">
             {nextStepLabel ? (
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{nextStepLabel}</p>
+              <p className="proposal-hub-text-muted text-[10px] font-bold uppercase tracking-[0.18em]">{nextStepLabel}</p>
             ) : null}
-            <p className={cn("text-sm leading-relaxed text-slate-300", nextStepLabel && "mt-2")}>{dynamicHint}</p>
-            <p className="mt-3 text-[11px] leading-relaxed text-slate-500">{nextActionHint}</p>
+            <p className={cn("proposal-hub-text-body text-sm leading-relaxed", nextStepLabel && "mt-2")}>{dynamicHint}</p>
+            <p className="proposal-hub-text-muted mt-3 text-[11px] leading-relaxed">{nextActionHint}</p>
           </section>
           <ProposalHubIntelPanel row={row} lang={lang} title={intelTitle} />
         </div>
@@ -179,7 +184,7 @@ export function ProposalWorkspacePreview({
 
         <Link
           href={manageHref}
-          className="proposal-hub-inline-link mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-emerald-300"
+          className="proposal-hub-inline-link proposal-hub-text-muted mt-4 inline-flex items-center gap-1.5 text-xs font-semibold transition-colors hover:text-emerald-600 dark:hover:text-emerald-300"
         >
           <PencilLine className="h-3.5 w-3.5" aria-hidden />
           {labels.editPricing}

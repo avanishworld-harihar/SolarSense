@@ -50,7 +50,7 @@ export function ProposalHubDealList({
   return (
     <div className={cn("proposal-hub-list flex min-h-0 flex-1 flex-col overflow-hidden", className)}>
       <div className="proposal-hub-list-head shrink-0 pb-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{pipelineLabel}</p>
+        <p className="proposal-hub-text-muted text-[10px] font-bold uppercase tracking-[0.18em]">{pipelineLabel}</p>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 [-webkit-overflow-scrolling:touch]">
         {PROPOSAL_STATUS_ORDER.map((st) => {
@@ -64,7 +64,7 @@ export function ProposalHubDealList({
                   <span className={cn("h-1.5 w-1.5 rounded-full", vis.dotClass)} aria-hidden />
                   {statusLabel(st)}
                 </span>
-                <span className="text-[10px] tabular-nums text-slate-500">{groupCountLabel(bucket.length)}</span>
+                <span className="proposal-hub-text-muted text-[10px] tabular-nums">{groupCountLabel(bucket.length)}</span>
               </div>
               <ul className="space-y-1.5" role="list">
                 {bucket.map((row, i) => {
@@ -101,15 +101,15 @@ export function ProposalHubDealList({
                           {initials}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-semibold leading-snug text-slate-100">{row.customer_name}</p>
-                          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-slate-500">
+                          <p className="proposal-hub-text-primary truncate text-[13px] font-semibold leading-snug sm:text-sm">{row.customer_name}</p>
+                          <p className="proposal-hub-text-muted mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px]">
                             <span>{row.system_kw} kW</span>
-                            <span className="text-slate-600">·</span>
+                            <span className="proposal-hub-text-secondary">·</span>
                             <span className="truncate">{formatShortDate(row.generated_at)}</span>
                           </p>
                         </div>
                         <div className="hidden shrink-0 flex-col items-end sm:flex">
-                          <p className="text-[13px] font-semibold tabular-nums text-slate-200">{amt}</p>
+                          <p className="proposal-hub-text-primary text-[13px] font-semibold tabular-nums">{amt}</p>
                           <span
                             className={cn(
                               "mt-1 h-0.5 w-8 rounded-full bg-gradient-to-r",
@@ -120,7 +120,7 @@ export function ProposalHubDealList({
                           />
                         </div>
                         <div className="shrink-0 text-right sm:hidden">
-                          <p className="text-[12px] font-semibold tabular-nums text-slate-200">{amt}</p>
+                          <p className="proposal-hub-text-primary text-[12px] font-semibold tabular-nums">{amt}</p>
                         </div>
                       </motion.button>
                     </li>

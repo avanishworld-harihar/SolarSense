@@ -60,7 +60,7 @@ export function ProposalHubAnalyticsStrip({
               transition={{ duration: 0.15 }}
             >
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{tile.label}</p>
+                <p className="proposal-hub-text-muted text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">{tile.label}</p>
                 <p className="proposal-hub-analytics-value mt-1 text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
                   {tile.value}
                 </p>

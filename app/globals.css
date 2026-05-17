@@ -155,7 +155,7 @@
      Workspace pages — Dashboard DNA for Customers, Projects, Proposals, More
      -------------------------------------------------------------------------- */
   .workspace-page {
-    @apply relative mx-auto w-full min-w-0 max-w-[88rem] space-y-5 sm:space-y-6 md:space-y-7;
+    @apply relative mx-auto w-full min-w-0 max-w-[88rem] space-y-6 sm:space-y-7 md:space-y-8;
   }
 
   .workspace-page > * + * {
@@ -249,6 +249,99 @@
 
   .workspace-page .ss-section-subline {
     @apply ws-type-body mt-1;
+  }
+
+  /* Workspace-only glass — stronger depth (dashboard is never inside .workspace-page) */
+  .workspace-page .glass-panel-premium,
+  .workspace-page .glass-surface,
+  .workspace-page .workspace-surface {
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    background: linear-gradient(
+      168deg,
+      rgba(255, 255, 255, 0.84) 0%,
+      rgba(255, 255, 255, 0.62) 48%,
+      rgba(248, 252, 255, 0.5) 100%
+    );
+    backdrop-filter: blur(26px) saturate(1.75);
+    -webkit-backdrop-filter: blur(26px) saturate(1.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.98),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+      0 4px 14px rgba(11, 34, 64, 0.06),
+      0 22px 52px rgba(11, 34, 64, 0.12),
+      0 0 0 1px rgba(14, 116, 144, 0.05);
+  }
+
+  .workspace-page .glass-panel-premium::before {
+    opacity: 1;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.58) 0%, transparent 46%);
+  }
+
+  .workspace-page .workspace-filter-rail {
+    border: 1px solid rgba(255, 255, 255, 0.88);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.52) 100%);
+    backdrop-filter: blur(22px) saturate(1.65);
+    -webkit-backdrop-filter: blur(22px) saturate(1.65);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 10px 32px rgba(11, 34, 64, 0.09);
+    padding: 0.4rem;
+  }
+
+  .workspace-page .ws-type-greeting {
+    @apply text-lg font-bold text-slate-900 sm:text-xl lg:text-[1.65rem] lg:leading-tight xl:text-[1.85rem] dark:text-[#E6EDF6];
+  }
+
+  .workspace-page .ws-type-eyebrow {
+    @apply text-[11px] tracking-[0.2em] text-slate-600 dark:text-[#8B949E] sm:text-xs;
+  }
+
+  .workspace-page .ws-type-body {
+    @apply text-[0.9375rem] leading-relaxed text-slate-600 dark:text-[#B6C0CC] sm:text-base;
+  }
+
+  .workspace-page .workspace-more-group__title {
+    @apply block text-base font-extrabold text-slate-900 sm:text-lg dark:text-[#E6EDF6];
+  }
+
+  .workspace-page .workspace-more-group__subtitle {
+    @apply mt-0.5 block text-xs font-semibold leading-snug text-slate-600 dark:text-slate-400;
+  }
+
+  .workspace-page .ss-step-card {
+    @apply space-y-4 p-5 sm:space-y-5 sm:p-6;
+  }
+
+  .workspace-page .ss-step-chip {
+    @apply px-3 py-1 text-[11px] sm:text-xs;
+  }
+
+  .workspace-page .ss-section-headline {
+    @apply text-lg font-extrabold sm:text-xl;
+  }
+
+  .dark .workspace-page .glass-panel-premium,
+  .dark .workspace-page .glass-surface,
+  .dark .workspace-page .workspace-surface {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: linear-gradient(
+      165deg,
+      rgba(28, 34, 44, 0.92) 0%,
+      rgba(18, 24, 34, 0.78) 55%,
+      rgba(14, 18, 26, 0.72) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 18px 48px rgba(0, 0, 0, 0.45);
+  }
+
+  .dark .workspace-page .workspace-filter-rail {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(180deg, rgba(22, 27, 36, 0.88) 0%, rgba(15, 20, 28, 0.72) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 12px 36px rgba(0, 0, 0, 0.35);
   }
 
   .ss-page-backdrop {
@@ -2999,8 +3092,42 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   --hub-surface-2: #111827;
   --hub-border: rgba(255, 255, 255, 0.08);
   --hub-glow: rgba(16, 185, 129, 0.15);
+  --hub-text-primary: rgb(248 250 252);
+  --hub-text-secondary: rgb(148 163 184);
+  --hub-text-muted: rgb(100 116 139);
+  --hub-text-body: rgb(203 213 225);
+  --hub-text-accent: rgb(110 231 183);
+  --hub-text-accent-strong: rgb(52 211 153);
   margin: -0.25rem -0.5rem 0;
   padding: 0.25rem 0.5rem 0;
+}
+
+.proposal-hub-text-primary {
+  color: var(--hub-text-primary);
+}
+
+.proposal-hub-text-secondary {
+  color: var(--hub-text-secondary);
+}
+
+.proposal-hub-text-muted {
+  color: var(--hub-text-muted);
+}
+
+.proposal-hub-text-body {
+  color: var(--hub-text-body);
+}
+
+.proposal-hub-text-accent {
+  color: var(--hub-text-accent-strong);
+}
+
+.proposal-hub-text-metric {
+  color: var(--hub-text-primary);
+}
+
+.proposal-hub-text-metric-accent {
+  color: var(--hub-text-accent-strong);
 }
 
 @media (min-width: 640px) {
@@ -3254,6 +3381,12 @@ html:not(.dark) .proposal-hub.workspace-page--proposals {
   --hub-surface-2: rgba(248, 250, 252, 0.96);
   --hub-border: rgba(15, 23, 42, 0.1);
   --hub-glow: rgba(16, 185, 129, 0.14);
+  --hub-text-primary: rgb(15 23 42);
+  --hub-text-secondary: rgb(71 85 105);
+  --hub-text-muted: rgb(100 116 139);
+  --hub-text-body: rgb(51 65 85);
+  --hub-text-accent: rgb(5 150 105);
+  --hub-text-accent-strong: rgb(4 120 87);
 }
 
 html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-header {
@@ -3362,4 +3495,15 @@ html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-cta-ghost 
 html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-cta-ghost:hover {
   background: rgba(15, 23, 42, 0.06) !important;
   color: rgb(15 23 42) !important;
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-intel-callout--action,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-intel-callout--warn,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-intel-callout--success,
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-intel-callout--neutral {
+  color: inherit;
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-workspace-eyebrow {
+  color: rgb(100 116 139);
 }

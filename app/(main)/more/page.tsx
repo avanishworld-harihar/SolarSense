@@ -943,7 +943,7 @@ function MoreGroup({
     <details
       id={id}
       className={cn(
-        "ss-card overflow-hidden p-0 [[open]_&_.more-chevron]:rotate-180",
+        "ss-card workspace-more-group overflow-hidden p-0 [[open]_&_.more-chevron]:rotate-180",
         "[&_summary::-webkit-details-marker]:hidden [&_summary::marker]:content-none"
       )}
       {...(defaultOpen ? { defaultOpen: true } : {})}
@@ -953,8 +953,8 @@ function MoreGroup({
           <Icon className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-extrabold text-brand-900 dark:text-foreground sm:text-base">{title}</span>
-          <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-slate-600 dark:text-slate-400">{subtitle}</span>
+          <span className="workspace-more-group__title">{title}</span>
+          <span className="workspace-more-group__subtitle">{subtitle}</span>
         </span>
         <ChevronDown
           className="more-chevron mt-0.5 h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200 dark:text-slate-400"

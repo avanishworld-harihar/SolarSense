@@ -27,7 +27,7 @@ export function WorkspacePageHero({
   return (
     <header
       className={cn(
-        "workspace-page-hero glass-panel-premium overflow-hidden p-4 sm:p-5 md:p-6",
+        "workspace-page-hero glass-panel-premium overflow-hidden p-5 sm:p-6 md:p-7",
         `workspace-page-hero--${tone}`,
         className
       )}

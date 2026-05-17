@@ -33,6 +33,7 @@ import { mergeCustomerForProposal, type ManualProposalCustomer } from "@/lib/mer
 import { swrDiscomsWithOfflineCache, swrTariffWithOfflineCache } from "@/lib/proposal-swr-fetchers";
 import { CUSTOMERS_SWR_KEY, fetchCustomersLoose } from "@/lib/customers-client";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
+import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -1348,7 +1349,13 @@ export default function ProposalPage() {
 
   return (
     <>
-      <div className="ss-page-shell">
+      <WorkspacePage tone="workflow" stagger={false}>
+        <WorkspacePageHero
+          tone="workflow"
+          eyebrow="Workflow"
+          title={t("proposal_title")}
+          subtitle={t("proposal_step1LeadHint")}
+        />
         <div className="ss-step-card space-y-2">
         <div className="flex items-center justify-between gap-2">
           <span className="ss-step-chip">Step 1</span>
@@ -1392,7 +1399,7 @@ export default function ProposalPage() {
       {leadSelected ? (
         <div className="ss-card-subtle border-indigo-100 bg-indigo-50/50 p-4 sm:p-4">
           <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-800">{t("proposal_leadContactBlockTitle")}</p>
-          <p className="mt-1 text-sm font-extrabold text-brand-900">{manual.leadContactName}</p>
+          <p className="mt-1 text-base font-extrabold text-slate-900 sm:text-lg dark:text-slate-50">{manual.leadContactName}</p>
           <p className="mt-0.5 text-xs font-semibold text-slate-700">
             {t("proposal_leadPhoneLabel")}: {manual.leadPhone || "—"}
           </p>
@@ -1638,8 +1645,8 @@ export default function ProposalPage() {
                   key={String(label)}
                   className="flex flex-col gap-0.5 border-b border-brand-50 py-1.5 last:border-0 sm:flex-row sm:justify-between sm:gap-2"
                 >
-                  <span className="shrink-0 text-slate-500">{label}</span>
-                  <span className="break-words text-right">{String(val)}</span>
+                  <span className="shrink-0 text-slate-600 dark:text-slate-400">{label}</span>
+                  <span className="break-words text-right text-sm font-bold text-slate-900 dark:text-slate-50 sm:text-base">{String(val)}</span>
                 </div>
               ) : null
             )}
@@ -1860,7 +1867,7 @@ export default function ProposalPage() {
           </div>
         ) : null}
       </div>
-      </div>
+      </WorkspacePage>
     </>
   );
 }
