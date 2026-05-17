@@ -29,20 +29,20 @@ export function ProposalJourneyProgress({
   return (
     <nav
       className={cn(
-        "proposal-journey-progress mb-6 overflow-x-auto rounded-2xl border px-2 py-2 print:hidden",
+        "proposal-journey-progress proposal-journey-progress--responsive mb-4 overflow-x-auto rounded-2xl border px-2 py-2 sm:mb-6 print:hidden",
         className
       )}
       aria-label="Proposal sections"
     >
-      <ol className="flex min-w-max items-center gap-1 sm:gap-1.5">
+      <ol className="flex min-w-max items-center gap-0.5 sm:gap-1.5">
         {steps.map((step, i) => (
-          <li key={step.id} className="flex items-center gap-1 sm:gap-1.5">
+          <li key={step.id} className="flex items-center gap-0.5 sm:gap-1.5">
             <a
               href={`#journey-${step.id}`}
-              className="proposal-journey-progress-link rounded-full px-2.5 py-1 text-[10px] font-semibold sm:px-3 sm:text-[11px]"
+              className="proposal-journey-progress-link rounded-full px-2 py-1 text-[10px] font-semibold sm:px-3 sm:text-[11px]"
             >
-              <span className="proposal-journey-progress-num mr-1 opacity-60">{i + 1}</span>
-              {step.label}
+              <span className="proposal-journey-progress-num mr-0.5 opacity-60 sm:mr-1">{i + 1}</span>
+              <span className="proposal-journey-progress-label">{step.label}</span>
             </a>
             {i < steps.length - 1 ? (
               <span className="proposal-journey-progress-chevron hidden text-[10px] opacity-30 sm:inline" aria-hidden>
@@ -68,7 +68,14 @@ export function ProposalJourneySection({
   noPad?: boolean;
 }) {
   return (
-    <section id={`journey-${id}`} className={cn("proposal-journey-section scroll-mt-24", !noPad && "proposal-journey-section-pad", className)}>
+    <section
+      id={`journey-${id}`}
+      className={cn(
+        "proposal-journey-section proposal-rhythm-section scroll-mt-20 sm:scroll-mt-24",
+        !noPad && "proposal-journey-section-pad",
+        className
+      )}
+    >
       {children}
     </section>
   );
@@ -88,7 +95,7 @@ export function ProposalSectionHeader({
   lang?: "en" | "hi";
 }) {
   return (
-    <header className="proposal-journey-header mb-6 sm:mb-8">
+    <header className="proposal-journey-header proposal-rhythm-header mb-5 sm:mb-8">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -153,11 +160,14 @@ export function JourneyBridge({ text, lang = "en" }: { text: string; lang?: "en"
 export function ProposalPanel({
   children,
   className,
-  emphasis
+  emphasis,
+  variant = "surface"
 }: {
   children: ReactNode;
   className?: string;
   emphasis?: "default" | "highlight" | "muted";
+  /** surface = primary glass; nested = inside another panel; flat = low chrome */
+  variant?: "surface" | "nested" | "flat";
 }) {
   return (
     <motion.div
@@ -166,7 +176,10 @@ export function ProposalPanel({
       viewport={{ once: true, margin: "-30px" }}
       transition={{ duration: 0.45 }}
       className={cn(
-        "proposal-panel rounded-2xl p-4 sm:p-6",
+        "proposal-panel rounded-2xl p-4 sm:p-5 md:p-6",
+        variant === "surface" && "proposal-panel--surface",
+        variant === "nested" && "proposal-panel--nested",
+        variant === "flat" && "proposal-panel--flat",
         emphasis === "highlight" && "proposal-panel--highlight",
         emphasis === "muted" && "proposal-panel--muted",
         className
@@ -193,7 +206,7 @@ export function HeroSavingsRibbon({
 }) {
   const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
   return (
-    <div className="proposal-hero-ribbon mt-6 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+    <motion.div className="proposal-hero-ribbon proposal-hero-ribbon--responsive mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-4 sm:gap-3">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -234,6 +247,6 @@ export function HeroSavingsRibbon({
         <p className="proposal-hero-ribbon-label">{labels.subsidy}</p>
         <p className="proposal-hero-ribbon-value">{inr(subsidy)}</p>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

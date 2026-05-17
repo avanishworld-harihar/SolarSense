@@ -2685,6 +2685,260 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   box-shadow: 0 0 28px rgba(16, 185, 129, 0.2);
 }
 
+/* ----------------------------------------------------------------------------
+   Proposal responsive orchestration — mobile / iPad / desktop (screen only)
+   Keeps glass identity; fixes rhythm, hierarchy, and chart density.
+---------------------------------------------------------------------------- */
+
+.proposal-responsive-doc {
+  --proposal-rhythm-tight: 0.75rem;
+  --proposal-rhythm-section: 2.25rem;
+  --proposal-rhythm-breath: 3rem;
+}
+
+@media (min-width: 768px) {
+  .proposal-responsive-doc {
+    --proposal-rhythm-section: 2.75rem;
+    --proposal-rhythm-breath: 3.5rem;
+  }
+}
+
+.proposal-rhythm-section + .proposal-rhythm-section,
+.proposal-journey-bridge + .proposal-rhythm-section {
+  margin-top: var(--proposal-rhythm-section);
+}
+
+.proposal-journey-bridge {
+  margin-top: var(--proposal-rhythm-tight);
+  margin-bottom: var(--proposal-rhythm-tight);
+}
+
+/* Panel depth hierarchy */
+.proposal-panel--surface {
+  backdrop-filter: blur(10px) saturate(1.45);
+  -webkit-backdrop-filter: blur(10px) saturate(1.45);
+}
+
+.proposal-panel--nested,
+.proposal-panel--flat {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.proposal-panel--highlight.proposal-panel--surface {
+  backdrop-filter: blur(14px) saturate(1.55);
+  -webkit-backdrop-filter: blur(14px) saturate(1.55);
+}
+
+/* Journey progress — calmer on phone */
+@media (max-width: 639px) {
+  .proposal-journey-progress--responsive {
+    margin-bottom: 1rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .proposal-journey-progress--responsive .proposal-journey-progress-num {
+    display: none;
+  }
+
+  .proposal-journey-progress--responsive .proposal-journey-progress-label {
+    font-size: 10px;
+  }
+}
+
+/* Hero — mobile summary-first, unified metric band */
+@media (max-width: 767px) {
+  .proposal-hero-orchestrated {
+    padding: 1rem 1.1rem 1.25rem;
+  }
+
+  .proposal-hero-orchestrated .proposal-hero-intro h1 {
+    font-size: 1.65rem;
+    line-height: 1.15;
+  }
+
+  .proposal-hero-profile {
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(255, 255, 255, 0.55);
+    padding: 0.65rem 0.75rem;
+    gap: 0.35rem;
+  }
+
+  .proposal-document[data-theme="dark"] .proposal-hero-profile {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .proposal-hero-profile > * {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0.35rem 0.25rem !important;
+  }
+
+  .proposal-hero-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem 0.65rem;
+    padding: 0.85rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(16, 185, 129, 0.22);
+    background: linear-gradient(145deg, rgba(16, 185, 129, 0.1), rgba(255, 255, 255, 0.5));
+  }
+
+  .proposal-document[data-theme="dark"] .proposal-hero-metrics {
+    border-color: rgba(16, 185, 129, 0.28);
+    background: linear-gradient(145deg, rgba(16, 185, 129, 0.14), rgba(255, 255, 255, 0.03));
+  }
+
+  .proposal-hero-metrics > * {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0.25rem 0.15rem !important;
+  }
+
+  .proposal-hero-metrics > * p:last-child {
+    font-size: 1.05rem !important;
+  }
+
+  .proposal-hero-ribbon--responsive .proposal-hero-ribbon-tile--primary {
+    grid-column: 1 / -1;
+    padding: 0.9rem 1rem;
+  }
+
+  .proposal-hero-ribbon--responsive .proposal-hero-ribbon-tile--primary .proposal-hero-ribbon-value {
+    font-size: 1.45rem;
+  }
+}
+
+/* Bill audit — chart + insights orchestration */
+@media (max-width: 767px) {
+  .proposal-audit-bars {
+    height: 10.5rem;
+    gap: 2px;
+  }
+
+  .proposal-audit-bars .proposal-chart-label:nth-child(even),
+  .proposal-audit-bars > div:nth-child(even) .proposal-chart-label {
+    font-size: 0;
+    line-height: 0;
+    height: 0.35rem;
+    overflow: hidden;
+  }
+
+  .proposal-orchestrated-insights {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    padding: 0.65rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(8px);
+  }
+
+  .proposal-document[data-theme="dark"] .proposal-orchestrated-insights {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .proposal-orchestrated-insights > * {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.65rem 0.5rem !important;
+    min-height: 0 !important;
+  }
+
+  .proposal-orchestrated-insights .proposal-audit-insight-value {
+    font-size: 1.25rem !important;
+  }
+}
+
+/* iPad / tablet — presentation-friendly width & splits */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .proposal-responsive-doc {
+    max-width: min(94vw, 860px);
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .proposal-page {
+    padding: 1.25rem 1.35rem;
+  }
+
+  .proposal-economics-stage .proposal-economics-pair {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .proposal-economics-stage .proposal-economics-longterm {
+    grid-template-columns: 1.15fr 0.85fr;
+  }
+
+  .proposal-bill-audit-section .proposal-audit-stage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .proposal-bill-audit-section .proposal-audit-chart-panel {
+    margin-bottom: 0;
+  }
+
+  .proposal-orchestrated-insights {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .proposal-economics-stage .proposal-economics-longterm {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+/* Economics & charts — readable heights */
+@media (max-width: 639px) {
+  .proposal-economics-stage .proposal-financial-hero {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .proposal-financial-hero-tile--saving {
+    grid-column: 1 / -1;
+  }
+
+  .proposal-economics-stage svg,
+  .proposal-economics-stage .h-56,
+  .proposal-economics-stage .h-72 {
+    min-height: 9.5rem;
+    max-height: 11rem;
+  }
+}
+
+/* Closing CTA — progressive emphasis before scroll end */
+.proposal-closing-stage {
+  margin-top: var(--proposal-rhythm-breath);
+}
+
+@media (max-width: 767px) {
+  .proposal-closing-stage .rounded-3xl {
+    padding: 1.35rem 1.25rem;
+  }
+
+  .proposal-closing-stage h3 {
+    font-size: 1.65rem;
+  }
+}
+
 @media print {
   @page {
     size: 210mm 297mm; /* Exact A4 portrait */
@@ -3288,9 +3542,22 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
+@media (min-width: 768px) {
+  .proposal-hub--responsive {
+    padding-bottom: 1.25rem;
+  }
+}
+
 @media (min-width: 1024px) {
   .proposal-hub--responsive {
     padding-bottom: 0;
+  }
+}
+
+/* iPad / tablet — split pipeline + workspace for live meetings */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .proposal-hub-mobile-list .proposal-hub-list > div:last-child {
+    max-height: none;
   }
 }
 

@@ -382,7 +382,7 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
   return (
     <motion.div
       ref={ref}
-      className="proposal-audit-bars flex h-52 items-end gap-[3px] border-b-2 border-slate-300/90 sm:h-64 sm:gap-1 lg:h-72"
+      className="proposal-audit-bars flex h-44 items-end gap-[2px] border-b-2 border-slate-300/90 sm:h-64 sm:gap-1 md:h-60 lg:h-72"
       role="img"
       aria-label="Monthly electricity bill bar chart"
     >
@@ -635,7 +635,7 @@ function HeroCover({
   // floats or overlaps. On mobile the grid collapses to 1 column.
   return (
     <section
-      className={`proposal-hero relative overflow-hidden rounded-3xl border p-5 sm:p-8 lg:p-10 ${
+      className={`proposal-hero proposal-hero-orchestrated relative overflow-hidden rounded-3xl border p-4 sm:p-8 md:p-9 lg:p-10 ${
         darkMode
           ? "border-white/10 bg-slate-900 shadow-[0_24px_80px_-20px_rgba(0,0,0,0.5)]"
           : "border-slate-200/90 bg-white shadow-[0_24px_80px_-24px_rgba(15,23,42,0.12)]"
@@ -687,8 +687,9 @@ function HeroCover({
           </div>
         </div>
 
+        <div className="proposal-hero-body mt-6 flex flex-col gap-0 sm:mt-7">
         {/* ── 2. KICKER + CUSTOMER NAME ──────────────────────────────────── */}
-        <div className="mt-7 sm:mt-8">
+        <div className="proposal-hero-intro order-1">
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -712,8 +713,23 @@ function HeroCover({
           ) : null}
         </div>
 
-        {/* ── 3. CUSTOMER PROFILE — strict 6-col grid ────────────────────── */}
-        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        <div className="proposal-hero-ribbon-slot order-2 mt-5 md:order-5 md:mt-6">
+          <HeroSavingsRibbon
+            annualSaving={summary.annualSaving}
+            paybackYears={summary.paybackYears}
+            netCost={summary.netCost}
+            subsidy={summary.pmSubsidy}
+            labels={{
+              saving: D["common.annualSaving"],
+              payback: D["common.payback"],
+              net: D["common.netCost"],
+              subsidy: lang === "hi" ? "सब्सिडी" : "Subsidy"
+            }}
+          />
+        </div>
+
+        {/* ── 3. CUSTOMER PROFILE ───────────────────────────────────────── */}
+        <div className="proposal-hero-profile order-3 mt-5 grid grid-cols-1 gap-2 sm:mt-6 sm:grid-cols-2 sm:gap-2.5 md:grid-cols-3">
           {[
             { l: D["profile.consumerId"], v: profileFieldOrDash(cp.consumerId) },
             { l: D["profile.meterNo"], v: profileFieldOrDash(cp.meterNumber) },
@@ -777,8 +793,8 @@ function HeroCover({
           </motion.div>
         ) : null}
 
-        {/* ── 5. SYSTEM SUMMARY — strict 5-col grid; no overlap ──────────── */}
-        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
+        {/* ── 5. SYSTEM SUMMARY ─────────────────────────────────────────── */}
+        <div className="proposal-hero-metrics order-4 mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:gap-2.5 md:grid-cols-3 lg:grid-cols-5">
           <StatTile label={D["common.system"]} value={`${summary.systemKw} kW`} delay={0.05} lang={lang} dark={metricDark} />
           <StatTile label={D["common.panels"]} value={String(summary.panels)} rawValue={summary.panels} delay={0.1} lang={lang} dark={metricDark} />
           <StatTile label={D["common.netCost"]} value={inrK(summary.netCost)} tone="blue" delay={0.15} lang={lang} dark={metricDark} />
@@ -792,20 +808,9 @@ function HeroCover({
             dark={metricDark}
           />
         </div>
-        <HeroSavingsRibbon
-          annualSaving={summary.annualSaving}
-          paybackYears={summary.paybackYears}
-          netCost={summary.netCost}
-          subsidy={summary.pmSubsidy}
-          labels={{
-            saving: D["common.annualSaving"],
-            payback: D["common.payback"],
-            net: D["common.netCost"],
-            subsidy: lang === "hi" ? "सब्सिडी" : "Subsidy"
-          }}
-        />
+
         <div
-          className={`mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 ${
+          className={`proposal-hero-foot order-5 mt-5 flex flex-col gap-2 border-t pt-4 sm:mt-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4 md:order-6 ${
             darkMode ? "border-white/10" : "border-slate-200/80"
           }`}
         >
@@ -815,6 +820,7 @@ function HeroCover({
           <p className={`shrink-0 text-[10px] font-medium sm:text-right sm:text-[11px] ${darkMode ? "text-slate-500" : "text-slate-400"}`}>
             {PROPOSAL_PLATFORM_CREDIT}
           </p>
+        </div>
         </div>
 
         {/* ── 6. WIDE BOTTOM IMAGE — bleed effect, strictly at page bottom ── */}
@@ -879,8 +885,9 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
     <ProposalJourneySection id="bill-audit" className="proposal-bill-audit-section">
       <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
 
-      <ProposalPanel className="proposal-audit-chart-panel border-0 bg-transparent p-0 shadow-none sm:p-0">
-        <div className="proposal-audit-chart-wrap min-h-[13rem] sm:min-h-[16rem] lg:min-h-[18rem]">
+      <div className="proposal-audit-stage">
+      <ProposalPanel variant="flat" className="proposal-audit-chart-panel">
+        <div className="proposal-audit-chart-wrap min-h-[11rem] sm:min-h-[16rem] md:min-h-[15rem] lg:min-h-[18rem]">
           <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
         </div>
       </ProposalPanel>
@@ -1014,7 +1021,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
       </div>
 
       {/* Insight cards */}
-      <div className="proposal-audit-insights mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <div className="proposal-audit-insights proposal-orchestrated-insights mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-4 sm:gap-4">
         <div className="proposal-audit-insight-card rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-rose-100/50 p-4 shadow-sm sm:p-5">
           <p
             className={`text-[10px] font-bold text-rose-700 ${
@@ -1071,6 +1078,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           </p>
         </div>
       </div>
+      </div>
     </ProposalJourneySection>
   );
 }
@@ -1091,7 +1099,7 @@ function EconomicsSection({
   const [showFinance, setShowFinance] = useState(false);
 
   return (
-    <ProposalJourneySection id="economics">
+    <ProposalJourneySection id="economics" className="proposal-economics-stage">
       <SectionHeader step={4} kicker={D["slide.economics.kicker"]} title={D["slide.economics.title"]} subtitle={D["slide.economics.subtitle"]} lang={lang} />
 
       <motion.div className="proposal-financial-hero mb-6">
@@ -1121,7 +1129,7 @@ function EconomicsSection({
         </div>
       </motion.div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="proposal-economics-pair grid gap-4 md:grid-cols-2">
         {/* Generation vs Usage */}
         <ProposalPanel className="sm:p-6">
           <p
@@ -1242,7 +1250,7 @@ function EconomicsSection({
       </div>
 
       {/* 25-yr comparison */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-5">
+      <div className="proposal-economics-longterm mt-7 grid gap-4 sm:mt-8 md:grid-cols-5">
         <ProposalPanel emphasis="highlight" className="sm:col-span-3 sm:p-6">
           <SolarVsGridChart
             years={summary.solarVsGrid.years}
@@ -2242,7 +2250,7 @@ function ClosingSection({
     .filter((u): u is string => typeof u === "string" && u.trim().length > 0);
 
   return (
-    <ProposalJourneySection id="closing-cta">
+    <ProposalJourneySection id="closing-cta" className="proposal-closing-stage">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -2425,7 +2433,7 @@ export default function ProposalView({
   return (
     <MotionConfig transition={{ duration: 0.35, ease: "easeOut" }} reducedMotion="user">
       <div
-        className={`proposal-document proposal-journey-connected mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
+        className={`proposal-document proposal-journey-connected proposal-responsive-doc mx-auto w-full max-w-[210mm] px-4 pb-32 pt-6 sm:px-8 sm:pt-10 print:max-w-none print:p-0 print:pb-0 transition-colors duration-300 ${
           lang === "hi" ? "lang-hi " : ""
         }${darkMode ? "text-white" : ""}`}
         data-theme={darkMode ? "dark" : "light"}

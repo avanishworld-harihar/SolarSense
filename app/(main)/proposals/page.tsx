@@ -170,7 +170,7 @@ export default function ProposalsHubPage() {
           <p className="proposal-hub-hint mt-5 hidden text-xs text-slate-500 lg:block">{t("proposals_hubSplitHint")}</p>
 
           {/* Phone + tablet (< lg) */}
-          <motion.div className="proposal-hub-mobile mt-4 lg:hidden">
+          <motion.div className="proposal-hub-mobile mt-4 md:hidden">
             {mobilePane === "list" ? (
               <section
                 aria-label={pipelineLabels.pipeline}
@@ -210,10 +210,11 @@ export default function ProposalsHubPage() {
           {/* Desktop split (lg+) */}
           <div
             className={cn(
-              "proposal-hub-shell proposal-hub-glass-panel mt-5 hidden min-h-0 lg:grid",
-              "lg:h-[min(calc(100dvh-12rem),760px)]",
-              "lg:grid-cols-[minmax(280px,0.32fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]",
-              "lg:overflow-hidden lg:rounded-2xl lg:border"
+              "proposal-hub-shell proposal-hub-glass-panel mt-5 hidden min-h-0 md:grid",
+              "md:h-[min(calc(100dvh-11rem),720px)]",
+              "md:grid-cols-[minmax(240px,0.34fr)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]",
+              "md:overflow-hidden md:rounded-2xl md:border",
+              "lg:h-[min(calc(100dvh-12rem),760px)] lg:grid-cols-[minmax(280px,0.32fr)_minmax(0,1fr)]"
             )}
           >
             <div className="proposal-hub-shell-list flex h-full min-h-0 flex-col overflow-hidden border-r p-4 lg:pr-5">
