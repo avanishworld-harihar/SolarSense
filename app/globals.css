@@ -2547,69 +2547,148 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     box-shadow: none !important;
   }
 
-  /* Bill Intelligence — single print page: chart + table + insights compact */
-  .proposal-page[data-page="bill-audit"] .proposal-journey-header {
-    margin-bottom: 2mm !important;
+  /* Bill Intelligence — full A4 page: tall standard bar chart, tight footer */
+  .proposal-page[data-page="bill-audit"] {
+    display: flex !important;
+    flex-direction: column !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
   }
+
+  .proposal-page[data-page="bill-audit"] .proposal-bill-audit-section {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    gap: 1.5mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-journey-header {
+    margin-bottom: 1mm !important;
+    flex-shrink: 0 !important;
+  }
+
   .proposal-page[data-page="bill-audit"] .proposal-journey-header p,
   .proposal-page[data-page="bill-audit"] .proposal-journey-header h2 {
+    line-height: 1.15 !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-journey-title {
+    font-size: 13.5pt !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-journey-subtitle {
+    font-size: 8pt !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-audit-chart-panel {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 62mm !important;
+    padding: 0 0 1mm !important;
+    margin: 0 0 1mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-audit-chart-wrap {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 58mm !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-audit-bars,
+  .proposal-page[data-page="bill-audit"] .proposal-audit-chart-wrap > .flex {
+    flex: 1 1 auto !important;
+    height: 58mm !important;
+    min-height: 58mm !important;
+    max-height: none !important;
+    gap: 0.8mm !important;
+    border-bottom: 0.4mm solid #64748b !important;
+    padding-bottom: 0 !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-chart-bar {
+    border-radius: 0.4mm 0.4mm 0 0 !important;
+    box-shadow: none !important;
+    filter: none !important;
+    background: #0284c7 !important;
+    background-image: none !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-chart-bar--peak {
+    background: #dc2626 !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-chart-label {
+    font-size: 6.5pt !important;
+    font-weight: 600 !important;
+    margin-top: 0.4mm !important;
+    color: #334155 !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-audit-mp-caption {
+    flex-shrink: 0 !important;
+    margin-top: 1mm !important;
+    margin-bottom: 1mm !important;
+    padding: 1mm 2mm !important;
+    font-size: 6.5pt !important;
     line-height: 1.2 !important;
   }
-  .proposal-page[data-page="bill-audit"] .proposal-audit-chart-panel {
-    padding: 2mm 3mm !important;
-    margin-bottom: 2mm !important;
-  }
-  .proposal-page[data-page="bill-audit"] .proposal-audit-chart-wrap > .flex,
-  .proposal-page[data-page="bill-audit"] .h-56,
-  .proposal-page[data-page="bill-audit"] .sm\:h-72,
-  .proposal-page[data-page="bill-audit"] .lg\:h-80 {
-    height: 4.5rem !important;
-    gap: 0.15rem !important;
-  }
-  .proposal-page[data-page="bill-audit"] .proposal-chart-label {
-    font-size: 7pt !important;
-  }
-  .proposal-page[data-page="bill-audit"] .proposal-audit-mp-caption {
-    margin-top: 2mm !important;
-    margin-bottom: 2mm !important;
-    padding: 1.5mm 2.5mm !important;
-    font-size: 7pt !important;
-    line-height: 1.25 !important;
-  }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-table-block {
-    margin-top: 2mm !important;
+    flex-shrink: 0 !important;
+    margin-top: 1mm !important;
   }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-table {
-    font-size: 7pt !important;
+    font-size: 6.75pt !important;
   }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-table th,
   .proposal-page[data-page="bill-audit"] .proposal-audit-table td {
-    padding: 1mm 1.25mm !important;
-    font-size: 7pt !important;
-    line-height: 1.15 !important;
+    padding: 0.75mm 1mm !important;
+    font-size: 6.75pt !important;
+    line-height: 1.12 !important;
   }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-insights {
-    margin-top: 2.5mm !important;
-    gap: 1.5mm !important;
+    flex-shrink: 0 !important;
+    margin-top: 1.5mm !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    gap: 1.25mm !important;
   }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-insights > div {
-    padding: 1.5mm 2mm !important;
-    border-radius: 2mm !important;
+    padding: 1.25mm 1.5mm !important;
+    border-radius: 1.5mm !important;
+    box-shadow: none !important;
   }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-insights p {
-    line-height: 1.15 !important;
+    line-height: 1.12 !important;
   }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-insights .text-2xl,
   .proposal-page[data-page="bill-audit"] .proposal-audit-insights .sm\:text-3xl {
-    font-size: 0.95rem !important;
-    margin-top: 0.5mm !important;
+    font-size: 9pt !important;
+    margin-top: 0.35mm !important;
   }
+
   .proposal-page[data-page="bill-audit"] .proposal-audit-insights .text-xs {
-    font-size: 6.5pt !important;
-    margin-top: 0.25mm !important;
-  }
-  .proposal-page[data-page="bill-audit"] .proposal-audit-insights .text-\[10px\] {
     font-size: 6pt !important;
+    margin-top: 0.2mm !important;
+  }
+
+  .proposal-page[data-page="bill-audit"] .proposal-audit-insights .text-\[10px\] {
+    font-size: 5.75pt !important;
   }
 
   /* Ensure images render crisply in PDF, capped for A4 fit */

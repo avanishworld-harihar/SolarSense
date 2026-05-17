@@ -344,30 +344,33 @@ function MonthlyBillsChart({ values, labels, peakIndices }: { values: number[]; 
   const animateReady = useMountAnimationReady();
   const peakSet = new Set(peakIndices ?? []);
   return (
-    <div ref={ref} className="flex h-56 items-end gap-1.5 sm:h-72 sm:gap-2 lg:h-80">
+    <motion.div
+      ref={ref}
+      className="proposal-audit-bars flex h-52 items-end gap-[3px] border-b-2 border-slate-300/90 sm:h-64 sm:gap-1 lg:h-72"
+      role="img"
+      aria-label="Monthly electricity bill bar chart"
+    >
       {safeValues.map((v, i) => {
         const target = (v / max) * 100;
         const isPeak = peakSet.has(i);
         return (
-          <div key={`${safeLabels[i]}-${i}`} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+          <div key={`${safeLabels[i]}-${i}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1">
             <motion.div
               // CSS var `--bar-target` is the print fallback — see globals.css.
-              style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 4 : 0 }}
-              initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 0.4 }}
+              style={{ ["--bar-target" as string]: `${target}%`, minHeight: target > 0 ? 3 : 0 }}
+              initial={reduced ? { height: `${target}%`, opacity: 1 } : { height: 0, opacity: 1 }}
               animate={animateReady ? { height: `${target}%`, opacity: 1 } : undefined}
               transition={{ type: "spring", delay: i * 0.018, stiffness: 120, damping: 20, mass: 0.9 }}
-              className={`proposal-chart-bar w-full rounded-t-md ${
-                isPeak
-                  ? "bg-gradient-to-t from-rose-600 to-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.55),0_2px_10px_rgba(244,63,94,0.35)]"
-                  : "bg-gradient-to-t from-sky-600 to-sky-400 shadow-[0_0_12px_rgba(14,165,233,0.45),0_2px_10px_rgba(14,165,233,0.25)]"
+              className={`proposal-chart-bar w-full max-w-[2.25rem] rounded-t-[3px] sm:max-w-none ${
+                isPeak ? "proposal-chart-bar--peak bg-rose-600" : "bg-sky-600"
               }`}
               aria-label={`${safeLabels[i]}: ${v}`}
             />
-            <span className="proposal-chart-label text-[10px] font-medium">{safeLabels[i]}</span>
+            <span className="proposal-chart-label text-[10px] font-semibold text-slate-600 sm:text-[11px]">{safeLabels[i]}</span>
           </div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
 
@@ -840,8 +843,8 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
     <ProposalJourneySection id="bill-audit" className="proposal-bill-audit-section">
       <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
 
-      <ProposalPanel className="proposal-audit-chart-panel sm:p-6">
-        <div className="proposal-audit-chart-wrap">
+      <ProposalPanel className="proposal-audit-chart-panel border-0 bg-transparent p-0 shadow-none sm:p-0">
+        <div className="proposal-audit-chart-wrap min-h-[13rem] sm:min-h-[16rem] lg:min-h-[18rem]">
           <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
         </div>
       </ProposalPanel>
