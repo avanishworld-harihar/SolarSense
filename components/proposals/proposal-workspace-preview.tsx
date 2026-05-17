@@ -32,7 +32,8 @@ export function ProposalWorkspacePreview({
   paneEyebrow,
   nextStepLabel,
   lang = "en",
-  intelTitle = "Recommended next"
+  intelTitle = "Recommended next",
+  layout = "pane"
 }: {
   row: ProposalHubDealRow | null;
   labels: ProposalListCardProps["labels"];
@@ -43,6 +44,8 @@ export function ProposalWorkspacePreview({
   nextStepLabel?: string;
   lang?: "en" | "hi";
   intelTitle?: string;
+  /** pane = split column with internal scroll; flow = tablet/phone natural page scroll */
+  layout?: "pane" | "flow";
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const reduced = useReducedMotion();
@@ -75,11 +78,25 @@ export function ProposalWorkspacePreview({
     { label: labels.panelBrand, value: row.panel_brand ?? "—", accent: false, wide: true }
   ];
 
+  const isFlow = layout === "flow";
+
   return (
     <>
-      <div className="proposal-hub-workspace flex h-full min-h-0 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 md:px-7 md:py-6 lg:px-8 lg:py-7 [-webkit-overflow-scrolling:touch]">
-        <header className="proposal-hub-workspace-head shrink-0 pb-5">
+      <div
+        className={cn(
+          "proposal-hub-workspace flex flex-col",
+          isFlow ? "proposal-hub-workspace--flow h-auto" : "proposal-hub-workspace--pane h-full min-h-0"
+        )}
+      >
+        <div
+          className={cn(
+            "proposal-hub-workspace-scroll px-5 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7",
+            isFlow
+              ? "h-auto overflow-visible"
+              : "min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+          )}
+        >
+        <header className="proposal-hub-workspace-head shrink-0 pb-4 sm:pb-5">
           {paneEyebrow ? <p className="proposal-hub-workspace-eyebrow text-[10px] font-bold uppercase tracking-[0.2em]">{paneEyebrow}</p> : null}
           <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
@@ -113,7 +130,7 @@ export function ProposalWorkspacePreview({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
                 className={cn(
-                  "proposal-hub-metric rounded-xl border p-3",
+                  "proposal-hub-glass-card proposal-hub-metric rounded-xl border p-3",
                   m.accent && "proposal-hub-metric--accent",
                   "wide" in m && m.wide && "col-span-2 sm:col-span-1"
                 )}
@@ -132,8 +149,8 @@ export function ProposalWorkspacePreview({
           </div>
         </section>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_minmax(200px,0.42fr)]">
-          <section className="proposal-hub-workspace-next rounded-xl border p-4">
+        <div className={cn("mt-5 grid gap-4", !isFlow && "lg:grid-cols-[1fr_minmax(200px,0.42fr)]")}>
+          <section className="proposal-hub-glass-card proposal-hub-workspace-next rounded-xl border p-4">
             {nextStepLabel ? (
               <p className="proposal-hub-text-muted text-[10px] font-bold uppercase tracking-[0.18em]">{nextStepLabel}</p>
             ) : null}
@@ -144,8 +161,13 @@ export function ProposalWorkspacePreview({
         </div>
         </div>
 
-        <footer className="proposal-hub-workspace-actions shrink-0 border-t border-[var(--hub-border)] bg-[var(--hub-surface)]/95 px-4 py-4 backdrop-blur-md sm:px-5 md:px-7">
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <footer
+          className={cn(
+            "proposal-hub-workspace-actions proposal-hub-glass-bar shrink-0 border-t border-[var(--hub-border)] px-4 py-4 sm:px-5 lg:px-7",
+            isFlow && "proposal-hub-workspace-actions--sticky"
+          )}
+        >
+          <div className={cn("flex gap-2", isFlow ? "flex-col" : "flex-col sm:flex-row sm:flex-wrap")}>
             <Button asChild size="lg" className="proposal-hub-cta-primary min-h-11 w-full gap-2 font-semibold sm:w-auto sm:min-w-[200px]">
               <Link href={manageHref}>
                 {labels.openWorkspace}

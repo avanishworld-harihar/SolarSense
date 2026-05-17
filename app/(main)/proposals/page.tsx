@@ -98,7 +98,7 @@ export default function ProposalsHubPage() {
   const intelTitle = uiLang === "hi" ? "अगला कदम" : "Recommended next";
 
   return (
-    <WorkspacePage tone="proposals" stagger={false} className="proposal-hub pb-6 md:pb-8">
+    <WorkspacePage tone="proposals" stagger={false} className="proposal-hub proposal-hub--responsive pb-6 lg:pb-8">
       <ProposalHubHeader
         variant="workspace"
         title={t("proposals_title")}
@@ -129,13 +129,13 @@ export default function ProposalsHubPage() {
       ) : null}
 
       {isLoading && !data ? (
-        <motion.div className="proposal-hub-shell mt-5 hidden min-h-[min(76vh,680px)] md:grid md:grid-cols-[minmax(260px,0.36fr)_1fr] md:gap-0">
+        <motion.div className="proposal-hub-shell mt-5 hidden min-h-[min(76vh,680px)] lg:grid lg:grid-cols-[minmax(260px,0.36fr)_1fr] lg:gap-0">
           <Skeleton className="h-full min-h-[400px] rounded-none bg-white/[0.04]" />
           <Skeleton className="h-full min-h-[400px] rounded-none bg-white/[0.02]" />
-        </motion.div>
+            </motion.div>
       ) : null}
       {isLoading && !data ? (
-        <div className="mt-5 space-y-3 md:hidden">
+        <div className="mt-5 space-y-3 lg:hidden">
           <Skeleton className="h-44 rounded-xl bg-white/[0.04]" />
           <Skeleton className="h-64 rounded-xl bg-white/[0.03]" />
         </div>
@@ -155,11 +155,11 @@ export default function ProposalsHubPage() {
 
       {!isLoading && rows.length > 0 ? (
         <>
-          <p className="proposal-hub-hint mt-5 hidden text-xs text-slate-500 md:block">{t("proposals_hubSplitHint")}</p>
+          <p className="proposal-hub-hint mt-5 hidden text-xs text-slate-500 lg:block">{t("proposals_hubSplitHint")}</p>
 
-          {/* Mobile */}
-          <div className="mt-4 flex flex-col gap-4 md:hidden">
-            <div className="proposal-hub-shell-list max-h-[min(42vh,400px)] min-h-0 shrink-0 rounded-2xl border p-3">
+          {/* Phone + tablet (< lg) */}
+          <div className="proposal-hub-stack mt-4 flex flex-col gap-4 lg:hidden">
+            <div className="proposal-hub-glass-panel proposal-hub-shell-list max-h-[min(36dvh,380px)] min-h-0 shrink-0 rounded-2xl border p-3 sm:max-h-[min(32dvh,340px)]">
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
@@ -167,10 +167,10 @@ export default function ProposalsHubPage() {
                 statusLabel={cardLabels.statusLabel}
                 groupCountLabel={pipelineLabels.groupCount}
                 pipelineLabel={pipelineLabels.pipeline}
-                className="max-h-full"
+                className="h-full min-h-0"
               />
             </div>
-            <div className="proposal-hub-shell-workspace flex max-h-[min(52vh,560px)] min-h-0 flex-col overflow-hidden rounded-2xl border">
+            <div className="proposal-hub-glass-panel proposal-hub-shell-workspace rounded-2xl border">
               <ProposalWorkspacePreview
                 row={focused}
                 labels={cardLabels}
@@ -181,20 +181,21 @@ export default function ProposalsHubPage() {
                 nextStepLabel={pipelineLabels.nextStepLabel}
                 lang={uiLang}
                 intelTitle={intelTitle}
+                layout="flow"
               />
             </div>
           </div>
 
-          {/* Desktop */}
+          {/* Desktop split (lg+) */}
           <div
             className={cn(
-              "proposal-hub-shell mt-5 hidden min-h-0 md:grid",
-              "md:h-[min(calc(100dvh-18rem),720px)] md:max-h-[min(calc(100dvh-14rem),780px)]",
-              "md:grid-cols-[minmax(260px,0.34fr)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]",
-              "md:overflow-hidden md:rounded-2xl md:border"
+              "proposal-hub-shell proposal-hub-glass-panel mt-5 hidden min-h-0 lg:grid",
+              "lg:h-[min(calc(100dvh-12rem),760px)]",
+              "lg:grid-cols-[minmax(280px,0.32fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]",
+              "lg:overflow-hidden lg:rounded-2xl lg:border"
             )}
           >
-            <div className="proposal-hub-shell-list flex h-full min-h-0 flex-col overflow-hidden border-r p-4 md:pr-5">
+            <div className="proposal-hub-shell-list flex h-full min-h-0 flex-col overflow-hidden border-r p-4 lg:pr-5">
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
@@ -216,6 +217,7 @@ export default function ProposalsHubPage() {
                 nextStepLabel={pipelineLabels.nextStepLabel}
                 lang={uiLang}
                 intelTitle={intelTitle}
+                layout="pane"
               />
             </div>
           </div>
