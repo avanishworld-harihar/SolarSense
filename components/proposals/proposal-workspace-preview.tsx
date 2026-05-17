@@ -13,6 +13,10 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ProposalHubDealRow } from "./proposal-hub-deal-list";
 
+function isMobileLayout(layout: "pane" | "flow" | "mobile") {
+  return layout === "mobile";
+}
+
 function formatShortDate(iso: string): string {
   try {
     const d = new Date(iso);
@@ -34,6 +38,7 @@ export function ProposalWorkspacePreview({
   lang = "en",
   intelTitle = "Recommended next",
   layout = "pane",
+  onScrollToPipeline,
   onBack
 }: {
   row: ProposalHubDealRow | null;
@@ -47,11 +52,14 @@ export function ProposalWorkspacePreview({
   intelTitle?: string;
   /** pane = desktop split; mobile = full-width detail pane; flow = legacy stacked scroll */
   layout?: "pane" | "flow" | "mobile";
-  /** Mobile detail: return to pipeline list */
+  /** Mobile: scroll back to pipeline list */
+  onScrollToPipeline?: () => void;
   onBack?: () => void;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const reduced = useReducedMotion();
+  const showPipelineNav = isMobileLayout(layout) && (onScrollToPipeline ?? onBack);
+  const goToPipeline = onScrollToPipeline ?? onBack;
 
   if (!row) {
     return (
@@ -86,6 +94,20 @@ export function ProposalWorkspacePreview({
 
   return (
     <>
+      {showPipelineNav ? (
+        <motion.div className="proposal-hub-mobile-workspace-nav sticky top-0 z-10 border-b border-[var(--hub-border)] bg-[color-mix(in_srgb,var(--hub-surface)_92%,transparent)] px-3 py-2.5 backdrop-blur-md">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="proposal-hub-mobile-sticky-nav-btn h-10 w-full justify-start gap-2 rounded-xl text-sm font-semibold shadow-sm"
+            onClick={goToPipeline}
+          >
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+            {lang === "hi" ? "सभी प्रस्ताव — सूची" : "All proposals — back to list"}
+          </Button>
+        </motion.div>
+      ) : null}
       <div
         className={cn(
           "proposal-hub-workspace flex flex-col",
@@ -109,26 +131,10 @@ export function ProposalWorkspacePreview({
           {paneEyebrow && !isMobile ? (
             <p className="proposal-hub-workspace-eyebrow text-[10px] font-bold uppercase tracking-[0.2em]">{paneEyebrow}</p>
           ) : null}
-          {isMobile ? (
-            <div className="mb-3 flex items-center gap-2">
-              {onBack ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="proposal-hub-mobile-back -ml-2 h-9 gap-1.5 px-2 text-xs font-semibold"
-                  onClick={onBack}
-                >
-                  <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-                  {lang === "hi" ? "पाइपलाइन" : "Pipeline"}
-                </Button>
-              ) : null}
-              {paneEyebrow ? (
-                <p className="proposal-hub-mobile-kicker text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                  {paneEyebrow}
-                </p>
-              ) : null}
-            </div>
+          {isMobile && paneEyebrow ? (
+            <p className="proposal-hub-mobile-kicker mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+              {paneEyebrow}
+            </p>
           ) : null}
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">

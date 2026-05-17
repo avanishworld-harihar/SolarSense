@@ -15,7 +15,8 @@ import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ProposalHubMobileNav } from "@/components/proposals/proposal-hub-mobile-nav";
 import useSWR from "swr";
 
 const PROPOSALS_SWR_KEY = "/api/proposals";
@@ -35,7 +36,9 @@ export default function ProposalsHubPage() {
   const { data, error, isLoading } = useSWR(PROPOSALS_SWR_KEY, fetchProposals, { revalidateOnFocus: true, dedupingInterval: 15_000 });
   const rows = data?.ok && Array.isArray(data.data) ? data.data : [];
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [mobilePane, setMobilePane] = useState<"list" | "detail">("list");
+  const pipelineRef = useRef<HTMLElement>(null);
+  const workspaceRef = useRef<HTMLElement>(null);
+  const [pipelineVisible, setPipelineVisible] = useState(true);
 
   useEffect(() => {
     if (rows.length === 0) {
@@ -98,16 +101,31 @@ export default function ProposalsHubPage() {
 
   const intelTitle = uiLang === "hi" ? "अगला कदम" : "Recommended next";
 
+  const scrollToPipeline = useCallback(() => {
+    pipelineRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  const scrollToWorkspace = useCallback(() => {
+    workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   const selectDeal = (id: string) => {
     setFocusId(id);
-    setMobilePane("detail");
+    requestAnimationFrame(() => {
+      scrollToWorkspace();
+    });
   };
 
   useEffect(() => {
-    if (mobilePane === "detail" && typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [mobilePane]);
+    const el = pipelineRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setPipelineVisible(entry?.isIntersecting ?? true),
+      { root: null, rootMargin: "-56px 0px 0px 0px", threshold: 0.08 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [isLoading, rows.length]);
 
   return (
     <WorkspacePage tone="proposals" stagger={false} className="proposal-hub proposal-hub--responsive pb-6 lg:pb-8">
@@ -169,13 +187,25 @@ export default function ProposalsHubPage() {
         <>
           <p className="proposal-hub-hint mt-5 hidden text-xs text-slate-500 lg:block">{t("proposals_hubSplitHint")}</p>
 
-          {/* Phone + tablet (< lg) */}
-          <motion.div className="proposal-hub-mobile mt-4 md:hidden">
-            {mobilePane === "list" ? (
-              <section
-                aria-label={pipelineLabels.pipeline}
-                className="proposal-hub-glass-panel proposal-hub-mobile-list rounded-2xl border p-3"
-              >
+          {/* Phone: list + workspace stack — scroll back anytime, no trapped detail screen */}
+          <ProposalHubMobileNav
+            visible={!pipelineVisible && !!focused}
+            customerName={focused?.customer_name ?? ""}
+            onShowPipeline={scrollToPipeline}
+            lang={uiLang}
+          />
+          <p className="proposal-hub-mobile-hint mt-4 text-center text-xs md:hidden">
+            {uiLang === "hi"
+              ? "ग्राहक चुनें — नीचे वर्कस्पेस खुलेगा। कभी भी ऊपर सूची पर लौटें।"
+              : "Tap a customer — workspace opens below. Scroll up anytime for the list."}
+          </p>
+          <div className="proposal-hub-mobile-stack mt-3 flex flex-col gap-4 md:hidden">
+            <section
+              ref={pipelineRef}
+              id="proposal-hub-pipeline"
+              aria-label={pipelineLabels.pipeline}
+              className="proposal-hub-glass-panel proposal-hub-mobile-list scroll-mt-20 rounded-2xl border p-3"
+            >
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
@@ -184,28 +214,28 @@ export default function ProposalsHubPage() {
                 groupCountLabel={pipelineLabels.groupCount}
                 pipelineLabel={pipelineLabels.pipeline}
               />
-              </section>
-            ) : (
-              <section
-                aria-label={pipelineLabels.paneEyebrow}
-                className="proposal-hub-glass-panel proposal-hub-mobile-detail rounded-2xl border"
-              >
-                <ProposalWorkspacePreview
-                  row={focused}
-                  labels={cardLabels}
-                  summaryTitle={pipelineLabels.summaryTitle}
-                  nextActionHint={pipelineLabels.nextAction}
-                  emptyLabel={pipelineLabels.empty}
-                  paneEyebrow={pipelineLabels.paneEyebrow}
-                  nextStepLabel={pipelineLabels.nextStepLabel}
-                  lang={uiLang}
-                  intelTitle={intelTitle}
-                  layout="mobile"
-                  onBack={() => setMobilePane("list")}
-                />
-              </section>
-            )}
-          </motion.div>
+            </section>
+            <section
+              ref={workspaceRef}
+              id="proposal-hub-active-workspace"
+              aria-label={pipelineLabels.paneEyebrow}
+              className="proposal-hub-glass-panel proposal-hub-mobile-workspace scroll-mt-24 rounded-2xl border"
+            >
+              <ProposalWorkspacePreview
+                row={focused}
+                labels={cardLabels}
+                summaryTitle={pipelineLabels.summaryTitle}
+                nextActionHint={pipelineLabels.nextAction}
+                emptyLabel={pipelineLabels.empty}
+                paneEyebrow={pipelineLabels.paneEyebrow}
+                nextStepLabel={pipelineLabels.nextStepLabel}
+                lang={uiLang}
+                intelTitle={intelTitle}
+                layout="mobile"
+                onScrollToPipeline={scrollToPipeline}
+              />
+            </section>
+          </div>
 
           {/* Desktop split (lg+) */}
           <div
