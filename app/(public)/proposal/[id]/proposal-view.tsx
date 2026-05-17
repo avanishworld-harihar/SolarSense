@@ -28,6 +28,11 @@ import {
 } from "lucide-react";
 import type { ProposalDeckSummary } from "@/lib/proposal-ppt";
 import { PROPOSAL_BRANDING_UPDATED_EVENT, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
+import {
+  applyProposalRouteShellTheme,
+  readProposalWebTheme,
+  writeProposalWebTheme
+} from "@/lib/proposal-web-theme";
 import { dict, monthLabels, type ProposalDict, type ProposalLang } from "@/lib/proposal-i18n";
 import { ATAL_GRIHA_JYOTI } from "@/lib/mp-tariff-2025-26";
 import { profileFieldOrDash, type EmiRow } from "@/lib/proposal-deck-helpers";
@@ -170,8 +175,8 @@ type ProposalViewProps = {
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
 
 /**
- * Net bill cell (web): **amount first** (large), subsidy as a small second line — easier on mobile
- * than a single cramped string. PPT/PDF still use one-line format in `lib/proposal-ppt.ts`.
+ * Net bill cell: subsidy in brackets on the same line (saves row height in print/PDF).
+ * Format: (MP subsidy −₹550) ₹7,497
  */
 function AuditNetBillCell({
   D,
@@ -191,24 +196,20 @@ function AuditNetBillCell({
   const amtColor =
     variant === "total" ? "text-sky-950" : isPeak ? "text-rose-800" : "text-slate-900";
   const subColor =
-    variant === "total"
-      ? "text-rose-700 font-semibold"
-      : isPeak
-        ? "text-rose-700 font-semibold"
-        : "text-rose-600 font-semibold";
+    variant === "total" ? "text-rose-700" : isPeak ? "text-rose-700" : "text-rose-600";
   return (
-    <div className="flex min-w-[5.5rem] flex-col items-end justify-center gap-1 py-0.5 sm:min-w-0">
-      <span className={`text-[17px] font-extrabold tabular-nums leading-none sm:text-base md:text-lg ${amtColor}`}>
-        {inr(total)}
-      </span>
+    <span className="proposal-audit-net-bill inline-block max-w-full text-right leading-tight tabular-nums">
       {hasSub ? (
-        <span
-          className={`max-w-[12rem] text-right text-[10px] font-semibold leading-snug sm:text-[11px] ${subColor}`}
-        >
-          {D["audit.mpSubLabel"]} · −₹{Math.abs(s).toLocaleString("en-IN")}
+        <span className={`proposal-audit-net-bill-subsidy text-[11px] font-semibold sm:text-xs ${subColor}`}>
+          ({D["audit.mpSubLabel"]} −₹{Math.abs(s).toLocaleString("en-IN")}){" "}
         </span>
       ) : null}
-    </div>
+      <span
+        className={`proposal-audit-net-bill-amount text-[15px] font-extrabold sm:text-sm md:text-base ${amtColor}`}
+      >
+        {inr(total)}
+      </span>
+    </span>
   );
 }
 
@@ -866,7 +867,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
         </p>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="proposal-audit-table-scroll overflow-x-auto overflow-y-visible overscroll-x-contain scroll-smooth rounded-2xl [-webkit-overflow-scrolling:touch] sm:overflow-x-visible">
-            <table className="proposal-audit-table min-w-[760px] w-full border-separate border-spacing-0 text-sm sm:min-w-0 sm:table-fixed">
+            <table className="proposal-audit-table min-w-[760px] w-full border-separate border-spacing-0 text-[13px] sm:min-w-0 sm:table-fixed sm:text-sm">
               <thead className="bg-slate-900 text-white">
                 <tr>
                   <th
@@ -979,7 +980,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
 
       {/* Insight cards */}
       <div className="proposal-audit-insights mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-        <div className="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-rose-100/50 p-4 shadow-sm">
+        <div className="proposal-audit-insight-card rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-rose-100/50 p-4 shadow-sm sm:p-5">
           <p
             className={`text-[10px] font-bold text-rose-700 ${
               lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
@@ -987,12 +988,12 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           >
             {D["insight.summer.title"]}
           </p>
-          <p className="mt-2 text-2xl font-bold text-rose-900 sm:text-3xl">
+          <p className="proposal-audit-insight-value mt-2 text-2xl font-bold text-rose-900 sm:text-3xl">
             <AnimatedNumber value={summary.summerPct} suffix="%" />
           </p>
-          <p className="mt-1 text-xs text-rose-800">{D["insight.summer.sub"]}</p>
+          <p className="proposal-audit-insight-sub mt-1 text-xs text-rose-800 sm:text-sm">{D["insight.summer.sub"]}</p>
         </div>
-        <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 shadow-sm">
+        <div className="proposal-audit-insight-card rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 shadow-sm sm:p-5">
           <p
             className={`text-[10px] font-bold text-amber-700 ${
               lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
@@ -1000,12 +1001,12 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           >
             {D["insight.fixed.title"]}
           </p>
-          <p className="mt-2 text-2xl font-bold text-amber-900 sm:text-3xl">
+          <p className="proposal-audit-insight-value mt-2 text-2xl font-bold text-amber-900 sm:text-3xl">
             <AnimatedINR value={summary.fixedAnnual} />
           </p>
-          <p className="mt-1 text-xs text-amber-800">{D["insight.fixed.sub"]}</p>
+          <p className="proposal-audit-insight-sub mt-1 text-xs text-amber-800 sm:text-sm">{D["insight.fixed.sub"]}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-slate-100/50 p-4 shadow-sm">
+        <div className="proposal-audit-insight-card rounded-2xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-slate-100/50 p-4 shadow-sm sm:p-5">
           <p
             className={`text-[10px] font-bold text-slate-600 ${
               lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
@@ -1013,12 +1014,12 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           >
             {D["insight.duty.title"]}
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+          <p className="proposal-audit-insight-value mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
             <AnimatedINR value={summary.auditTotals.duty + summary.auditTotals.fuel} />
           </p>
-          <p className="mt-1 text-xs text-slate-700">{D["insight.duty.sub"]}</p>
+          <p className="proposal-audit-insight-sub mt-1 text-xs text-slate-700 sm:text-sm">{D["insight.duty.sub"]}</p>
         </div>
-        <div className="rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 shadow-sm">
+        <div className="proposal-audit-insight-card rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 shadow-sm sm:p-5">
           <p
             className={`text-[10px] font-bold text-emerald-700 ${
               lang === "hi" ? "tracking-normal normal-case" : "uppercase tracking-[0.18em]"
@@ -1026,10 +1027,10 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           >
             {D["insight.solar.title"]}
           </p>
-          <p className="mt-2 text-2xl font-bold text-emerald-900 sm:text-3xl">
+          <p className="proposal-audit-insight-value mt-2 text-2xl font-bold text-emerald-900 sm:text-3xl">
             <AnimatedNumber value={summary.totalReduction} suffix="%" />
           </p>
-          <p className="mt-1 text-xs text-emerald-800">
+          <p className="proposal-audit-insight-sub mt-1 text-xs text-emerald-800 sm:text-sm">
             <AnimatedINR value={summary.annualSaving} />
             {D["common.perYr"]}
           </p>
@@ -2272,6 +2273,19 @@ export default function ProposalView({
   const [darkMode, setDarkMode] = useState(true);
   /** Prefer snapshot from DB; if missing (older proposals), fall back to this browser's saved branding. */
   const [displayInstallerLogoUrl, setDisplayInstallerLogoUrl] = useState("");
+
+  useEffect(() => {
+    const preferred = readProposalWebTheme() === "dark";
+    setDarkMode(preferred);
+    applyProposalRouteShellTheme(preferred ? "dark" : "light");
+  }, []);
+
+  useEffect(() => {
+    const theme = darkMode ? "dark" : "light";
+    writeProposalWebTheme(theme);
+    applyProposalRouteShellTheme(theme);
+    document.documentElement.dataset.proposalTheme = theme;
+  }, [darkMode]);
   const [companyGstFromBranding, setCompanyGstFromBranding] = useState(() =>
     typeof window !== "undefined" ? readProposalBrandingSettings().companyGstNumber?.trim() ?? "" : ""
   );

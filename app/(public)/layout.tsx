@@ -1,11 +1,10 @@
 /**
  * Sol.52 — public route group for shared customer-facing pages.
  *
- * No app-shell, no bottom nav, no auth chrome. The body class still inherits
- * the global `mesh-gradient-bg` from `app/layout.tsx`, so we override it
- * here with a clean white canvas via the wrapper div.
+ * No app-shell, no bottom nav, no auth chrome. Background is set per-route
+ * (proposal layout uses dark canvas by default).
  */
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-[100dvh] bg-white text-slate-900">{children}</div>;
+  return <div className="min-h-[100dvh]">{children}</div>;
 }
