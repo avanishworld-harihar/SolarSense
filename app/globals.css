@@ -3283,7 +3283,7 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
-/* Phone + tablet (< lg): page scrolls naturally; actions stick above bottom nav */
+/* Phone + tablet (< lg): room for bottom nav */
 .proposal-hub--responsive {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
@@ -3294,12 +3294,54 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   }
 }
 
+@media (max-width: 1023px) {
+  .proposal-hub {
+    margin: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* Mobile master–detail: one pane at a time, no overlap */
+.proposal-hub-mobile {
+  position: relative;
+  z-index: 0;
+}
+
+.proposal-hub-mobile-list .proposal-hub-list > div:last-child {
+  max-height: min(58dvh, 560px);
+}
+
+.proposal-hub-mobile-detail {
+  overflow: visible;
+}
+
+.proposal-hub-workspace--mobile .proposal-hub-workspace-scroll {
+  overflow: visible;
+  flex: none;
+  height: auto;
+}
+
+.proposal-hub-mobile-back {
+  color: var(--hub-text-secondary);
+}
+
+.proposal-hub-mobile-back:hover {
+  color: var(--hub-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html:not(.dark) .proposal-hub.workspace-page--proposals .proposal-hub-mobile-back:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
 .proposal-hub-workspace--flow .proposal-hub-workspace-scroll {
   overflow: visible;
   flex: none;
   height: auto;
 }
 
+/* Legacy flow only — never used on mobile master–detail */
 .proposal-hub-workspace-actions--sticky {
   position: sticky;
   bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));

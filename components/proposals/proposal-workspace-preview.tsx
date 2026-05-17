@@ -8,7 +8,7 @@ import { hubNextActionHint, statusProgressPct, statusVisual } from "@/lib/propos
 import { normalizeProposalStatus } from "@/lib/proposal-status";
 import { cn } from "@/lib/utils";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, ExternalLink, MessageCircle, MoreHorizontal, PencilLine } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, MessageCircle, MoreHorizontal, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import type { ProposalHubDealRow } from "./proposal-hub-deal-list";
@@ -33,7 +33,8 @@ export function ProposalWorkspacePreview({
   nextStepLabel,
   lang = "en",
   intelTitle = "Recommended next",
-  layout = "pane"
+  layout = "pane",
+  onBack
 }: {
   row: ProposalHubDealRow | null;
   labels: ProposalListCardProps["labels"];
@@ -44,8 +45,10 @@ export function ProposalWorkspacePreview({
   nextStepLabel?: string;
   lang?: "en" | "hi";
   intelTitle?: string;
-  /** pane = split column with internal scroll; flow = tablet/phone natural page scroll */
-  layout?: "pane" | "flow";
+  /** pane = desktop split; mobile = full-width detail pane; flow = legacy stacked scroll */
+  layout?: "pane" | "flow" | "mobile";
+  /** Mobile detail: return to pipeline list */
+  onBack?: () => void;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const reduced = useReducedMotion();
@@ -78,29 +81,65 @@ export function ProposalWorkspacePreview({
     { label: labels.panelBrand, value: row.panel_brand ?? "—", accent: false, wide: true }
   ];
 
-  const isFlow = layout === "flow";
+  const isPane = layout === "pane";
+  const isMobile = layout === "mobile";
 
   return (
     <>
       <div
         className={cn(
           "proposal-hub-workspace flex flex-col",
-          isFlow ? "proposal-hub-workspace--flow h-auto" : "proposal-hub-workspace--pane h-full min-h-0"
+          isPane
+            ? "proposal-hub-workspace--pane h-full min-h-0"
+            : isMobile
+              ? "proposal-hub-workspace--mobile relative h-auto w-full"
+              : "proposal-hub-workspace--stacked relative h-auto w-full"
         )}
       >
         <div
           className={cn(
-            "proposal-hub-workspace-scroll px-5 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7",
-            isFlow
-              ? "h-auto overflow-visible"
-              : "min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+            isPane
+              ? "proposal-hub-workspace-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6 lg:px-8 lg:py-7"
+              : isMobile
+                ? "proposal-hub-workspace-scroll px-4 py-4"
+                : "proposal-hub-workspace-scroll h-auto overflow-visible px-5 py-5 sm:px-6 sm:py-6"
           )}
         >
-        <header className="proposal-hub-workspace-head shrink-0 pb-4 sm:pb-5">
-          {paneEyebrow ? <p className="proposal-hub-workspace-eyebrow text-[10px] font-bold uppercase tracking-[0.2em]">{paneEyebrow}</p> : null}
-          <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="proposal-hub-text-primary text-2xl font-bold tracking-tight sm:text-3xl">{row.customer_name}</h2>
+        <header className={cn("proposal-hub-workspace-head shrink-0", isMobile ? "pb-3" : "pb-4 sm:pb-5")}>
+          {paneEyebrow && !isMobile ? (
+            <p className="proposal-hub-workspace-eyebrow text-[10px] font-bold uppercase tracking-[0.2em]">{paneEyebrow}</p>
+          ) : null}
+          {isMobile ? (
+            <div className="mb-3 flex items-center gap-2">
+              {onBack ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="proposal-hub-mobile-back -ml-2 h-9 gap-1.5 px-2 text-xs font-semibold"
+                  onClick={onBack}
+                >
+                  <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                  {lang === "hi" ? "पाइपलाइन" : "Pipeline"}
+                </Button>
+              ) : null}
+              {paneEyebrow ? (
+                <p className="proposal-hub-mobile-kicker text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                  {paneEyebrow}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2
+                className={cn(
+                  "proposal-hub-text-primary font-bold tracking-tight",
+                  isMobile ? "text-xl leading-tight" : "text-2xl sm:text-3xl"
+                )}
+              >
+                {row.customer_name}
+              </h2>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                 <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1", vis.pillClass)}>
                   <span className={cn("h-1.5 w-1.5 rounded-full", vis.dotClass)} aria-hidden />
@@ -149,7 +188,7 @@ export function ProposalWorkspacePreview({
           </div>
         </section>
 
-        <div className={cn("mt-5 grid gap-4", !isFlow && "lg:grid-cols-[1fr_minmax(200px,0.42fr)]")}>
+        <motion.div className={cn("mt-5 grid gap-4", isPane && "lg:grid-cols-[1fr_minmax(200px,0.42fr)]")}>
           <section className="proposal-hub-glass-card proposal-hub-workspace-next rounded-xl border p-4">
             {nextStepLabel ? (
               <p className="proposal-hub-text-muted text-[10px] font-bold uppercase tracking-[0.18em]">{nextStepLabel}</p>
@@ -158,16 +197,11 @@ export function ProposalWorkspacePreview({
             <p className="proposal-hub-text-muted mt-3 text-[11px] leading-relaxed">{nextActionHint}</p>
           </section>
           <ProposalHubIntelPanel row={row} lang={lang} title={intelTitle} />
-        </div>
+        </motion.div>
         </div>
 
-        <footer
-          className={cn(
-            "proposal-hub-workspace-actions proposal-hub-glass-bar shrink-0 border-t border-[var(--hub-border)] px-4 py-4 sm:px-5 lg:px-7",
-            isFlow && "proposal-hub-workspace-actions--sticky"
-          )}
-        >
-          <div className={cn("flex gap-2", isFlow ? "flex-col" : "flex-col sm:flex-row sm:flex-wrap")}>
+        <footer className="proposal-hub-workspace-actions proposal-hub-glass-bar shrink-0 border-t border-[var(--hub-border)] px-4 py-4 sm:px-5 lg:px-7">
+          <div className={cn("flex gap-2", isMobile || !isPane ? "flex-col" : "flex-col sm:flex-row sm:flex-wrap")}>
             <Button asChild size="lg" className="proposal-hub-cta-primary min-h-11 w-full gap-2 font-semibold sm:w-auto sm:min-w-[200px]">
               <Link href={manageHref}>
                 {labels.openWorkspace}

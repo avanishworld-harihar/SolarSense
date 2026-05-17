@@ -35,6 +35,7 @@ export default function ProposalsHubPage() {
   const { data, error, isLoading } = useSWR(PROPOSALS_SWR_KEY, fetchProposals, { revalidateOnFocus: true, dedupingInterval: 15_000 });
   const rows = data?.ok && Array.isArray(data.data) ? data.data : [];
   const [focusId, setFocusId] = useState<string | null>(null);
+  const [mobilePane, setMobilePane] = useState<"list" | "detail">("list");
 
   useEffect(() => {
     if (rows.length === 0) {
@@ -97,6 +98,17 @@ export default function ProposalsHubPage() {
 
   const intelTitle = uiLang === "hi" ? "अगला कदम" : "Recommended next";
 
+  const selectDeal = (id: string) => {
+    setFocusId(id);
+    setMobilePane("detail");
+  };
+
+  useEffect(() => {
+    if (mobilePane === "detail" && typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [mobilePane]);
+
   return (
     <WorkspacePage tone="proposals" stagger={false} className="proposal-hub proposal-hub--responsive pb-6 lg:pb-8">
       <ProposalHubHeader
@@ -158,33 +170,42 @@ export default function ProposalsHubPage() {
           <p className="proposal-hub-hint mt-5 hidden text-xs text-slate-500 lg:block">{t("proposals_hubSplitHint")}</p>
 
           {/* Phone + tablet (< lg) */}
-          <div className="proposal-hub-stack mt-4 flex flex-col gap-4 lg:hidden">
-            <div className="proposal-hub-glass-panel proposal-hub-shell-list max-h-[min(36dvh,380px)] min-h-0 shrink-0 rounded-2xl border p-3 sm:max-h-[min(32dvh,340px)]">
+          <motion.div className="proposal-hub-mobile mt-4 lg:hidden">
+            {mobilePane === "list" ? (
+              <section
+                aria-label={pipelineLabels.pipeline}
+                className="proposal-hub-glass-panel proposal-hub-mobile-list rounded-2xl border p-3"
+              >
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
-                onSelect={setFocusId}
+                onSelect={selectDeal}
                 statusLabel={cardLabels.statusLabel}
                 groupCountLabel={pipelineLabels.groupCount}
                 pipelineLabel={pipelineLabels.pipeline}
-                className="h-full min-h-0"
               />
-            </div>
-            <div className="proposal-hub-glass-panel proposal-hub-shell-workspace rounded-2xl border">
-              <ProposalWorkspacePreview
-                row={focused}
-                labels={cardLabels}
-                summaryTitle={pipelineLabels.summaryTitle}
-                nextActionHint={pipelineLabels.nextAction}
-                emptyLabel={pipelineLabels.empty}
-                paneEyebrow={pipelineLabels.paneEyebrow}
-                nextStepLabel={pipelineLabels.nextStepLabel}
-                lang={uiLang}
-                intelTitle={intelTitle}
-                layout="flow"
-              />
-            </div>
-          </div>
+              </section>
+            ) : (
+              <section
+                aria-label={pipelineLabels.paneEyebrow}
+                className="proposal-hub-glass-panel proposal-hub-mobile-detail rounded-2xl border"
+              >
+                <ProposalWorkspacePreview
+                  row={focused}
+                  labels={cardLabels}
+                  summaryTitle={pipelineLabels.summaryTitle}
+                  nextActionHint={pipelineLabels.nextAction}
+                  emptyLabel={pipelineLabels.empty}
+                  paneEyebrow={pipelineLabels.paneEyebrow}
+                  nextStepLabel={pipelineLabels.nextStepLabel}
+                  lang={uiLang}
+                  intelTitle={intelTitle}
+                  layout="mobile"
+                  onBack={() => setMobilePane("list")}
+                />
+              </section>
+            )}
+          </motion.div>
 
           {/* Desktop split (lg+) */}
           <div
