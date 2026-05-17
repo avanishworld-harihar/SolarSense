@@ -77,7 +77,8 @@ export function ProposalWorkspacePreview({
 
   return (
     <>
-      <div className="proposal-hub-workspace flex min-h-0 flex-col">
+      <div className="proposal-hub-workspace flex h-full min-h-0 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 md:px-7 md:py-6 lg:px-8 lg:py-7 [-webkit-overflow-scrolling:touch]">
         <header className="proposal-hub-workspace-head shrink-0 pb-5">
           {paneEyebrow ? <p className="proposal-hub-workspace-eyebrow text-[10px] font-bold uppercase tracking-[0.2em]">{paneEyebrow}</p> : null}
           <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
@@ -141,54 +142,57 @@ export function ProposalWorkspacePreview({
           </section>
           <ProposalHubIntelPanel row={row} lang={lang} title={intelTitle} />
         </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          <Button asChild size="lg" className="proposal-hub-cta-primary col-span-2 min-h-11 gap-2 font-semibold sm:col-span-1 sm:min-w-[200px]">
-            <Link href={manageHref}>
-              {labels.openWorkspace}
-              <ArrowRight className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="proposal-hub-cta-secondary min-h-11 gap-2 font-semibold">
-            <Link href={publicHref} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" aria-hidden />
-              {labels.previewPublic}
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="proposal-hub-cta-secondary min-h-11 gap-2 font-semibold"
-            onClick={() => {
-              const url = `${typeof window !== "undefined" ? window.location.origin : ""}${publicHref}`;
-              const text = encodeURIComponent(`Solar proposal: ${url}`);
-              window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
-            }}
-          >
-            <MessageCircle className="h-4 w-4" aria-hidden />
-            {labels.send}
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="proposal-hub-cta-ghost h-11 w-11"
-            aria-label={labels.moreActions}
-            aria-expanded={sheetOpen}
-            onClick={() => setSheetOpen(true)}
-          >
-            <MoreHorizontal className="h-5 w-5" aria-hidden />
-          </Button>
         </div>
 
-        <Link
-          href={manageHref}
-          className="proposal-hub-inline-link proposal-hub-text-muted mt-4 inline-flex items-center gap-1.5 text-xs font-semibold transition-colors hover:text-emerald-600 dark:hover:text-emerald-300"
-        >
-          <PencilLine className="h-3.5 w-3.5" aria-hidden />
-          {labels.editPricing}
-        </Link>
+        <footer className="proposal-hub-workspace-actions shrink-0 border-t border-[var(--hub-border)] bg-[var(--hub-surface)]/95 px-4 py-4 backdrop-blur-md sm:px-5 md:px-7">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button asChild size="lg" className="proposal-hub-cta-primary min-h-11 w-full gap-2 font-semibold sm:w-auto sm:min-w-[200px]">
+              <Link href={manageHref}>
+                {labels.openWorkspace}
+                <ArrowRight className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="proposal-hub-cta-secondary min-h-11 w-full gap-2 font-semibold sm:w-auto">
+              <Link href={publicHref} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="truncate">{labels.previewPublic}</span>
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="proposal-hub-cta-secondary min-h-11 w-full gap-2 font-semibold sm:w-auto"
+              onClick={() => {
+                const url = `${typeof window !== "undefined" ? window.location.origin : ""}${publicHref}`;
+                const text = encodeURIComponent(`Solar proposal: ${url}`);
+                window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />
+              {labels.send}
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="proposal-hub-cta-ghost h-11 w-11 shrink-0 self-end sm:self-auto"
+              aria-label={labels.moreActions}
+              aria-expanded={sheetOpen}
+              onClick={() => setSheetOpen(true)}
+            >
+              <MoreHorizontal className="h-5 w-5" aria-hidden />
+            </Button>
+          </div>
+
+          <Link
+            href={manageHref}
+            className="proposal-hub-inline-link proposal-hub-text-muted mt-3 inline-flex items-center gap-1.5 text-xs font-semibold transition-colors hover:text-emerald-600 dark:hover:text-emerald-300"
+          >
+            <PencilLine className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {labels.editPricing}
+          </Link>
+        </footer>
       </div>
 
       <ProposalHubActionsSheet

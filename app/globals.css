@@ -3261,15 +3261,26 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   border-color: var(--hub-border);
   background: var(--hub-surface);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  min-height: 0;
 }
 
 .proposal-hub-shell-list {
   border-color: var(--hub-border);
   background: rgba(0, 0, 0, 0.2);
+  min-height: 0;
 }
 
 .proposal-hub-shell-workspace {
   background: linear-gradient(180deg, var(--hub-surface) 0%, #0a0e14 100%);
+  min-height: 0;
+}
+
+.proposal-hub-list {
+  min-height: 0;
+}
+
+.proposal-hub-workspace-actions {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 .proposal-hub-list-group {

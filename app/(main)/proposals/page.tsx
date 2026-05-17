@@ -170,7 +170,7 @@ export default function ProposalsHubPage() {
                 className="max-h-full"
               />
             </div>
-            <div className="proposal-hub-shell-workspace min-h-0 rounded-2xl border p-4">
+            <div className="proposal-hub-shell-workspace flex max-h-[min(52vh,560px)] min-h-0 flex-col overflow-hidden rounded-2xl border">
               <ProposalWorkspacePreview
                 row={focused}
                 labels={cardLabels}
@@ -188,11 +188,13 @@ export default function ProposalsHubPage() {
           {/* Desktop */}
           <div
             className={cn(
-              "proposal-hub-shell mt-5 hidden min-h-0 md:grid md:min-h-[min(78vh,720px)] md:max-h-[min(84vh,780px)]",
-              "md:grid-cols-[minmax(260px,0.34fr)_1fr] md:overflow-hidden md:rounded-2xl md:border"
+              "proposal-hub-shell mt-5 hidden min-h-0 md:grid",
+              "md:h-[min(calc(100dvh-18rem),720px)] md:max-h-[min(calc(100dvh-14rem),780px)]",
+              "md:grid-cols-[minmax(260px,0.34fr)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]",
+              "md:overflow-hidden md:rounded-2xl md:border"
             )}
           >
-            <div className="proposal-hub-shell-list flex min-h-0 flex-col border-r p-4 md:pr-5">
+            <div className="proposal-hub-shell-list flex h-full min-h-0 flex-col overflow-hidden border-r p-4 md:pr-5">
               <ProposalHubDealList
                 rows={rows}
                 focusId={focusId}
@@ -200,9 +202,10 @@ export default function ProposalsHubPage() {
                 statusLabel={cardLabels.statusLabel}
                 groupCountLabel={pipelineLabels.groupCount}
                 pipelineLabel={pipelineLabels.pipeline}
+                className="h-full min-h-0"
               />
             </div>
-            <div className="proposal-hub-shell-workspace min-h-0 overflow-y-auto overscroll-contain p-5 md:p-7 lg:p-8">
+            <div className="proposal-hub-shell-workspace flex h-full min-h-0 flex-col overflow-hidden">
               <ProposalWorkspacePreview
                 row={focused}
                 labels={cardLabels}
