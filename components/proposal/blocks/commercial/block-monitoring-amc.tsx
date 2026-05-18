@@ -156,6 +156,7 @@ export function BlockMonitoringAMC({ ctx }: Props) {
                 </div>
               </motion.div>
             ))}
+          </div>
           </GlassPanel>
         </SectionReveal>
 

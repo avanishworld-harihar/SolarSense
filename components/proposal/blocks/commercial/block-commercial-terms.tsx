@@ -200,6 +200,7 @@ export function BlockCommercialTerms({ ctx }: Props) {
                 );
               })}
             </div>
+          </div>
           </GlassPanel>
         </SectionReveal>
 

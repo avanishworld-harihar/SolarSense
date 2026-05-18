@@ -231,6 +231,7 @@ export function BlockSystemArchitecture({ ctx }: Props) {
               ))}
             </tbody>
           </table>
+        </div>
         </GlassPanel>
       </SectionReveal>
 
