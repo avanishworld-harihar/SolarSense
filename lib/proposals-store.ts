@@ -54,6 +54,8 @@ export type CreateProposalInput = {
   consumerId?: string | null;
   createdBy?: string | null;
   expiresAt?: Date | null;
+  /** Phase A — Proposal OS preset. Defaults to "residential_smart". */
+  presetId?: string | null;
 };
 
 export type StoredProposal = {
@@ -116,7 +118,8 @@ export async function createProposal(input: CreateProposalInput): Promise<Stored
     summary: s as unknown as Row,
 
     created_by: input.createdBy ?? null,
-    expires_at: input.expiresAt?.toISOString() ?? null
+    expires_at: input.expiresAt?.toISOString() ?? null,
+    preset_id: input.presetId ?? "residential_smart",
   };
 
   return await insertAdaptive<StoredProposal>(client, "proposals", payload, "id, share_token, customer_name, generated_at");
@@ -137,6 +140,17 @@ export type ProposalRecord = StoredProposal & {
   installer_contact: string | null;
   installer_tagline: string | null;
   expires_at: string | null;
+  /**
+   * Phase A — Proposal OS: which preset produced this document.
+   * Defaults to "residential_smart" for all legacy proposals.
+   */
+  preset_id?: string | null;
+  /**
+   * Phase A — Proposal OS: FK to `proposal_pricing_snapshots.id`.
+   * Set when a customer formally approves the proposal.
+   * Null until `approved` status is reached.
+   */
+  accepted_snapshot_id?: string | null;
 };
 
 /**
@@ -191,6 +205,8 @@ export type ProposalListItem = {
   panel_brand: string | null;
   annual_saving_inr: number | null;
   proposal_status: ProposalStatus;
+  /** Phase A — Proposal OS preset. Legacy rows default to "residential_smart". */
+  preset_id: string;
 };
 
 /**
@@ -214,7 +230,8 @@ function mapProposalListRow(r: Record<string, unknown>): ProposalListItem {
     final_amount_inr,
     panel_brand: typeof brand === "string" && brand.trim() ? brand.trim() : null,
     annual_saving_inr: typeof saving === "number" && Number.isFinite(saving) ? saving : null,
-    proposal_status: normalizeProposalStatus(typeof r.proposal_status === "string" ? r.proposal_status : "draft")
+    proposal_status: normalizeProposalStatus(typeof r.proposal_status === "string" ? r.proposal_status : "draft"),
+    preset_id: typeof r.preset_id === "string" && r.preset_id ? r.preset_id : "residential_smart",
   };
 }
 
@@ -224,7 +241,7 @@ export async function listRecentProposals(limit = 50): Promise<ProposalListItem[
   const { data, error } = await client
     .from("proposals")
     .select(
-      "id, customer_name, generated_at, system_kw, lead_id, panel_brand, annual_saving_inr, proposal_status, proposal_pricing(final_amount_inr)"
+      "id, customer_name, generated_at, system_kw, lead_id, panel_brand, annual_saving_inr, proposal_status, preset_id, proposal_pricing(final_amount_inr)"
     )
     .order("generated_at", { ascending: false })
     .limit(limit);

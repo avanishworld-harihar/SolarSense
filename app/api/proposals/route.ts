@@ -84,6 +84,8 @@ const bodySchema = z.object({
   pmSuryaGharSubsidyInr: z.number().min(0).max(500000).optional(),
   netCostInr: z.number().min(0).max(50000000).optional(),
   dataSource: z.enum(["bill", "requirement"]).optional(),
+  /** Phase A — Proposal OS preset. Defaults to "residential_smart". */
+  presetId: z.enum(["residential_smart", "commercial_executive"]).optional(),
   panelBrand: z.enum(["Adani", "Waaree", "JSW", "Tata", "Vikram", "RenewSys"]).optional(),
   installerName: z.string().max(120).optional(),
   installerTagline: z.string().max(160).optional(),
@@ -139,7 +141,8 @@ export async function POST(req: NextRequest) {
       summary,
       clientRef: payload.clientRef ?? null,
       leadId: payload.leadId ?? null,
-      consumerId: payload.consumerId ?? null
+      consumerId: payload.consumerId ?? null,
+      presetId: payload.presetId ?? "residential_smart",
     });
 
     if (!created) {
@@ -209,10 +212,11 @@ export async function POST(req: NextRequest) {
         shareToken: created.share_token,
         customerName: created.customer_name,
         generatedAt: created.generated_at,
+        presetId: payload.presetId ?? "residential_smart",
         shareUrl,
         summary: responseSummary,
         projectId,
-        leadStatus: payload.leadId ? "proposal-sent" : null
+        leadStatus: payload.leadId ? "proposal-sent" : null,
       },
       { status: 200 }
     );
