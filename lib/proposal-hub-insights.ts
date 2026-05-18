@@ -10,6 +10,10 @@ export type ProposalHubRow = {
   panel_brand: string | null;
   annual_saving_inr: number | null;
   proposal_status: string;
+  /** Phase A — preset determines residential vs commercial visual tone */
+  preset_id?: string | null;
+  /** Optional: company / organisation name for commercial proposals */
+  company_name?: string | null;
 };
 
 export type ProposalHubStats = {
@@ -170,4 +174,129 @@ export function hubIntelForStatus(st: ProposalStatus, lang: "en" | "hi"): IntelI
 
 export function hubNextActionHint(st: ProposalStatus, lang: "en" | "hi"): string {
   return hubIntelForStatus(st, lang).body;
+}
+
+// ─── E3: Health, velocity, confidence, preset helpers ────────────────────────
+
+/** True when the preset looks commercial (not a residential variant). */
+export function isCommercialPreset(presetId?: string | null): boolean {
+  if (!presetId) return false;
+  return presetId.includes("commercial") || presetId.includes("industrial") || presetId.includes("capex");
+}
+
+/**
+ * Age of a deal in calendar days.
+ * Used for "deal velocity" and "health score" indicators.
+ */
+export function dealAgeInDays(generatedAt: string): number {
+  try {
+    const ms = Date.now() - new Date(generatedAt).getTime();
+    return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Health score 0–100 for a deal.
+ * "Healthy" means recently active and progressing toward approved.
+ * "Stale" means long idle in early stages.
+ */
+export function dealHealthScore(row: ProposalHubRow): number {
+  const st = normalizeProposalStatus(row.proposal_status);
+  const age = dealAgeInDays(row.generated_at);
+
+  // Approved deals are always healthy
+  if (st === "approved") return 100;
+
+  // Stage progress base (0-60)
+  const stageBase = statusProgressPct(st) * 0.6;
+
+  // Age penalty: -2 per day idle in early stages, capped at -40
+  const stalePenalty = st === "draft" ? Math.min(age * 2, 40) : Math.min(age * 1, 30);
+
+  return Math.max(5, Math.round(stageBase - stalePenalty));
+}
+
+/**
+ * Velocity label — how fast this deal is moving.
+ * "hot" = recent progress, "warm" = normal, "cold" = stale
+ */
+export type DealVelocity = "hot" | "warm" | "cold";
+
+export function dealVelocity(row: ProposalHubRow): DealVelocity {
+  const st = normalizeProposalStatus(row.proposal_status);
+  const age = dealAgeInDays(row.generated_at);
+  if (st === "approved") return "hot";
+  if (st === "negotiation" && age < 7) return "hot";
+  if ((st === "viewed" || st === "negotiation") && age < 14) return "warm";
+  if (st === "sent" && age < 3) return "warm";
+  if (age > 21) return "cold";
+  return "warm";
+}
+
+/**
+ * Estimated closing confidence 0–100 (display only — NOT a real ML prediction).
+ * Derived from status + recency.
+ */
+export function closingConfidence(row: ProposalHubRow): number {
+  const st = normalizeProposalStatus(row.proposal_status);
+  const age = dealAgeInDays(row.generated_at);
+  const base: Record<ProposalStatus, number> = {
+    draft: 10,
+    sent: 25,
+    viewed: 45,
+    negotiation: 70,
+    approved: 100,
+  };
+  const score = base[st];
+  // Decay confidence if stale (< 30 days old doesn't hurt, older decays)
+  const decay = age > 30 ? Math.min((age - 30) * 0.5, 25) : 0;
+  return Math.max(5, Math.round(score - decay));
+}
+
+/** Velocity visual config */
+export function velocityVisual(v: DealVelocity): { label: string; color: string; dot: string } {
+  switch (v) {
+    case "hot":
+      return { label: "Hot", color: "text-rose-500", dot: "bg-rose-500" };
+    case "warm":
+      return { label: "Active", color: "text-amber-500", dot: "bg-amber-400" };
+    case "cold":
+      return { label: "Stale", color: "text-slate-400", dot: "bg-slate-400" };
+  }
+}
+
+/** Light-mode status visual palette (for cards on white backgrounds) */
+export type StatusVisualLight = {
+  bg: string;
+  text: string;
+  dot: string;
+  border: string;
+};
+
+export function statusVisualLight(st: ProposalStatus): StatusVisualLight {
+  switch (st) {
+    case "draft":
+      return { bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-400", border: "border-slate-200" };
+    case "sent":
+      return { bg: "bg-sky-50", text: "text-sky-700", dot: "bg-sky-500", border: "border-sky-200" };
+    case "viewed":
+      return { bg: "bg-violet-50", text: "text-violet-700", dot: "bg-violet-500", border: "border-violet-200" };
+    case "negotiation":
+      return { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500", border: "border-amber-200" };
+    case "approved":
+      return { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500", border: "border-emerald-200" };
+    default:
+      return { bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-400", border: "border-slate-200" };
+  }
+}
+
+/** Format INR amounts compactly (₹1.2L, ₹25K, etc.) */
+export function formatInrCompact(v: number | null): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  if (v >= 1_00_00_000) return `₹${(v / 1_00_00_000).toFixed(1)}Cr`;
+  if (v >= 1_00_000) return `₹${(v / 1_00_000).toFixed(1)}L`;
+  if (v >= 1_000) return `₹${(v / 1_000).toFixed(0)}K`;
+  return `₹${Math.round(v).toLocaleString("en-IN")}`;
 }
