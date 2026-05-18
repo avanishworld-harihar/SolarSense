@@ -156,7 +156,7 @@ function useCountUp(target: number, inView: boolean, duration = 1.4) {
   return value;
 }
 
-function AnimatedINR({ value, prefix = "₹", className }: { value: number; prefix?: string; className?: string }) {
+export function AnimatedINR({ value, prefix = "₹", className }: { value: number; prefix?: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-20px" });
   const counted = useCountUp(value, inView);
@@ -168,7 +168,7 @@ function AnimatedINR({ value, prefix = "₹", className }: { value: number; pref
   );
 }
 
-function AnimatedNumber({ value, suffix = "", className }: { value: number; suffix?: string; className?: string }) {
+export function AnimatedNumber({ value, suffix = "", className }: { value: number; suffix?: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-20px" });
   const counted = useCountUp(value, inView);
@@ -269,7 +269,7 @@ function telHrefFromInstallerContact(contact: string): string {
 // Reusable atoms
 // ---------------------------------------------------------------------------
 
-function StatTile({
+export function StatTile({
   label,
   value,
   rawValue,
@@ -323,7 +323,7 @@ function StatTile({
   );
 }
 
-function SectionHeader({
+export function SectionHeader({
   kicker,
   title,
   subtitle,
@@ -608,7 +608,7 @@ function CtaButton({
 // Slide-style sections — matching the 12 PPT slides.
 // ---------------------------------------------------------------------------
 
-function HeroCover({
+export function HeroCover({
   D,
   lang,
   summary,
@@ -884,7 +884,7 @@ function HeroCover({
   );
 }
 
-function SystemRequirementSection({
+export function SystemRequirementSection({
   D,
   summary,
   lang
@@ -989,7 +989,7 @@ function SystemRequirementSection({
   );
 }
 
-function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; summary: ProposalDeckSummary; monthLbls: string[]; lang: ProposalLang }) {
+export function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; summary: ProposalDeckSummary; monthLbls: string[]; lang: ProposalLang }) {
   return (
     <ProposalJourneySection id="bill-audit" className="proposal-bill-audit-section">
       <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
@@ -1194,7 +1194,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
   );
 }
 
-function EconomicsSection({
+export function EconomicsSection({
   D,
   summary,
   monthLbls,
@@ -1402,7 +1402,7 @@ function TreeAnimation({ count, inView }: { count: number; inView: boolean }) {
   );
 }
 
-function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: ProposalDeckSummary; lang: ProposalLang }) {
+export function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: ProposalDeckSummary; lang: ProposalLang }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.12 });
   const env = summary.environmental;
@@ -1540,7 +1540,7 @@ function EnvironmentSection({ D, summary, lang }: { D: ProposalDict; summary: Pr
   );
 }
 
-function CompanyProfileSection({
+export function CompanyProfileSection({
   D,
   lang,
   summary,
@@ -1687,7 +1687,7 @@ function CompanyProfileSection({
   );
 }
 
-function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
+export function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
   const blocks = [
     { title: lang === "hi" ? "सोलर पैनल" : "Solar Panels", sub: `${summary.panels} × 540W ${summary.brands.panel}` },
     { title: lang === "hi" ? "DC केबल + DCDB" : "DC Cabling + DCDB", sub: "TUV 4mm² · SPD" },
@@ -1770,7 +1770,7 @@ function TechnicalProposalSection({ D, lang, summary }: { D: ProposalDict; lang:
   );
 }
 
-function BomSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
+export function BomSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
   return (
     <ProposalJourneySection id="bom">
       <SectionHeader step={6} kicker={D["slide.bom.kicker"]} title={D["slide.bom.title"]} lang={lang} />
@@ -1848,7 +1848,7 @@ function BomSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang;
   );
 }
 
-function PaymentSection({ D, summary, lang }: { D: ProposalDict; summary: ProposalDeckSummary; lang: ProposalLang }) {
+export function PaymentSection({ D, summary, lang }: { D: ProposalDict; summary: ProposalDeckSummary; lang: ProposalLang }) {
   const colors = ["bg-sky-500", "bg-violet-500", "bg-emerald-500", "bg-amber-500"];
   const labelKeys: Array<keyof ProposalDict> = ["pay.advance", "pay.material", "pay.installation", "pay.commissioning"];
   return (
@@ -1892,7 +1892,7 @@ function PaymentSection({ D, summary, lang }: { D: ProposalDict; summary: Propos
   );
 }
 
-function CommercialAndAmcSection({
+export function CommercialAndAmcSection({
   D,
   summary,
   selectedAmcYears,
@@ -1966,7 +1966,7 @@ function CommercialAndAmcSection({
   );
 }
 
-function ServiceAmcSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
+export function ServiceAmcSection({ D, lang, summary }: { D: ProposalDict; lang: ProposalLang; summary: ProposalDeckSummary }) {
   const includedBullets = lang === "hi"
     ? ["त्रैमासिक पैनल सफाई + विद्युत जांच", "इन्वर्टर पैरामीटर मॉनिटरिंग", "DC/AC वायरिंग सत्यापन", "अर्थिंग एवं SPD जांच", "जनरेशन रिपोर्ट हर तिमाही"]
     : ["Quarterly panel cleaning + electrical check", "Inverter parameter monitoring", "DC/AC wiring verification", "Earthing & SPD test", "Quarterly generation report"];
@@ -2028,7 +2028,7 @@ function ServiceAmcSection({ D, lang, summary }: { D: ProposalDict; lang: Propos
   );
 }
 
-function BankingSection({
+export function BankingSection({
   D,
   summary,
   siteImages,
@@ -2176,7 +2176,7 @@ function BankingSection({
 // SurveyAndWorkflowSection — Page 4 (Engineering depth: site survey, shadow
 // analysis, and 5-stage installation workflow). Densified for A4 printing.
 // ---------------------------------------------------------------------------
-function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; lang: ProposalLang; siteImages?: string[] }) {
+export function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; lang: ProposalLang; siteImages?: string[] }) {
   const surveyImage = siteImages?.[5] ?? siteImages?.[0];
 
   const surveyChecks = lang === "hi"
@@ -2335,7 +2335,7 @@ function SurveyAndWorkflowSection({ D, lang, siteImages }: { D: ProposalDict; la
   );
 }
 
-function ClosingSection({
+export function ClosingSection({
   D,
   summary,
   siteImages,

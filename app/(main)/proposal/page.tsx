@@ -39,6 +39,11 @@ import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ProposalPresetPicker, type ProposalPresetId } from "@/components/proposals/os/preset-picker";
+import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
+import { BuilderStageBar } from "@/components/proposals/os/builder-stage-bar";
+import { ProposalLivePreviewPanel } from "@/components/proposals/os/live-preview-panel";
+import { BlockPlaylistEditor } from "@/components/proposals/os/block-playlist-editor";
 import useSWR, { useSWRConfig } from "swr";
 
 const BillAnalysisCharts = dynamic(
@@ -237,6 +242,12 @@ export default function ProposalPage() {
   const [clientRef, setClientRef] = useState("");
   const [hydratedFromServer, setHydratedFromServer] = useState(false);
   const [learnedBillProfiles, setLearnedBillProfiles] = useState<Record<string, LearnedBillProfile>>({});
+
+  // ── Proposal OS UI state ────────────────────────────────────────────────────
+  const [osPresetId, setOsPresetId] = useState<ProposalPresetId | null>(null);
+  const [showPresetPicker, setShowPresetPicker] = useState(true);
+  const [showBlockPlaylist, setShowBlockPlaylist] = useState(false);
+
   const lastCalcPersistSignatureRef = useRef("");
   const uploadQueueRef = useRef<UploadTask[]>([]);
   const uploadWorkerRunningRef = useRef(false);
@@ -599,6 +610,9 @@ export default function ProposalPage() {
     () => customers.find((c) => c.id === selectedLeadId) ?? null,
     [customers, selectedLeadId]
   );
+
+  // Reactive bill-backed status for live preview
+  const isBillBackedLive = latestBill != null;
 
   useEffect(() => {
     setAdditionalBills((prev) => {
@@ -1366,16 +1380,43 @@ export default function ProposalPage() {
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
+  const osCustomerName = manual.leadContactName || manual.officialBillName;
+
   return (
     <>
-      <WorkspacePage tone="workflow" stagger={false}>
-        <WorkspacePageHero
-          tone="workflow"
-          eyebrow="Workflow"
-          title={t("proposal_title")}
-          subtitle={t("proposal_step1LeadHint")}
+      {/* Proposal OS — Preset Picker overlay */}
+      {showPresetPicker && (
+        <ProposalPresetPicker
+          currentPresetId={osPresetId}
+          onSelect={(id) => { setOsPresetId(id); setShowPresetPicker(false); }}
+          onSkip={() => { setOsPresetId("residential_smart"); setShowPresetPicker(false); }}
         />
-        <div className="ss-step-card space-y-2">
+      )}
+
+      {/* Block playlist drawer */}
+      {showBlockPlaylist && (
+        <BlockPlaylistEditor
+          presetId={osPresetId}
+          onClose={() => setShowBlockPlaylist(false)}
+        />
+      )}
+
+      <WorkspacePage tone="workflow" stagger={false}>
+        {/* Proposal OS — branded header */}
+        <ProposalOSHeader
+          presetId={osPresetId}
+          onChangePreset={() => setShowPresetPicker(true)}
+          customerName={osCustomerName || undefined}
+        />
+
+        {/* OS layout: form (flex-1) + live preview panel (fixed width, desktop) */}
+        <div className="flex items-start gap-4 lg:gap-6">
+          {/* Main builder column */}
+          <div className="min-w-0 flex-1">
+            <BuilderStageBar presetId={osPresetId} />
+
+            {/* ─── EXISTING FORM CONTENT (unchanged) ─── */}
+            <div id="step-1-anchor" className="ss-step-card space-y-2">
         <div className="flex items-center justify-between gap-2">
           <span className="ss-step-chip">Step 1</span>
           <button
@@ -1430,7 +1471,7 @@ export default function ProposalPage() {
         />
       ) : null}
 
-      <div className="ss-step-card">
+      <div id="step-2-anchor" className="ss-step-card">
         <span className="ss-step-chip">Step 2</span>
         <h2 className="flex flex-col gap-1 text-base font-bold text-brand-900 sm:flex-row sm:items-center sm:gap-2 sm:text-lg">
           <span className="flex items-center gap-2">
@@ -1686,7 +1727,7 @@ export default function ProposalPage() {
         <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">{t("proposal_annualSavingsLine")}</p>
       </div>
 
-      <div className="ss-card space-y-4 p-4 sm:p-5">
+      <div id="step-3-anchor" className="ss-card space-y-4 p-4 sm:p-5">
         {/* Solar System Size — editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -1831,7 +1872,7 @@ export default function ProposalPage() {
           ) : null}
         </div>
 
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div id="step-4-anchor" className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button
             type="button"
             className="ss-cta-primary sm:text-base"
@@ -1890,7 +1931,27 @@ export default function ProposalPage() {
             </div>
           </div>
         ) : null}
-      </div>
+      </div>{/* closes system size ss-card */}
+          </div>{/* end main builder column */}
+
+          {/* Live preview panel — desktop only (xl+) */}
+          <div className="hidden xl:block xl:w-72 xl:shrink-0 2xl:w-80">
+            <ProposalLivePreviewPanel
+              presetId={osPresetId}
+              customerName={osCustomerName}
+              city={activeLead?.city ?? manual.city}
+              systemKw={effectiveResult.solarKw}
+              annualSaving={effectiveResult.annualSavings}
+              netCost={effectiveResult.netCost}
+              paybackLabel={effectiveResult.paybackDisplay}
+              isBillBacked={isBillBackedLive}
+              latestProposalUrl={latestWebProposalUrl}
+              onGenerate={() => void generateWebProposal()}
+              busy={isWebProposalBusy}
+              onEditBlocks={() => setShowBlockPlaylist(true)}
+            />
+          </div>
+        </div>{/* end OS layout flex */}
       </WorkspacePage>
     </>
   );
