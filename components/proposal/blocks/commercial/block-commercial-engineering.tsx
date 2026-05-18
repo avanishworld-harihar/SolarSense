@@ -15,16 +15,7 @@
 import { motion } from "framer-motion";
 import { Gauge, ShieldCheck, Cpu } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
-
-function SectionLabel({ num, label }: { num: string; label: string }) {
-  return (
-    <div className="mb-8 flex items-center gap-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{num}</span>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-600">{label}</span>
-    </div>
-  );
-}
+import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
 
 function MetricRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
@@ -97,25 +88,23 @@ export function BlockCommercialEngineering({ ctx }: Props) {
       ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-      <SectionLabel num="04" label={isHi ? "इंजीनियरिंग आधार" : "Engineering Rationale"} />
-
-      <div className="mb-3">
-        <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">
-          {isHi ? "तकनीकी डिज़ाइन आधार" : "Technical Design Basis"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {isHi
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 md:px-12 md:py-24">
+      <CommercialSectionHeader
+        num="04"
+        label={isHi ? "इंजीनियरिंग आधार" : "Engineering Rationale"}
+        title={isHi ? "तकनीकी डिज़ाइन आधार" : "Technical Design Basis"}
+        subtitle={
+          isHi
             ? "सिस्टम डिज़ाइन में उपयोग की गई प्रमुख इंजीनियरिंग मापदंड"
-            : "Key engineering parameters governing system sizing, layout, and performance estimates"}
-        </p>
-      </div>
+            : "Key engineering parameters governing system sizing, layout, and performance estimates"
+        }
+      />
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         {/* Design parameters */}
-        <div className="lg:col-span-2">
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+        <SectionReveal className="lg:col-span-2">
+          <GlassPanel>
+            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
               <Gauge className="h-4 w-4 text-sky-500" />
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
                 {isHi ? "सिस्टम डिज़ाइन मापदंड" : "System Design Parameters"}
@@ -134,13 +123,13 @@ export function BlockCommercialEngineering({ ctx }: Props) {
                 </motion.div>
               ))}
             </div>
-          </div>
-        </div>
+          </GlassPanel>
+        </SectionReveal>
 
         {/* Standards & certifications */}
-        <div className="flex flex-col gap-5">
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+        <SectionReveal className="flex flex-col gap-5" delay={0.08}>
+          <GlassPanel>
+            <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
                 {isHi ? "मानक एवं प्रमाण" : "Standards & Compliance"}
@@ -161,13 +150,14 @@ export function BlockCommercialEngineering({ ctx }: Props) {
                 </motion.li>
               ))}
             </ul>
-          </div>
-        </div>
+          </GlassPanel>
+        </SectionReveal>
       </div>
 
       {/* Installation workflow */}
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+      <SectionReveal className="mt-6" delay={0.12}>
+        <GlassPanel>
+          <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3.5">
           <Cpu className="h-4 w-4 text-indigo-500" />
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
             {isHi ? "स्थापना एवं कमीशनिंग प्रक्रिया" : "Installation & Commissioning Process"}
@@ -192,8 +182,9 @@ export function BlockCommercialEngineering({ ctx }: Props) {
               </div>
             </motion.div>
           ))}
-        </div>
-      </div>
+          </div>
+        </GlassPanel>
+      </SectionReveal>
     </div>
   );
 }

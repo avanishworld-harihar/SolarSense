@@ -12,16 +12,7 @@
 import { motion } from "framer-motion";
 import { Activity, CheckCircle2, ShieldCheck, Wifi, XCircle } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
-
-function SectionLabel({ num, label }: { num: string; label: string }) {
-  return (
-    <div className="mb-8 flex items-center gap-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{num}</span>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-600">{label}</span>
-    </div>
-  );
-}
+import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
 
 const fmtL = (v: number) => {
   if (v >= 100_000) return `₹${(v / 100_000).toFixed(1)} L`;
@@ -126,23 +117,22 @@ export function BlockMonitoringAMC({ ctx }: Props) {
       ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-      <SectionLabel num="08" label={isHi ? "मॉनिटरिंग एवं रखरखाव" : "Monitoring & AMC"} />
-
-      <div className="mb-3">
-        <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">
-          {isHi ? "स्मार्ट मॉनिटरिंग एवं वार्षिक रखरखाव" : "Smart Monitoring & Annual Maintenance"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {isHi
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 md:px-12 md:py-24">
+      <CommercialSectionHeader
+        num="08"
+        label={isHi ? "मॉनिटरिंग एवं रखरखाव" : "Monitoring & AMC"}
+        title={isHi ? "स्मार्ट मॉनिटरिंग एवं वार्षिक रखरखाव" : "Smart Monitoring & Annual Maintenance"}
+        subtitle={
+          isHi
             ? "24×7 रियल-टाइम डेटा, सक्रिय फॉल्ट मैनेजमेंट, और दीर्घकालिक प्रदर्शन गारंटी"
-            : "24×7 real-time data, proactive fault management, and long-term performance assurance"}
-        </p>
-      </div>
+            : "24×7 real-time data, proactive fault management, and long-term performance assurance"
+        }
+      />
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         {/* Monitoring features grid */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <SectionReveal>
+          <GlassPanel>
           <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
             <Wifi className="h-4 w-4 text-sky-500" />
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -166,12 +156,12 @@ export function BlockMonitoringAMC({ ctx }: Props) {
                 </div>
               </motion.div>
             ))}
-          </div>
-        </div>
+          </GlassPanel>
+        </SectionReveal>
 
         {/* SLA table */}
-        <div className="flex flex-col gap-5">
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <SectionReveal className="flex flex-col gap-5" delay={0.08}>
+          <GlassPanel>
             <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
               <ShieldCheck className="h-4 w-4 text-emerald-500" />
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -197,13 +187,13 @@ export function BlockMonitoringAMC({ ctx }: Props) {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
+            </GlassPanel>
+        </SectionReveal>
       </div>
 
       {/* AMC tiers */}
-      <div className="mt-5">
+      <SectionReveal className="mt-8" delay={0.1}>
+        <div>
         <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
           {isHi ? "वार्षिक रखरखाव अनुबंध — योजना तुलना" : "Annual Maintenance Contract — Plan Comparison"}
         </p>
@@ -248,7 +238,8 @@ export function BlockMonitoringAMC({ ctx }: Props) {
             );
           })}
         </div>
-      </div>
+        </div>
+      </SectionReveal>
     </div>
   );
 }

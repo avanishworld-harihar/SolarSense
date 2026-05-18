@@ -17,16 +17,7 @@
 import { motion } from "framer-motion";
 import { ListChecks } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
-
-function SectionLabel({ num, label }: { num: string; label: string }) {
-  return (
-    <div className="mb-8 flex items-center gap-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{num}</span>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-600">{label}</span>
-    </div>
-  );
-}
+import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
 
 const fmtL = (v: number) => {
   if (v >= 10_000_000) return `₹${(v / 10_000_000).toFixed(2)} Cr`;
@@ -264,22 +255,21 @@ export function BlockTieredBOM({ ctx }: Props) {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-      <SectionLabel num="06" label={isHi ? "सामग्री सूची" : "Bill of Materials"} />
-
-      <div className="mb-3">
-        <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">
-          {isHi ? "स्तरीय सामग्री सूची" : "Tiered Bill of Materials"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {isHi
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 md:px-12 md:py-24">
+      <CommercialSectionHeader
+        num="06"
+        label={isHi ? "सामग्री सूची" : "Bill of Materials"}
+        title={isHi ? "स्तरीय सामग्री सूची" : "Tiered Bill of Materials"}
+        subtitle={
+          isHi
             ? "EPC आपूर्ति और स्थापना दायरे की संपूर्ण सूची — सभी श्रेणियां"
-            : "Complete EPC supply-and-install scope — all categories with specifications, makes, and warranties"}
-        </p>
-      </div>
+            : "Complete EPC supply-and-install scope — all categories with specifications, makes, and warranties"
+        }
+      />
 
       {/* Cost distribution bar */}
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <SectionReveal>
+        <GlassPanel className="p-5">
         <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
           {isHi ? "लागत वितरण (अनुमानित)" : "Approximate Cost Distribution"}
         </p>
@@ -315,10 +305,11 @@ export function BlockTieredBOM({ ctx }: Props) {
             ? `कुल परियोजना लागत: ${fmtL(summary.grossSystemCost)} (subsidy के बाद: ${fmtL(summary.netCost)})`
             : `Total project value: ${fmtL(summary.grossSystemCost)} · Net after subsidy: ${fmtL(summary.netCost)}`}
         </p>
-      </div>
+        </GlassPanel>
+      </SectionReveal>
 
       {/* BOM tables by category */}
-      <div className="mt-5 space-y-4">
+      <div className="mt-6 space-y-4">
         {categories.map((cat, catIdx) => {
           const c = catColorClasses[cat.color];
           const label = isHi && cat.labelHi ? cat.labelHi : cat.label;
@@ -328,8 +319,8 @@ export function BlockTieredBOM({ ctx }: Props) {
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: catIdx * 0.06 }}
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+              transition={{ delay: catIdx * 0.05 }}
+              className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_16px_rgba(15,23,42,0.05)]"
             >
               {/* Category header */}
               <div className={`flex items-center gap-2 px-5 py-3 ${c.header}`}>

@@ -14,16 +14,7 @@
 import { motion } from "framer-motion";
 import { Download, Mail, Phone, Share2, Zap } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
-
-function SectionLabel({ num, label }: { num: string; label: string }) {
-  return (
-    <div className="mb-8 flex items-center gap-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{num}</span>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-600">{label}</span>
-    </div>
-  );
-}
+import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
 
 const fmtL = (v: number) => {
   if (v >= 10_000_000) return `₹${(v / 10_000_000).toFixed(2)} Cr`;
@@ -89,16 +80,26 @@ export function BlockPremiumClosing({ ctx }: Props) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-      <SectionLabel num="10" label={isHi ? "प्रस्ताव स्वीकृति" : "Closing & Acceptance"} />
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 md:px-12 md:py-24">
+      <CommercialSectionHeader
+        num="10"
+        label={isHi ? "प्रस्ताव स्वीकृति" : "Closing & Acceptance"}
+        title={isHi ? "प्रस्ताव को स्वीकार करें" : "Accept This Proposal"}
+        subtitle={
+          isHi
+            ? "इस पृष्ठ पर सारांश, स्वीकृति अनुभाग, और संपर्क विवरण हैं"
+            : "Decision summary, acceptance section, and next steps to commission your solar system"
+        }
+      />
 
       {/* Decision summary banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="mb-8 overflow-hidden rounded-xl bg-slate-950"
-      >
+      <SectionReveal>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-8 overflow-hidden rounded-2xl bg-slate-950 shadow-xl"
+        >
         <div className="border-b border-white/10 px-6 py-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
             {isHi ? "कार्यकारी निर्णय सारांश" : "Executive Decision Summary"}
@@ -117,7 +118,8 @@ export function BlockPremiumClosing({ ctx }: Props) {
             </div>
           ))}
         </div>
-      </motion.div>
+        </motion.div>
+      </SectionReveal>
 
       {/* Cost of delay */}
       <motion.div

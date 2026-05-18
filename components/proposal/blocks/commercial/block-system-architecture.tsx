@@ -15,16 +15,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Cpu, Shield, Wifi } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
-
-function SectionLabel({ num, label }: { num: string; label: string }) {
-  return (
-    <div className="mb-8 flex items-center gap-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{num}</span>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-600">{label}</span>
-    </div>
-  );
-}
+import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
 
 type ArchNode = {
   id: string;
@@ -141,22 +132,21 @@ export function BlockSystemArchitecture({ ctx }: Props) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-      <SectionLabel num="05" label={isHi ? "सिस्टम आर्किटेक्चर" : "System Architecture"} />
-
-      <div className="mb-3">
-        <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">
-          {isHi ? "सिस्टम कंपोनेंट आर्किटेक्चर" : "System Component Architecture"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {isHi
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 md:px-12 md:py-24">
+      <CommercialSectionHeader
+        num="05"
+        label={isHi ? "सिस्टम आर्किटेक्चर" : "System Architecture"}
+        title={isHi ? "सिस्टम कंपोनेंट आर्किटेक्चर" : "System Component Architecture"}
+        subtitle={
+          isHi
             ? "DC स्ट्रिंग से ग्रिड तक — सिंगल-लाइन डायग्राम सारांश"
-            : "DC string to grid — single-line diagram overview with component specifications"}
-        </p>
-      </div>
+            : "DC string to grid — single-line diagram overview with component specifications"
+        }
+      />
 
       {/* Architecture flow diagram */}
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <SectionReveal>
+        <GlassPanel className="p-5">
         <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
           {isHi ? "सिस्टम ब्लॉक डायग्राम" : "System Block Diagram (Simplified SLD)"}
         </p>
@@ -199,10 +189,12 @@ export function BlockSystemArchitecture({ ctx }: Props) {
             {isHi ? "ग्रिड कनेक्शन" : "Grid tie (DISCOM metering)"}
           </span>
         </div>
-      </div>
+        </GlassPanel>
+      </SectionReveal>
 
       {/* Component specifications table */}
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white shadow-sm">
+      <SectionReveal className="mt-6" delay={0.08}>
+        <GlassPanel>
         <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
           <Cpu className="h-4 w-4 text-indigo-500" />
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -239,12 +231,12 @@ export function BlockSystemArchitecture({ ctx }: Props) {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
+        </GlassPanel>
+      </SectionReveal>
 
       {/* Protection & monitoring row */}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <SectionReveal className="mt-6 grid gap-5 sm:grid-cols-2" delay={0.12}>
+        <GlassPanel className="p-5">
           <div className="mb-3 flex items-center gap-2">
             <Shield className="h-4 w-4 text-rose-500" />
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -266,9 +258,9 @@ export function BlockSystemArchitecture({ ctx }: Props) {
               </li>
             ))}
           </ul>
-        </div>
+        </GlassPanel>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <GlassPanel className="p-5">
           <div className="mb-3 flex items-center gap-2">
             <Wifi className="h-4 w-4 text-sky-500" />
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -290,8 +282,8 @@ export function BlockSystemArchitecture({ ctx }: Props) {
               </li>
             ))}
           </ul>
-        </div>
-      </div>
+        </GlassPanel>
+      </SectionReveal>
     </div>
   );
 }

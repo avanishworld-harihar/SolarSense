@@ -17,16 +17,7 @@
 import { motion } from "framer-motion";
 import { Calendar, CheckCircle2 } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
-
-function SectionLabel({ num, label }: { num: string; label: string }) {
-  return (
-    <div className="mb-8 flex items-center gap-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{num}</span>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-600">{label}</span>
-    </div>
-  );
-}
+import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
 
 type Phase = {
   num: string;
@@ -211,22 +202,21 @@ export function BlockExecutionTimeline({ ctx }: Props) {
   const weekNumbers = Array.from({ length: totalWeeksDisplay }, (_, i) => i + 1);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-      <SectionLabel num="07" label={isHi ? "परियोजना समयरेखा" : "Execution Timeline"} />
-
-      <div className="mb-3">
-        <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">
-          {isHi ? "परियोजना कार्यान्वयन समयरेखा" : "Project Execution Timeline"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {isHi
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 md:px-12 md:py-24">
+      <CommercialSectionHeader
+        num="07"
+        label={isHi ? "परियोजना समयरेखा" : "Execution Timeline"}
+        title={isHi ? "परियोजना कार्यान्वयन समयरेखा" : "Project Execution Timeline"}
+        subtitle={
+          isHi
             ? `अनुमानित ${totalWeeksDisplay}-सप्ताह की कार्य योजना — ${summary.systemKw} kW सिस्टम`
-            : `Estimated ${totalWeeksDisplay}-week project plan for ${summary.systemKw} kW on-grid system`}
-        </p>
-      </div>
+            : `Estimated ${totalWeeksDisplay}-week project plan for ${summary.systemKw} kW on-grid system`
+        }
+      />
 
       {/* Gantt chart */}
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <SectionReveal>
+        <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_16px_rgba(15,23,42,0.05)]">
         <div className="min-w-[640px] p-5">
           {/* Week header */}
           <div className="mb-3 flex">
@@ -288,10 +278,11 @@ export function BlockExecutionTimeline({ ctx }: Props) {
             );
           })}
         </div>
-      </div>
+        </div>
+      </SectionReveal>
 
       {/* Milestones + activities */}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {phases.map((phase, i) => {
           const c = colorMap[phase.color];
           const phaseLabel = isHi && phase.phaseHi ? phase.phaseHi : phase.phase;

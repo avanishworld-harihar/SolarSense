@@ -13,16 +13,7 @@
 import { motion } from "framer-motion";
 import { ClipboardList, FileCheck, IndianRupee, Scale } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
-
-function SectionLabel({ num, label }: { num: string; label: string }) {
-  return (
-    <div className="mb-8 flex items-center gap-4">
-      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">{num}</span>
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-sky-600">{label}</span>
-    </div>
-  );
-}
+import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
 
 const fmtL = (v: number) => {
   if (v >= 10_000_000) return `₹${(v / 10_000_000).toFixed(2)} Cr`;
@@ -144,23 +135,22 @@ export function BlockCommercialTerms({ ctx }: Props) {
       ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:px-8 md:py-14">
-      <SectionLabel num="09" label={isHi ? "व्यावसायिक शर्तें" : "Commercial Terms"} />
-
-      <div className="mb-3">
-        <h2 className="text-2xl font-bold text-slate-900 md:text-3xl">
-          {isHi ? "व्यावसायिक एवं कानूनी शर्तें" : "Commercial & Contractual Terms"}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {isHi
+    <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 md:px-12 md:py-24">
+      <CommercialSectionHeader
+        num="09"
+        label={isHi ? "व्यावसायिक शर्तें" : "Commercial Terms"}
+        title={isHi ? "व्यावसायिक एवं कानूनी शर्तें" : "Commercial & Contractual Terms"}
+        subtitle={
+          isHi
             ? "भुगतान अनुसूची, वारंटी मैट्रिक्स, दायरा एवं मुख्य व्यावसायिक शर्तें"
-            : "Payment schedule, warranty matrix, EPC scope, and key commercial terms"}
-        </p>
-      </div>
+            : "Payment schedule, warranty matrix, EPC scope, and key commercial terms"
+        }
+      />
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         {/* Payment schedule */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <SectionReveal>
+          <GlassPanel>
           <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
             <IndianRupee className="h-4 w-4 text-sky-500" />
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -210,13 +200,13 @@ export function BlockCommercialTerms({ ctx }: Props) {
                 );
               })}
             </div>
-          </div>
-        </div>
+          </GlassPanel>
+        </SectionReveal>
 
         {/* Key terms + scope */}
-        <div className="flex flex-col gap-4">
+        <SectionReveal className="flex flex-col gap-4" delay={0.08}>
           {/* Key commercial terms */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <GlassPanel>
             <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
               <Scale className="h-4 w-4 text-indigo-500" />
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -237,7 +227,7 @@ export function BlockCommercialTerms({ ctx }: Props) {
           </div>
 
           {/* Scope matrix */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+          <GlassPanel>
             <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
               <ClipboardList className="h-4 w-4 text-emerald-500" />
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -271,13 +261,14 @@ export function BlockCommercialTerms({ ctx }: Props) {
                   ))}
                 </ul>
               </div>
-            </div>
-          </div>
-        </div>
+            </GlassPanel>
+          </GlassPanel>
+        </SectionReveal>
       </div>
 
       {/* Warranty matrix */}
-      <div className="mt-5 rounded-xl border border-slate-200 bg-white shadow-sm">
+      <SectionReveal className="mt-6" delay={0.12}>
+        <GlassPanel>
         <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
           <FileCheck className="h-4 w-4 text-violet-500" />
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
@@ -318,7 +309,8 @@ export function BlockCommercialTerms({ ctx }: Props) {
             ? `* वारंटी दावे के लिए ${installer.name} से संपर्क करें। सभी वारंटी नियमित रखरखाव की शर्त पर लागू हैं।`
             : `* Contact ${installer.name} for warranty claims. All warranties subject to normal maintenance and use conditions.`}
         </p>
-      </div>
+        </GlassPanel>
+      </SectionReveal>
     </div>
   );
 }

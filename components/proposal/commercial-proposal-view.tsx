@@ -1,23 +1,31 @@
 "use client";
 
 /**
- * CommercialProposalView — the executive-grade commercial proposal rendering experience.
+ * CommercialProposalView — executive-grade commercial proposal rendering.
  *
  * Route: /proposal/[id] when preset_id = "commercial_executive"
  *
  * Architecture:
- *   - Self-contained: manages its own state (lang, downloading)
  *   - Derives all commercial metrics from ProposalDeckSummary + PremiumProposalPptInput
  *   - Renders 10 premium sections sequentially
- *   - Sticky dark top-nav with section jumpers
+ *   - Sticky dark top-nav with active-section tracking + section jumpers
+ *   - Presentation mode: fullscreen immersive walkthrough
+ *   - Alternate section backgrounds for visual rhythm
+ *   - Floating progress indicator on desktop
  *   - Mobile + iPad responsive
- *
- * Does NOT use ProposalWebRenderer or the block registry.
- * This is a purpose-built executive renderer for the commercial_executive preset.
  */
 
-import { useCallback, useState } from "react";
-import { MotionConfig } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import {
+  Expand,
+  Minimize,
+  Maximize2,
+  Share2,
+  X,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import type { ProposalDeckSummary, PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import type { ProposalLang } from "@/lib/proposal-i18n";
 
@@ -33,7 +41,7 @@ import { BlockMonitoringAMC } from "./blocks/commercial/block-monitoring-amc";
 import { BlockCommercialTerms } from "./blocks/commercial/block-commercial-terms";
 import { BlockPremiumClosing } from "./blocks/commercial/block-premium-closing";
 
-// ─── Shared context type ─────────────────────────────────────────────────────
+// ─── Shared context ───────────────────────────────────────────────────────────
 
 export type CommercialCtx = {
   summary: ProposalDeckSummary;
@@ -63,7 +71,7 @@ export type CommercialCtx = {
   onShare: () => void;
 };
 
-// ─── Sticky navigation sections ──────────────────────────────────────────────
+// ─── Navigation sections ──────────────────────────────────────────────────────
 
 const NAV_SECTIONS = [
   { num: "01", label: "Executive", anchor: "comm-cover" },
@@ -78,13 +86,31 @@ const NAV_SECTIONS = [
   { num: "10", label: "Closing", anchor: "comm-closing" },
 ] as const;
 
+type SectionAnchor = (typeof NAV_SECTIONS)[number]["anchor"];
+
 function scrollToSection(anchor: string) {
   if (typeof document === "undefined") return;
   const el = document.getElementById(anchor);
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ─── Props ───────────────────────────────────────────────────────────────────
+// ─── Section background alternation ──────────────────────────────────────────
+// Cover is always dark-navy. Sections alternate white / very-light-slate.
+
+const SECTION_BG = [
+  "", // cover — dark, handled by block itself
+  "bg-white",
+  "bg-slate-50/70",
+  "bg-white",
+  "bg-slate-50/70",
+  "bg-white",
+  "bg-slate-50/70",
+  "bg-white",
+  "bg-slate-50/70",
+  "bg-white",
+] as const;
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 export type CommercialProposalViewProps = {
   id: string;
@@ -97,7 +123,7 @@ export type CommercialProposalViewProps = {
   installerLogoUrl?: string;
 };
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommercialProposalView({
   id,
@@ -111,6 +137,49 @@ export default function CommercialProposalView({
 }: CommercialProposalViewProps) {
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
   const [downloading, setDownloading] = useState(false);
+  const [activeSection, setActiveSection] = useState<SectionAnchor>("comm-cover");
+  const [presentMode, setPresentMode] = useState(false);
+  const [presentIdx, setPresentIdx] = useState(0);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // ── Active-section tracking via IntersectionObserver ─────────────────────
+  useEffect(() => {
+    const sections = NAV_SECTIONS.map((s) => document.getElementById(s.anchor)).filter(Boolean) as HTMLElement[];
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id as SectionAnchor);
+          }
+        }
+      },
+      { threshold: 0.25, rootMargin: "-10% 0px -60% 0px" }
+    );
+    sections.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
+  // ── Presentation-mode keyboard navigation ─────────────────────────────────
+  useEffect(() => {
+    if (!presentMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        setPresentIdx((i) => Math.min(i + 1, NAV_SECTIONS.length - 1));
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        setPresentIdx((i) => Math.max(i - 1, 0));
+      } else if (e.key === "Escape") {
+        setPresentMode(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [presentMode]);
+
+  // Scroll to active section in presentation mode
+  useEffect(() => {
+    if (!presentMode) return;
+    scrollToSection(NAV_SECTIONS[presentIdx].anchor);
+  }, [presentMode, presentIdx]);
 
   // ── Derived commercial metrics ────────────────────────────────────────────
 
@@ -138,34 +207,29 @@ export default function CommercialProposalView({
     summary.systemKw > 0
       ? Math.round(summary.annualGen / summary.systemKw)
       : 0;
-  const performanceRatio = 78; // typical India on-grid PR
+  const performanceRatio = 78;
   const lcoe =
     summary.netCost > 0 && summary.annualGen > 0
       ? Math.round((summary.netCost / (summary.annualGen * 25)) * 100) / 100
       : 0;
 
-  // 25-year escalated cashflow
+  // 25-year escalated cashflow (6% tariff escalation)
   const cashflow25: { year: number; saving: number; cumulative: number }[] = [];
   let cumulative = -summary.netCost;
   let annualSaving = summary.annualSaving;
   for (let yr = 1; yr <= 25; yr++) {
     cumulative += annualSaving;
-    cashflow25.push({
-      year: yr,
-      saving: Math.round(annualSaving),
-      cumulative: Math.round(cumulative),
-    });
+    cashflow25.push({ year: yr, saving: Math.round(annualSaving), cumulative: Math.round(cumulative) });
     annualSaving *= 1.06;
   }
   const breakEvenYear =
     cashflow25.find((r) => r.cumulative >= 0)?.year ?? Math.round(summary.paybackYears);
   const profit25 = cashflow25[24]?.cumulative ?? summary.lifetime25Profit;
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleDownload = useCallback(() => {
     setDownloading(true);
-    // PPT download reuses the same endpoint as ProposalView
     if (typeof window !== "undefined") {
       window.open(`/api/proposals/${id}/ppt`, "_blank");
     }
@@ -182,7 +246,7 @@ export default function CommercialProposalView({
     }
   }, [customerName]);
 
-  // ── Build context object ──────────────────────────────────────────────────
+  // ── Context object ────────────────────────────────────────────────────────
 
   const ctx: CommercialCtx = {
     summary,
@@ -218,104 +282,242 @@ export default function CommercialProposalView({
         className="commercial-proposal min-h-screen font-sans antialiased"
         style={{ colorScheme: "light" }}
       >
-        {/* ── Sticky dark navigation bar ───────────────────────────────── */}
-        <nav className="sticky top-0 z-50 hidden border-b border-white/10 bg-slate-950/97 backdrop-blur-sm md:block">
-          <div className="flex items-center overflow-x-auto">
-            <div className="flex shrink-0 items-center border-r border-white/10 px-4 py-2.5">
-              <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
-                COMMERCIAL PROPOSAL
-              </span>
-            </div>
-            {NAV_SECTIONS.map((s) => (
+
+        {/* ── Sticky dark navigation bar ──────────────────────────────── */}
+        <AnimatePresence>
+          {!presentMode && (
+            <motion.nav
+              key="sticky-nav"
+              initial={{ y: -56 }}
+              animate={{ y: 0 }}
+              exit={{ y: -56 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="sticky top-0 z-50 border-b border-white/8 bg-slate-950/97 backdrop-blur-md"
+            >
+              <div className="flex items-center">
+                {/* Brand cell */}
+                <div className="hidden shrink-0 items-center gap-2 border-r border-white/8 px-4 py-2.5 md:flex">
+                  <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.28em] text-slate-500">
+                    SOL.52 COMMERCIAL
+                  </span>
+                </div>
+
+                {/* Section nav — scrollable */}
+                <div className="flex flex-1 overflow-x-auto">
+                  {NAV_SECTIONS.map((s) => {
+                    const isActive = activeSection === s.anchor;
+                    return (
+                      <button
+                        key={s.anchor}
+                        onClick={() => scrollToSection(s.anchor)}
+                        className={`group relative flex shrink-0 flex-col items-center gap-0.5 px-3.5 py-2.5 transition-colors ${
+                          isActive ? "bg-white/6" : "hover:bg-white/4"
+                        }`}
+                      >
+                        <span
+                          className={`text-[8px] font-bold transition-colors ${
+                            isActive ? "text-sky-400" : "text-slate-600 group-hover:text-sky-500"
+                          }`}
+                        >
+                          {s.num}
+                        </span>
+                        <span
+                          className={`whitespace-nowrap text-[10px] font-medium transition-colors ${
+                            isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200"
+                          }`}
+                        >
+                          {s.label}
+                        </span>
+                        {/* Active indicator */}
+                        {isActive && (
+                          <motion.div
+                            layoutId="nav-active"
+                            className="absolute bottom-0 inset-x-0 h-[2px] bg-sky-400"
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Right controls */}
+                <div className="flex shrink-0 items-center gap-1 border-l border-white/8 px-2 py-1.5">
+                  {/* Language toggle */}
+                  <button
+                    onClick={() => setLang(lang === "en" ? "hi" : "en")}
+                    className="rounded px-2 py-1 text-[10px] font-semibold text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-300"
+                  >
+                    {lang === "en" ? "हिंदी" : "EN"}
+                  </button>
+                  {/* Presentation mode */}
+                  <button
+                    onClick={() => { setPresentMode(true); setPresentIdx(0); }}
+                    title="Presentation mode"
+                    className="flex items-center gap-1.5 rounded px-2 py-1 text-[10px] font-semibold text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
+                  >
+                    <Expand className="h-3 w-3" />
+                    <span className="hidden sm:inline">Present</span>
+                  </button>
+                  {/* Share */}
+                  <button
+                    onClick={handleShare}
+                    className="flex h-7 w-7 items-center justify-center rounded text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
+                  >
+                    <Share2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
+
+        {/* ── Presentation-mode overlay bar ────────────────────────────── */}
+        <AnimatePresence>
+          {presentMode && (
+            <motion.div
+              key="present-bar"
+              initial={{ y: -48 }}
+              animate={{ y: 0 }}
+              exit={{ y: -48 }}
+              className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between border-b border-white/8 bg-slate-950/98 px-4 py-2 backdrop-blur-md"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-500">
+                  PRESENTATION MODE
+                </span>
+                <span className="text-[10px] text-slate-600">
+                  {presentIdx + 1} / {NAV_SECTIONS.length} · {NAV_SECTIONS[presentIdx].label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPresentIdx((i) => Math.max(i - 1, 0))}
+                  disabled={presentIdx === 0}
+                  className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setPresentIdx((i) => Math.min(i + 1, NAV_SECTIONS.length - 1))}
+                  disabled={presentIdx === NAV_SECTIONS.length - 1}
+                  className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setPresentMode(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded text-slate-500 hover:bg-white/10 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Floating vertical progress bar (desktop) ─────────────────── */}
+        <div className="fixed right-4 top-1/2 z-40 hidden -translate-y-1/2 flex-col items-center gap-1.5 xl:flex">
+          {NAV_SECTIONS.map((s, i) => {
+            const isActive = activeSection === s.anchor;
+            return (
               <button
                 key={s.anchor}
                 onClick={() => scrollToSection(s.anchor)}
-                className="group flex shrink-0 flex-col items-center gap-0.5 px-3.5 py-2.5 transition-colors hover:bg-white/5"
+                title={s.label}
+                className="group flex items-center gap-2"
               >
-                <span className="text-[8px] font-bold text-slate-600 group-hover:text-sky-400">
-                  {s.num}
-                </span>
-                <span className="whitespace-nowrap text-[10px] font-medium text-slate-400 group-hover:text-slate-200">
+                <span className={`hidden text-[9px] font-bold transition-all group-hover:block ${isActive ? "text-sky-400" : "text-slate-400"}`}>
                   {s.label}
                 </span>
+                <span
+                  className={`block rounded-full transition-all duration-300 ${
+                    isActive
+                      ? "h-5 w-2 bg-sky-400"
+                      : "h-1.5 w-1.5 bg-slate-300 hover:bg-slate-500"
+                  }`}
+                />
               </button>
-            ))}
-            <div className="ml-auto flex shrink-0 items-center gap-1 border-l border-white/10 px-3 py-1.5">
-              <button
-                onClick={() => setLang(lang === "en" ? "hi" : "en")}
-                className="rounded px-2 py-1 text-[10px] font-semibold text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-300"
-              >
-                {lang === "en" ? "हिंदी" : "EN"}
-              </button>
-            </div>
-          </div>
-        </nav>
+            );
+          })}
+        </div>
 
-        {/* ── Section 01 — Executive Cover (full-height dark page) ─────── */}
+        {/* ── Section 01 — Cover (full-height dark) ────────────────────── */}
         <section id="comm-cover">
           <BlockCommercialCover ctx={ctx} />
         </section>
 
-        {/* ── White content area ───────────────────────────────────────── */}
-        <div className="bg-white">
-          {/* Section 02 — ROI Dashboard */}
-          <section id="comm-roi" className="border-b border-slate-100">
-            <BlockROIDashboard ctx={ctx} />
-          </section>
-
-          {/* Section 03 — Financial Intelligence */}
-          <section id="comm-financials" className="border-b border-slate-100">
-            <BlockCommercialFinancials ctx={ctx} />
-          </section>
-
-          {/* Section 04 — Engineering Rationale */}
-          <section id="comm-engineering" className="border-b border-slate-100">
-            <BlockCommercialEngineering ctx={ctx} />
-          </section>
-
-          {/* Section 05 — System Architecture */}
-          <section id="comm-architecture" className="border-b border-slate-100">
-            <BlockSystemArchitecture ctx={ctx} />
-          </section>
-
-          {/* Section 06 — Tiered BOM */}
-          <section id="comm-bom" className="border-b border-slate-100">
-            <BlockTieredBOM ctx={ctx} />
-          </section>
-
-          {/* Section 07 — Execution Timeline */}
-          <section id="comm-timeline" className="border-b border-slate-100">
-            <BlockExecutionTimeline ctx={ctx} />
-          </section>
-
-          {/* Section 08 — Monitoring + AMC */}
-          <section id="comm-monitoring" className="border-b border-slate-100">
-            <BlockMonitoringAMC ctx={ctx} />
-          </section>
-
-          {/* Section 09 — Commercial Terms */}
-          <section id="comm-terms" className="border-b border-slate-100">
-            <BlockCommercialTerms ctx={ctx} />
-          </section>
-
-          {/* Section 10 — Premium Closing */}
-          <section id="comm-closing" className="pb-20">
-            <BlockPremiumClosing ctx={ctx} />
-          </section>
+        {/* ── Content sections — alternating white/light backgrounds ───── */}
+        <div>
+          {(
+            [
+              { anchor: "comm-roi", idx: 1, Block: BlockROIDashboard },
+              { anchor: "comm-financials", idx: 2, Block: BlockCommercialFinancials },
+              { anchor: "comm-engineering", idx: 3, Block: BlockCommercialEngineering },
+              { anchor: "comm-architecture", idx: 4, Block: BlockSystemArchitecture },
+              { anchor: "comm-bom", idx: 5, Block: BlockTieredBOM },
+              { anchor: "comm-timeline", idx: 6, Block: BlockExecutionTimeline },
+              { anchor: "comm-monitoring", idx: 7, Block: BlockMonitoringAMC },
+              { anchor: "comm-terms", idx: 8, Block: BlockCommercialTerms },
+              { anchor: "comm-closing", idx: 9, Block: BlockPremiumClosing },
+            ] as const
+          ).map(({ anchor, idx, Block }) => (
+            <section
+              key={anchor}
+              id={anchor}
+              className={`${SECTION_BG[idx]} border-b border-slate-100/80 last:border-0`}
+            >
+              {/* @ts-expect-error — Block components all accept { ctx } */}
+              <Block ctx={ctx} />
+            </section>
+          ))}
         </div>
 
-        {/* ── Mobile nav FAB (bottom-right) ───────────────────────────── */}
-        <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 md:hidden">
+        {/* ── Mobile FAB ───────────────────────────────────────────────── */}
+        <div className="fixed bottom-5 right-4 z-40 flex flex-col items-end gap-2 md:hidden">
+          {/* Mobile section nav toggle */}
+          {mobileNavOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="mb-1 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/98 py-2 shadow-2xl backdrop-blur-md"
+            >
+              {NAV_SECTIONS.map((s) => (
+                <button
+                  key={s.anchor}
+                  onClick={() => { scrollToSection(s.anchor); setMobileNavOpen(false); }}
+                  className="flex w-full items-center gap-3 px-4 py-2 text-left hover:bg-white/5"
+                >
+                  <span className="text-[9px] font-bold text-slate-500">{s.num}</span>
+                  <span className="text-xs font-medium text-slate-300">{s.label}</span>
+                </button>
+              ))}
+            </motion.div>
+          )}
+
+          {/* Menu toggle */}
+          <button
+            onClick={() => setMobileNavOpen((v) => !v)}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900/90 shadow-lg backdrop-blur"
+          >
+            {mobileNavOpen ? (
+              <X className="h-4 w-4 text-white" />
+            ) : (
+              <Maximize2 className="h-4 w-4 text-white" />
+            )}
+          </button>
+
+          {/* Share */}
           <button
             onClick={handleShare}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800/90 shadow-lg backdrop-blur"
-            aria-label="Share"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-600/90 shadow-lg backdrop-blur"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
+            <Share2 className="h-4 w-4 text-white" />
           </button>
         </div>
+
+        {/* Minimal bottom padding */}
+        <div className="h-20" />
       </div>
     </MotionConfig>
   );
