@@ -270,7 +270,8 @@ function PaletteInner() {
                 <div className="flex flex-col items-center gap-2 py-10 text-center">
                   <Zap className="h-5 w-5 text-slate-300 dark:text-slate-600" aria-hidden />
                   <p className="text-sm text-slate-400 dark:text-slate-500">
-                    No results for <span className="font-semibold">"{query}"</span>
+                    No results for{" "}
+                    <span className="font-semibold">&ldquo;{query}&rdquo;</span>
                   </p>
                 </div>
               ) : (
