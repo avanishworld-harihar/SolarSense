@@ -225,7 +225,7 @@ export function BlockCommercialTerms({ ctx }: Props) {
                 </div>
               ))}
             </div>
-          </div>
+          </GlassPanel>
 
           {/* Scope matrix */}
           <GlassPanel>
@@ -262,7 +262,7 @@ export function BlockCommercialTerms({ ctx }: Props) {
                   ))}
                 </ul>
               </div>
-            </GlassPanel>
+            </div>
           </GlassPanel>
         </SectionReveal>
       </div>

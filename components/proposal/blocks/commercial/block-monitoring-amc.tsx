@@ -188,7 +188,8 @@ export function BlockMonitoringAMC({ ctx }: Props) {
                   ))}
                 </tbody>
               </table>
-            </GlassPanel>
+            </div>
+          </GlassPanel>
         </SectionReveal>
       </div>
 
