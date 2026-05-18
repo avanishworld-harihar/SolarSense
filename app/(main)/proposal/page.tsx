@@ -37,7 +37,7 @@ import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
 import { ProposalQuickPreview } from "@/components/proposal/proposal-quick-preview";
 import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
-import { Download, FileUp, Globe, MessageCircle, Send } from "lucide-react";
+import { Building2, Download, FileUp, Globe, MessageCircle, Send, Sparkles, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ProposalPresetPicker, type ProposalPresetId } from "@/components/proposals/os/preset-picker";
 import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
@@ -613,6 +613,29 @@ export default function ProposalPage() {
 
   // Reactive bill-backed status for live preview
   const isBillBackedLive = latestBill != null;
+
+  // ── Builder stage progress tracking ─────────────────────────────────────────
+  // Drives BuilderStageBar active/completed state in real-time.
+  const osActiveStageIndex = useMemo(() => {
+    const hasClient = Boolean(manual.leadContactName || manual.officialBillName || selectedLeadId);
+    const hasEnergy = isBillBackedLive || Object.values(monthlyUnits).some((v) => v > 0);
+    const hasSystem = effectiveResult.solarKw > 0;
+    if (!hasClient) return 0;
+    if (!hasEnergy) return 1;
+    if (!hasSystem) return 2;
+    return 3;
+  }, [manual.leadContactName, manual.officialBillName, selectedLeadId, isBillBackedLive, monthlyUnits, effectiveResult.solarKw]);
+
+  const osCompletedStages = useMemo(() => {
+    const stages: number[] = [];
+    const hasClient = Boolean(manual.leadContactName || manual.officialBillName || selectedLeadId);
+    const hasEnergy = isBillBackedLive || Object.values(monthlyUnits).some((v) => v > 0);
+    const hasSystem = effectiveResult.solarKw > 0;
+    if (hasClient) stages.push(0);
+    if (hasEnergy) stages.push(1);
+    if (hasSystem) stages.push(2);
+    return stages;
+  }, [manual.leadContactName, manual.officialBillName, selectedLeadId, isBillBackedLive, monthlyUnits, effectiveResult.solarKw]);
 
   useEffect(() => {
     setAdditionalBills((prev) => {
@@ -1255,6 +1278,7 @@ export default function ProposalPage() {
           netCostInr: effectiveResult.netCost,
           panels: effectiveResult.panels,
           dataSource: billBacked ? "bill" : "requirement",
+          presetId: osPresetId ?? "residential_smart",
           ...buildProposalExtrasPayload()
         })
       });
@@ -1413,12 +1437,41 @@ export default function ProposalPage() {
         <div className="flex items-start gap-4 lg:gap-6">
           {/* Main builder column */}
           <div className="min-w-0 flex-1">
-            <BuilderStageBar presetId={osPresetId} />
+            <BuilderStageBar
+              presetId={osPresetId}
+              activeStageIndex={osActiveStageIndex}
+              completedStages={osCompletedStages}
+            />
+
+            {/* Commercial-executive mode activation banner */}
+            {osPresetId === "commercial_executive" && (
+              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50 px-4 py-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 shadow-sm">
+                  <Building2 className="h-4.5 w-4.5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-sky-900">Commercial Executive Mode</p>
+                  <p className="text-[11px] text-sky-700">Bill upload is optional · Executive ROI + engineering output · DISCOM compliance included</p>
+                </div>
+                <div className="flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-1 text-[10px] font-bold text-sky-700">
+                  <Sparkles className="h-3 w-3" />
+                  Active
+                </div>
+              </div>
+            )}
 
             {/* ─── EXISTING FORM CONTENT (unchanged) ─── */}
-            <div id="step-1-anchor" className="ss-step-card space-y-2">
+            <div id="step-1-anchor" className={`ss-step-card space-y-2 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         <div className="flex items-center justify-between gap-2">
-          <span className="ss-step-chip">Step 1</span>
+          <div className="flex items-center gap-2">
+            <span className="ss-step-chip">Step 1</span>
+            {osPresetId === "commercial_executive" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                <Building2 className="h-2.5 w-2.5" />
+                Commercial
+              </span>
+            )}
+          </div>
           <button
             type="button"
             onClick={resetProposalForm}
@@ -1471,7 +1524,7 @@ export default function ProposalPage() {
         />
       ) : null}
 
-      <div id="step-2-anchor" className="ss-step-card">
+      <div id="step-2-anchor" className={`ss-step-card ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         <span className="ss-step-chip">Step 2</span>
         <h2 className="flex flex-col gap-1 text-base font-bold text-brand-900 sm:flex-row sm:items-center sm:gap-2 sm:text-lg">
           <span className="flex items-center gap-2">
@@ -1482,6 +1535,18 @@ export default function ProposalPage() {
         <p className="mt-2 text-xs font-medium leading-snug text-slate-600 sm:text-sm">
           {t("proposal_step2BillUploadsSub")} {billingRule.averagingHint}
         </p>
+
+        {/* Commercial mode — bill upload is optional */}
+        {osPresetId === "commercial_executive" && (
+          <div className="mt-2 flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5">
+            <Building2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-600" />
+            <div>
+              <p className="text-[11px] font-bold text-sky-800 sm:text-xs">Commercial mode — bill upload is optional</p>
+              <p className="mt-0.5 text-[10px] text-sky-700">Skip uploads and use requirement-based sizing. Enter monthly kWh below, or proceed directly to Step 3.</p>
+            </div>
+          </div>
+        )}
+
         {!leadSelected ? (
           <p className="mt-2 rounded-lg border border-amber-200/90 bg-amber-50/90 px-2.5 py-2 text-[11px] font-semibold leading-snug text-amber-950 sm:text-xs">
             {t("proposal_billPersistLeadHint")}
@@ -1727,7 +1792,7 @@ export default function ProposalPage() {
         <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">{t("proposal_annualSavingsLine")}</p>
       </div>
 
-      <div id="step-3-anchor" className="ss-card space-y-4 p-4 sm:p-5">
+      <div id="step-3-anchor" className={`ss-card space-y-4 p-4 sm:p-5 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         {/* Solar System Size — editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -1875,12 +1940,18 @@ export default function ProposalPage() {
         <div id="step-4-anchor" className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <button
             type="button"
-            className="ss-cta-primary sm:text-base"
+            className={`ss-cta-primary sm:text-base ${osPresetId === "commercial_executive" ? "from-sky-600 via-sky-500 to-indigo-600 hover:from-sky-700 hover:to-indigo-700" : ""}`}
             onClick={() => void generateWebProposal()}
             disabled={isWebProposalBusy}
           >
-            {isWebProposalBusy ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <Globe className="mr-2 h-4 w-4" />}
-            Generate Web Proposal
+            {isWebProposalBusy ? (
+              <Skeleton className="mr-2 h-4 w-4 rounded-full" />
+            ) : osPresetId === "commercial_executive" ? (
+              <Building2 className="mr-2 h-4 w-4" />
+            ) : (
+              <Globe className="mr-2 h-4 w-4" />
+            )}
+            {osPresetId === "commercial_executive" ? "Generate Commercial Proposal" : "Generate Web Proposal"}
           </button>
           <button
             type="button"
@@ -1934,8 +2005,8 @@ export default function ProposalPage() {
       </div>{/* closes system size ss-card */}
           </div>{/* end main builder column */}
 
-          {/* Live preview panel — desktop only (xl+) */}
-          <div className="hidden xl:block xl:w-72 xl:shrink-0 2xl:w-80">
+          {/* Live preview panel — visible at lg+ (iPad Pro, desktop) */}
+          <div className="hidden lg:block lg:w-60 lg:shrink-0 xl:w-72 2xl:w-80">
             <ProposalLivePreviewPanel
               presetId={osPresetId}
               customerName={osCustomerName}
