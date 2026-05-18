@@ -995,6 +995,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
       <SectionHeader step={3} kicker={D["slide.audit.kicker"]} title={D["slide.audit.title"]} subtitle={D["slide.audit.subtitle"]} lang={lang} />
 
       <div className="proposal-audit-stage">
+      <div className="proposal-audit-stack-chart">
       <ProposalPanel variant="flat" className="proposal-audit-chart-panel">
         <div className="proposal-audit-chart-wrap min-h-[11rem] sm:min-h-[16rem] md:min-h-[15rem] lg:min-h-[18rem]">
           <MonthlyBillsChart values={summary.auditRows.map((r) => r.total)} labels={monthLbls} peakIndices={[3, 4, 5, 6]} />
@@ -1006,19 +1007,20 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
           {summary.mpSmartBillingCaption}
         </p>
       ) : null}
+      </div>
 
-      {/* Month-wise table — min width, swipe hint, sticky month column, stacked net bill on mobile */}
-      <div className="proposal-audit-table-block mt-6">
+      {/* Month-wise table — full width; horizontal scroll on phone & iPad */}
+      <div className="proposal-audit-table-block">
         <p
-          className="mb-2 flex items-start gap-2 rounded-xl border border-slate-200/90 bg-slate-50 px-3 py-2.5 text-[11px] leading-snug text-slate-700 shadow-sm lg:hidden print:hidden"
+          className="mb-2 flex items-start gap-2 rounded-xl border border-slate-200/90 bg-slate-50 px-3 py-2.5 text-[11px] leading-snug text-slate-700 shadow-sm xl:hidden print:hidden"
           role="note"
         >
           <ChevronsLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" aria-hidden />
           <span>{D["audit.swipeHint"]}</span>
         </p>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="proposal-audit-table-scroll overflow-x-auto overflow-y-visible overscroll-x-contain scroll-smooth rounded-2xl [-webkit-overflow-scrolling:touch] sm:overflow-x-visible">
-            <table className="proposal-audit-table min-w-[760px] w-full border-separate border-spacing-0 text-[13px] sm:min-w-0 sm:table-fixed sm:text-sm">
+          <div className="proposal-audit-table-scroll overflow-x-auto overflow-y-visible overscroll-x-contain scroll-smooth rounded-2xl [-webkit-overflow-scrolling:touch] xl:overflow-x-visible">
+            <table className="proposal-audit-table min-w-[760px] w-full border-separate border-spacing-0 text-[13px] xl:min-w-0 xl:table-fixed xl:text-sm">
               <thead className="bg-slate-900 text-white">
                 <tr>
                   <th
@@ -1130,7 +1132,7 @@ function DeepAuditSection({ D, summary, monthLbls, lang }: { D: ProposalDict; su
       </div>
 
       {/* Insight cards */}
-      <div className="proposal-audit-insights proposal-orchestrated-insights mt-5 grid grid-cols-2 gap-3 sm:mt-6 sm:grid-cols-4 sm:gap-4">
+      <div className="proposal-audit-insights proposal-orchestrated-insights grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
         <div className="proposal-audit-insight-card rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-rose-100/50 p-4 shadow-sm sm:p-5">
           <p
             className={`text-[10px] font-bold text-rose-700 ${

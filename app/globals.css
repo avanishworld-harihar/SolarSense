@@ -2818,6 +2818,32 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
   }
 }
 
+/* Bill audit page — vertical stack: chart → table → insight cards */
+.proposal-bill-audit-section .proposal-audit-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* Phone + iPad: 2×2 insight grid (not 4 skinny columns) */
+@media (max-width: 1279px) {
+  .proposal-bill-audit-section .proposal-audit-insights.proposal-orchestrated-insights {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.75rem;
+  }
+}
+
+.proposal-bill-audit-section .proposal-audit-stack-chart,
+.proposal-bill-audit-section .proposal-audit-chart-panel,
+.proposal-bill-audit-section .proposal-audit-table-block,
+.proposal-bill-audit-section .proposal-audit-insights {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
 /* Bill audit — chart + insights orchestration */
 @media (max-width: 767px) {
   .proposal-audit-bars {
@@ -2882,20 +2908,47 @@ html[data-ss-touch-optimize] .backdrop-blur-3xl {
     grid-template-columns: 1.15fr 0.85fr;
   }
 
+  /* Bill audit — vertical stack on tablet (chart → table → insight cards) */
   .proposal-bill-audit-section .proposal-audit-stage {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: stretch;
+  }
+
+  .proposal-bill-audit-section .proposal-audit-stack-chart,
+  .proposal-bill-audit-section .proposal-audit-chart-panel,
+  .proposal-bill-audit-section .proposal-audit-table-block,
+  .proposal-bill-audit-section .proposal-audit-insights {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .proposal-bill-audit-section .proposal-audit-chart-panel {
     margin-bottom: 0;
   }
 
+  .proposal-bill-audit-section .proposal-audit-bars {
+    height: 14rem;
+  }
+
+  .proposal-bill-audit-section .proposal-audit-insights {
+    margin-top: 0 !important;
+  }
+
   .proposal-orchestrated-insights {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.65rem;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .proposal-orchestrated-insights > * {
+    min-width: 0;
   }
 }
 
