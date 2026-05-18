@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const JOURNEY_STEPS = [
+const JOURNEY_STEPS_BILL = [
   { id: "cover", label: "Start" },
   { id: "expertise", label: "Trust" },
   { id: "bill-audit", label: "Your bill" },
@@ -17,14 +17,30 @@ const JOURNEY_STEPS = [
   { id: "closing", label: "Next" }
 ] as const;
 
+const JOURNEY_STEPS_REQUIREMENT = [
+  { id: "cover", label: "Start" },
+  { id: "expertise", label: "Trust" },
+  { id: "system-requirement", label: "Design" },
+  { id: "environment", label: "Impact" },
+  { id: "technical-bom", label: "System" },
+  { id: "survey", label: "Install" },
+  { id: "amc", label: "Support" },
+  { id: "commercial", label: "Pay" },
+  { id: "closing", label: "Next" }
+] as const;
+
 export function ProposalJourneyProgress({
   showSurvey,
+  billAuditBacked = true,
   className
 }: {
   showSurvey?: boolean;
+  /** When false, bill audit + economics nav items are replaced by system design. */
+  billAuditBacked?: boolean;
   className?: string;
 }) {
-  const steps = JOURNEY_STEPS.filter((s) => s.id !== "survey" || showSurvey);
+  const base = billAuditBacked ? JOURNEY_STEPS_BILL : JOURNEY_STEPS_REQUIREMENT;
+  const steps = base.filter((s) => s.id !== "survey" || showSurvey);
 
   return (
     <nav

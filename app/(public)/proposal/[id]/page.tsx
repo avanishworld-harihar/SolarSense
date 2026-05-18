@@ -5,6 +5,7 @@ import { getLeadSurveyStatus } from "@/lib/supabase";
 import { mergeProposalPricingIntoPptInput } from "@/lib/proposal-pricing-merge";
 import { getProposalPricingByProposalId } from "@/lib/proposal-pricing-store";
 import { getProposalById, trackProposalView } from "@/lib/proposals-store";
+import { isProposalBillAuditBacked } from "@/lib/proposal-bill-audit-eligibility";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import ProposalView from "./proposal-view";
 
@@ -50,11 +51,13 @@ export default async function PublicProposalPage({ params }: PageProps) {
   const leadId = proposal.lead_id?.trim() ? proposal.lead_id.trim() : null;
   const surveyStatus = await getLeadSurveyStatus(leadId);
   const showSurveyWorkflowSection = isLeadSurveyCompleteForProposal(surveyStatus);
+  const billAuditBacked = isProposalBillAuditBacked(mergedInput);
 
   return (
     <ProposalView
       id={id}
       summary={liveSummary}
+      billAuditBacked={billAuditBacked}
       installer={{
         name: proposal.installer_name ?? liveSummary.installer,
         contact: proposal.installer_contact ?? liveSummary.contact,

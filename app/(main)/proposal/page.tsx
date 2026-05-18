@@ -30,6 +30,7 @@ import {
 } from "@/lib/discom-billing-rules";
 import { pickProposalLeadPhone, patchLeadPhoneIfProvided } from "@/lib/lead-phone";
 import { mergeCustomerForProposal, type ManualProposalCustomer } from "@/lib/merge-proposal-customer";
+import { isBillBackedFromBuilderState } from "@/lib/proposal-bill-audit-eligibility";
 import { swrDiscomsWithOfflineCache, swrTariffWithOfflineCache } from "@/lib/proposal-swr-fetchers";
 import { CUSTOMERS_SWR_KEY, fetchCustomersLoose } from "@/lib/customers-client";
 import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
@@ -1199,6 +1200,14 @@ export default function ProposalPage() {
       const uploadedBills = [latestBill, ...additionalBills];
       const monthlyBillActuals = buildMonthlyBillActualsFromBills(uploadedBills, auditedMonthTotals);
       const monthlyAuditOverrides = buildMonthlyAuditOverridesFromBills(uploadedBills);
+      const billBacked = isBillBackedFromBuilderState({
+        latestBill,
+        previousBill,
+        additionalBills,
+        monthlyUnits,
+        auditedMonthTotals,
+        monthlyBillActuals
+      });
       const response = await fetch("/api/proposals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1231,6 +1240,7 @@ export default function ProposalPage() {
           pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
           netCostInr: effectiveResult.netCost,
           panels: effectiveResult.panels,
+          dataSource: billBacked ? "bill" : "requirement",
           ...buildProposalExtrasPayload()
         })
       });

@@ -205,6 +205,8 @@ type ProposalViewProps = {
   installerLogoUrl?: string;
   /** When true, show the site survey + install workflow page (CRM `survey_status` complete). */
   showSurveyWorkflowSection?: boolean;
+  /** When false, hide bill audit + economics pages and show system-requirement page instead. */
+  billAuditBacked?: boolean;
 };
 
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
@@ -342,6 +344,7 @@ function journeyBridge(lang: ProposalLang, key: string): string {
     afterCover: "We start with who we are — then we look at your bill, your savings, and your system.",
     afterTrust: "Your real electricity bills show where costs go up — and where solar helps.",
     afterBill: "From your bill pattern, here is how much you can save each year.",
+    afterRequirement: "Here is the system we sized for your requirement — generation, coverage, and commercial snapshot.",
     afterSavings: "Along with savings, solar also cuts pollution and helps the planet.",
     afterImpact: "This is the system size and parts we recommend for your roof.",
     afterSystem: "Here is how we install, support, and stay with you after go-live.",
@@ -353,6 +356,7 @@ function journeyBridge(lang: ProposalLang, key: string): string {
     afterCover: "पहले हमारा परिचय — फिर आपका बिल, बचत और सिस्टम।",
     afterTrust: "आपके असली बिल बताते हैं कि खर्च कहाँ बढ़ता है — और सोलर कहाँ मदद करता है।",
     afterBill: "बिल के हिसाब से, हर साल आप कितना बचा सकते हैं — यहाँ है।",
+    afterRequirement: "आपकी ज़रूरत के हिसाब से सिस्टम — उत्पादन, कवरेज और वाणिज्यिक सारांश।",
     afterSavings: "बचत के साथ, सोलर से प्रदूषण भी कम होता है।",
     afterImpact: "आपकी छत के लिए सिस्टम साइज़ और सामान — यहाँ है।",
     afterSystem: "इंस्टॉल, सपोर्ट और बाद की देखभाल — कैसे करते हैं।",
@@ -877,6 +881,111 @@ function HeroCover({
         )}
       </div>
     </section>
+  );
+}
+
+function SystemRequirementSection({
+  D,
+  summary,
+  lang
+}: {
+  D: ProposalDict;
+  summary: ProposalDeckSummary;
+  lang: ProposalLang;
+}) {
+  const monthlyGen = Math.round(summary.annualGen / 12);
+  const inverterLabel = summary.brands?.inverter ?? summary.panelBrand ?? "—";
+  const panelLabel = summary.brands?.panel ?? summary.panelBrand ?? "—";
+  const surplus = Math.max(0, summary.annualGen - summary.annualUse);
+
+  return (
+    <ProposalJourneySection id="system-requirement" className="proposal-system-requirement-section">
+      <SectionHeader
+        step={3}
+        kicker={D["slide.requirement.kicker"]}
+        title={D["slide.requirement.title"]}
+        subtitle={D["slide.requirement.subtitle"]}
+        lang={lang}
+      />
+
+      <p className="proposal-requirement-note mb-6 rounded-xl border border-indigo-200/70 bg-indigo-50/80 px-4 py-3 text-sm leading-relaxed text-slate-800 dark:border-indigo-500/30 dark:bg-indigo-950/30 dark:text-slate-200">
+        {D["req.designNote"]}
+      </p>
+
+      <div className="proposal-requirement-hero mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ProposalPanel emphasis="highlight" className="flex flex-col gap-1 sm:col-span-2">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{D["common.system"]}</p>
+          <p className="text-3xl font-extrabold tabular-nums text-indigo-800 dark:text-indigo-200">
+            {summary.systemKw} kW
+          </p>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            {summary.panels} × {D["common.panels"]} (540 W class)
+          </p>
+        </ProposalPanel>
+        <ProposalPanel className="flex flex-col justify-center">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{D["gen.annualGen"]}</p>
+          <p className="mt-1 text-2xl font-extrabold tabular-nums text-emerald-800 dark:text-emerald-300">
+            {summary.annualGen.toLocaleString("en-IN")} u
+          </p>
+          <p className="mt-0.5 text-xs text-slate-600">
+            {D["req.monthlyGen"]}: ~{monthlyGen.toLocaleString("en-IN")} u
+          </p>
+        </ProposalPanel>
+        <ProposalPanel className="flex flex-col justify-center">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{D["req.estimatedUse"]}</p>
+          <p className="mt-1 text-2xl font-extrabold tabular-nums text-sky-900 dark:text-sky-200">
+            {summary.annualUse.toLocaleString("en-IN")} u
+          </p>
+          <p className="mt-0.5 text-xs text-slate-600">
+            {D["gen.coverage"]}: {summary.coverage}%
+          </p>
+        </ProposalPanel>
+      </div>
+
+      <div className="proposal-requirement-spec grid gap-4 md:grid-cols-2">
+        <ProposalPanel className="sm:p-6">
+          <div className="flex items-start gap-3">
+            <Sun className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" aria-hidden />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{D["req.specPanels"]}</p>
+              <p className="mt-1 text-base font-bold text-slate-900 dark:text-slate-50">{panelLabel}</p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-start gap-3 border-t border-slate-100 pt-4 dark:border-white/10">
+            <Zap className="mt-0.5 h-5 w-5 shrink-0 text-indigo-500" aria-hidden />
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{D["req.specInverter"]}</p>
+              <p className="mt-1 text-base font-bold text-slate-900 dark:text-slate-50">{inverterLabel}</p>
+            </div>
+          </div>
+        </ProposalPanel>
+        <ProposalPanel className="sm:p-6">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{D["req.financialTitle"]}</p>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <StatTile label={D["common.netCost"]} value={inr(summary.netCost)} tone="blue" lang={lang} />
+            <StatTile
+              label={D["common.annualSaving"]}
+              value={inr(summary.annualSaving)}
+              rawValue={summary.annualSaving}
+              tone="green"
+              lang={lang}
+            />
+            <StatTile
+              label={D["common.payback"]}
+              value={`${summary.paybackYears.toFixed(1)} ${D["emi.years"]}`}
+              tone="ink"
+              lang={lang}
+            />
+            <StatTile label={D["gen.coverage"]} value={`${summary.coverage}%`} tone="green" lang={lang} />
+          </div>
+          {surplus > 0 ? (
+            <p className="mt-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+              {D["gen.surplus"]}: ~{surplus.toLocaleString("en-IN")} u / yr
+            </p>
+          ) : null}
+        </ProposalPanel>
+      </div>
+    </ProposalJourneySection>
   );
 }
 
@@ -2312,7 +2421,8 @@ export default function ProposalView({
   installer,
   siteImages,
   installerLogoUrl,
-  showSurveyWorkflowSection = false
+  showSurveyWorkflowSection = false,
+  billAuditBacked = true
 }: ProposalViewProps) {
   const [downloading, setDownloading] = useState(false);
   const [lang, setLang] = useState<ProposalLang>(summary.lang ?? "en");
@@ -2440,7 +2550,11 @@ export default function ProposalView({
       >
       {/* Floating controls — hidden in print */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <ProposalJourneyProgress showSurvey={showSurveyWorkflowSection} className="flex-1 min-w-0" />
+        <ProposalJourneyProgress
+          showSurvey={showSurveyWorkflowSection}
+          billAuditBacked={billAuditBacked}
+          className="flex-1 min-w-0"
+        />
       </div>
       <div className="mb-4 flex flex-wrap items-center justify-end gap-2 print:hidden">
         <button
@@ -2503,19 +2617,25 @@ export default function ProposalView({
 
       <JourneyBridge text={journeyBridge(lang, "afterTrust")} lang={lang} />
 
-      {/* PAGE 3 — BILL INTELLIGENCE (chart + table + insights, one print page) */}
-      <div className="proposal-page" data-page="bill-audit">
-        <DeepAuditSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} />
-      </div>
-
-      <JourneyBridge text={journeyBridge(lang, "afterBill")} lang={lang} />
-
-      {/* PAGE 4 — ECONOMICS (Solar vs Grid, EMI, ROI) */}
-      <div className="proposal-page" data-page="economics">
-        <EconomicsSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} />
-      </div>
-
-      <JourneyBridge text={journeyBridge(lang, "afterSavings")} lang={lang} />
+      {billAuditBacked ? (
+        <>
+          <div className="proposal-page" data-page="bill-audit">
+            <DeepAuditSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} />
+          </div>
+          <JourneyBridge text={journeyBridge(lang, "afterBill")} lang={lang} />
+          <div className="proposal-page" data-page="economics">
+            <EconomicsSection D={D} summary={displaySummary} monthLbls={monthLbls} lang={lang} />
+          </div>
+          <JourneyBridge text={journeyBridge(lang, "afterSavings")} lang={lang} />
+        </>
+      ) : (
+        <>
+          <div className="proposal-page" data-page="system-requirement">
+            <SystemRequirementSection D={D} summary={displaySummary} lang={lang} />
+          </div>
+          <JourneyBridge text={journeyBridge(lang, "afterRequirement")} lang={lang} />
+        </>
+      )}
 
       {/* PAGE 5 — ENVIRONMENT (Carbon offset + tree-planting equivalence) */}
       <div className="proposal-page" data-page="environment">

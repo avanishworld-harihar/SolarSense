@@ -83,6 +83,7 @@ const bodySchema = z.object({
   grossSystemCostInr: z.number().min(0).max(50000000).optional(),
   pmSuryaGharSubsidyInr: z.number().min(0).max(500000).optional(),
   netCostInr: z.number().min(0).max(50000000).optional(),
+  dataSource: z.enum(["bill", "requirement"]).optional(),
   panelBrand: z.enum(["Adani", "Waaree", "JSW", "Tata", "Vikram", "RenewSys"]).optional(),
   installerName: z.string().max(120).optional(),
   installerTagline: z.string().max(160).optional(),

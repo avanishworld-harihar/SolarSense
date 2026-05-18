@@ -37,6 +37,15 @@ export type ProposalDict = {
   "slide.economics.kicker": string;
   "slide.economics.title": string;
   "slide.economics.subtitle": string;
+  "slide.requirement.kicker": string;
+  "slide.requirement.title": string;
+  "slide.requirement.subtitle": string;
+  "req.designNote": string;
+  "req.estimatedUse": string;
+  "req.monthlyGen": string;
+  "req.specPanels": string;
+  "req.specInverter": string;
+  "req.financialTitle": string;
   "slide.environment.kicker": string;
   "slide.environment.title": string;
   "slide.environment.subtitle": string;
@@ -226,6 +235,16 @@ const EN: ProposalDict = {
   "slide.economics.kicker": "Generation vs Usage",
   "slide.economics.title": "How Your Solar Will Pay Itself Off",
   "slide.economics.subtitle": "EMI options, lifetime savings & break-even point",
+  "slide.requirement.kicker": "System design",
+  "slide.requirement.title": "Your recommended solar system",
+  "slide.requirement.subtitle": "Sized from your requirement — upload bills later to refine the audit",
+  "req.designNote":
+    "Figures below use your stated load and standard MPERC assumptions. A bill upload will unlock the month-by-month audit pages.",
+  "req.estimatedUse": "Estimated annual consumption",
+  "req.monthlyGen": "Typical monthly generation",
+  "req.specPanels": "PV modules",
+  "req.specInverter": "Inverter class",
+  "req.financialTitle": "Commercial snapshot",
   "slide.environment.kicker": "Your Green Legacy",
   "slide.environment.title": "Carbon You'll Save Forever",
   "slide.environment.subtitle": "25-year environmental impact of your rooftop",
@@ -392,6 +411,16 @@ const HI: ProposalDict = {
   "slide.economics.kicker": "उत्पादन बनाम खपत",
   "slide.economics.title": "आपका सोलर खुद की कीमत कैसे चुकाएगा",
   "slide.economics.subtitle": "EMI विकल्प, आजीवन बचत और ब्रेक-ईवन बिंदु",
+  "slide.requirement.kicker": "सिस्टम डिज़ाइन",
+  "slide.requirement.title": "आपके लिए सुझाया सोलर सिस्टम",
+  "slide.requirement.subtitle": "आपकी ज़रूरत के हिसाब से — बिल अपलोड करने पर मासिक ऑडिट पेज खुलेंगे",
+  "req.designNote":
+    "नीचे के आँकड़े आपकी ज़रूरत और MPERC मानकों पर आधारित हैं। बिल अपलोड करने पर माह-दर-माह ऑडिट दिखेगा।",
+  "req.estimatedUse": "अनुमानित वार्षिक खपत",
+  "req.monthlyGen": "औसत मासिक उत्पादन",
+  "req.specPanels": "सोलर पैनल",
+  "req.specInverter": "इन्वर्टर",
+  "req.financialTitle": "वाणिज्यिक सारांश",
   "slide.environment.kicker": "आपकी हरित विरासत",
   "slide.environment.title": "आपके द्वारा बचाया जाने वाला कार्बन",
   "slide.environment.subtitle": "आपकी छत का 25-वर्षीय पर्यावरणीय प्रभाव",

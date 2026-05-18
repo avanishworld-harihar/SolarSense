@@ -108,6 +108,12 @@ export type PremiumProposalPptInput = {
   /** Optional company logo (data URL or http(s) URL). */
   installerLogoUrl?: string;
 
+  /**
+   * `bill` — show bill audit + economics pages (uploaded bill or varied monthly units).
+   * `requirement` — CRM / sizing path without bill; web view shows system specification page instead.
+   */
+  dataSource?: "bill" | "requirement";
+
   /** Multilingual selection. Defaults to English. */
   lang?: ProposalLang;
 
