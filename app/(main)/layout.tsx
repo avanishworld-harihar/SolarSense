@@ -1,46 +1,47 @@
 "use client";
 
-import { AppShell } from "@/components/app-shell";
-import { BottomNav } from "@/components/bottom-nav";
-import { useLanguage } from "@/lib/language-context";
+/**
+ * Main app layout — E2 OS Shell upgrade.
+ *
+ * Switches from AppShell + BottomNav to OsShell which provides:
+ *   - Adaptive left rail (desktop lg+)
+ *   - Enhanced sticky topbar with breadcrumbs + workspace pill
+ *   - Cmd+K command palette
+ *   - Mobile bottom nav (existing BottomNav, unchanged)
+ *   - Connected page transition motion
+ *
+ * AppShell is NOT removed — it continues to serve admin and 404 pages.
+ * All existing routes, proposal flows, and business logic are preserved.
+ */
+
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
-function shellTitle(pathname: string, t: (key: string) => string): string {
-  const p = pathname || "/";
-  if (p === "/") return t("dashboard_title");
-  if (p.startsWith("/customers")) return t("customers_title");
-  if (p.startsWith("/projects")) return t("projects_title");
-  if (p.startsWith("/proposals")) return t("proposals_title");
-  if (p === "/proposal") return t("proposals_newBuilderTitle");
-  if (p.startsWith("/proposal/")) return t("proposals_title");
-  if (p.startsWith("/more")) return t("more_title");
-  return t("dashboard_title");
-}
+import { OsShell } from "@/components/shell/os-shell";
 
-/**
- * Keeps header + bottom nav mounted across primary app routes (big win for iPad tab taps).
- */
 export default function MainAppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { t } = useLanguage();
   const reducedMotion = useReducedMotion();
+
   return (
-    <>
-      <AppShell title={shellTitle(pathname, t)}>
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={pathname}
-            initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0 }}
-            transition={{ duration: reducedMotion ? 0 : 0.16, ease: "easeOut" }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
-      </AppShell>
-      <BottomNav />
-    </>
+    <OsShell>
+      {/*
+       * Page transition — identical timing to the original layout.
+       * AnimatePresence with `initial={false}` prevents the enter animation
+       * on first load (matches prior behavior). mode="sync" (default) lets
+       * the new page enter immediately while the old one exits.
+       */}
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={pathname}
+          initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0 }}
+          transition={{ duration: reducedMotion ? 0 : 0.16, ease: "easeOut" }}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    </OsShell>
   );
 }
