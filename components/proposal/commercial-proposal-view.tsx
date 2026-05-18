@@ -466,7 +466,6 @@ export default function CommercialProposalView({
               id={anchor}
               className={`${SECTION_BG[idx]} border-b border-slate-100/80 last:border-0`}
             >
-              {/* @ts-expect-error — Block components all accept { ctx } */}
               <Block ctx={ctx} />
             </section>
           ))}
