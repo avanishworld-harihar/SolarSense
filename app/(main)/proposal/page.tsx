@@ -38,7 +38,7 @@ import { DASHBOARD_STATS_SWR_KEY } from "@/lib/dashboard-stats-client";
 import { ProposalQuickPreview } from "@/components/proposal/proposal-quick-preview";
 import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
-import { Building2, Download, FileUp, Globe, MessageCircle, Send, Sparkles, Zap } from "lucide-react";
+import { Building2, Download, ExternalLink, FileUp, Globe, MessageCircle, Send, Sparkles, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parsePrefillFromSearchParams } from "@/lib/quick-actions";
@@ -243,7 +243,9 @@ export default function ProposalPage() {
   const [isPptDownloading, setIsPptDownloading] = useState(false);
   const [isCopyingSummary, setIsCopyingSummary] = useState(false);
   const [isWebProposalBusy, setIsWebProposalBusy] = useState(false);
+  const [isWorkspaceBusy, setIsWorkspaceBusy] = useState(false);
   const [latestWebProposalUrl, setLatestWebProposalUrl] = useState<string | null>(null);
+  const [draftProposalId, setDraftProposalId] = useState<string | null>(null);
   // Proposal Builder Settings â€” language + EMI only (logo, bank, AMC, site photos live in More > Company Profile).
   const [proposalLang, setProposalLang] = useState<"en" | "hi">("en");
   const [financeRatePct, setFinanceRatePct] = useState(7);
@@ -1329,95 +1331,136 @@ export default function ProposalPage() {
     }
   }
 
+  async function persistProposalToServer(): Promise<{
+    id: string;
+    shareUrl: string;
+    leadCreated: boolean;
+    leadId: string | null;
+  } | null> {
+    setLastAutoLeadId(null);
+    const { leadId, created: leadCreated } = await ensureLeadIdForProposal();
+    const merged = mergeCustomerForProposal(manual, latestBill || previousBill);
+    const customerName = merged?.name?.trim() || manual.officialBillName || manual.leadContactName || "Customer";
+    const location = [merged?.district || manual.city, merged?.state || manual.state].filter(Boolean).join(", ");
+    const uploadedBills = [latestBill, ...additionalBills];
+    const monthlyBillActuals = buildMonthlyBillActualsFromBills(uploadedBills, auditedMonthTotals);
+    const monthlyAuditOverrides = buildMonthlyAuditOverridesFromBills(uploadedBills);
+    const billBacked = isBillBackedFromBuilderState({
+      latestBill,
+      previousBill,
+      additionalBills,
+      monthlyUnits,
+      auditedMonthTotals,
+      monthlyBillActuals,
+    });
+    const response = await fetch("/api/proposals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customerName,
+        location,
+        systemKw: effectiveResult.solarKw,
+        yearlyBill: effectiveResult.currentMonthlyBill * 12,
+        afterSolar: effectiveResult.newMonthlyBill * 12,
+        saving: effectiveResult.annualSavings,
+        paybackYears: effectiveResult.paybackYears,
+        monthlyUnits,
+        state: manual.state || latestBill?.state || previousBill?.state || installerState || "Madhya Pradesh",
+        discom: manual.discom || latestBill?.discom || previousBill?.discom || installerDiscom || "MPPKVVCL",
+        connectionType: manual.connectionType || latestBill?.connection_type || previousBill?.connection_type || "",
+        tariffCategory: manual.tariffCategory || latestBill?.tariff_category || previousBill?.tariff_category || "",
+        connectedLoadKw: connectedLoadKw ?? undefined,
+        areaProfile,
+        billMonth: latestBill?.bill_month || previousBill?.bill_month || undefined,
+        currentMonthBillAmountInr:
+          latestBill?.current_month_bill_amount_inr ??
+          previousBill?.current_month_bill_amount_inr ??
+          null,
+        monthlyBillActuals,
+        monthlyAuditOverrides,
+        clientRef: clientRef || undefined,
+        leadId,
+        ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
+        grossSystemCostInr: effectiveResult.grossCost,
+        pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
+        netCostInr: effectiveResult.netCost,
+        panels: effectiveResult.panels,
+        dataSource: billBacked ? "bill" : "requirement",
+        presetId: osPresetId ?? "residential_smart",
+        ...buildProposalExtrasPayload(),
+      }),
+    });
+    if (!response.ok) {
+      const json = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(json.error || "Web proposal failed");
+    }
+    const json = (await response.json()) as { ok: boolean; id?: string; shareUrl?: string; persisted?: boolean };
+    if (!json.ok || !json.id) throw new Error("Web proposal could not be created");
+    if (json.persisted === false) {
+      toast.error("Save failed", t("proposal_persistFailed"));
+      return null;
+    }
+    const shareUrl = json.shareUrl || `${window.location.origin}/proposal/${json.id}`;
+    setLatestWebProposalUrl(shareUrl);
+    setDraftProposalId(json.id);
+    syncCrmCachesAfterProposal(leadId);
+    return { id: json.id, shareUrl, leadCreated, leadId };
+  }
+
   async function generateWebProposal() {
     setIsWebProposalBusy(true);
-    setLastAutoLeadId(null);
     try {
-      const { leadId, created: leadCreated } = await ensureLeadIdForProposal();
-      const merged = mergeCustomerForProposal(manual, latestBill || previousBill);
-      const customerName = merged?.name?.trim() || manual.officialBillName || manual.leadContactName || "Customer";
-      const location = [merged?.district || manual.city, merged?.state || manual.state].filter(Boolean).join(", ");
-      const uploadedBills = [latestBill, ...additionalBills];
-      const monthlyBillActuals = buildMonthlyBillActualsFromBills(uploadedBills, auditedMonthTotals);
-      const monthlyAuditOverrides = buildMonthlyAuditOverridesFromBills(uploadedBills);
-      const billBacked = isBillBackedFromBuilderState({
-        latestBill,
-        previousBill,
-        additionalBills,
-        monthlyUnits,
-        auditedMonthTotals,
-        monthlyBillActuals
-      });
-      const response = await fetch("/api/proposals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName,
-          location,
-          systemKw: effectiveResult.solarKw,
-          yearlyBill: effectiveResult.currentMonthlyBill * 12,
-          afterSolar: effectiveResult.newMonthlyBill * 12,
-          saving: effectiveResult.annualSavings,
-          paybackYears: effectiveResult.paybackYears,
-          monthlyUnits,
-          state: manual.state || latestBill?.state || previousBill?.state || installerState || "Madhya Pradesh",
-          discom: manual.discom || latestBill?.discom || previousBill?.discom || installerDiscom || "MPPKVVCL",
-          connectionType: manual.connectionType || latestBill?.connection_type || previousBill?.connection_type || "",
-          tariffCategory: manual.tariffCategory || latestBill?.tariff_category || previousBill?.tariff_category || "",
-          connectedLoadKw: connectedLoadKw ?? undefined,
-          areaProfile,
-          billMonth: latestBill?.bill_month || previousBill?.bill_month || undefined,
-          currentMonthBillAmountInr:
-            latestBill?.current_month_bill_amount_inr ??
-            previousBill?.current_month_bill_amount_inr ??
-            null,
-          monthlyBillActuals,
-          monthlyAuditOverrides,
-          clientRef: clientRef || undefined,
-          leadId,
-          ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
-          grossSystemCostInr: effectiveResult.grossCost,
-          pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
-          netCostInr: effectiveResult.netCost,
-          panels: effectiveResult.panels,
-          dataSource: billBacked ? "bill" : "requirement",
-          presetId: osPresetId ?? "residential_smart",
-          ...buildProposalExtrasPayload()
-        })
-      });
-      if (!response.ok) {
-        const json = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(json.error || "Web proposal failed");
-      }
-      const json = (await response.json()) as { ok: boolean; id?: string; shareUrl?: string; persisted?: boolean };
-      if (!json.ok) throw new Error("Web proposal could not be created");
-      if (json.persisted === false) {
-        toast.error("Save failed", t("proposal_persistFailed"));
-        return;
-      }
-      const shareUrl = json.shareUrl || (json.id ? `${window.location.origin}/proposal/${json.id}` : null);
-      if (!shareUrl) throw new Error("No share URL returned");
-      setLatestWebProposalUrl(shareUrl);
-      syncCrmCachesAfterProposal(leadId);
+      const saved = await persistProposalToServer();
+      if (!saved) return;
       try {
-        await navigator.clipboard.writeText(shareUrl);
+        await navigator.clipboard.writeText(saved.shareUrl);
         toast.success(
           "Web proposal ready",
-          leadCreated ? t("proposal_leadCreatedSub") : "Share link copied â€” paste on WhatsApp."
+          saved.leadCreated ? t("proposal_leadCreatedSub") : "Share link copied — paste on WhatsApp."
         );
       } catch {
         toast.success(
           "Web proposal ready",
-          leadCreated ? t("proposal_leadCreatedSub") : "Share link saved below."
+          saved.leadCreated ? t("proposal_leadCreatedSub") : "Share link saved below."
         );
       }
-      window.open(shareUrl, "_blank", "noopener,noreferrer");
+      window.open(saved.shareUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
       toast.error("Web proposal failed", error instanceof Error ? error.message : "Could not generate web proposal.");
     } finally {
       setIsWebProposalBusy(false);
     }
   }
+
+  async function openCommercialWorkspace(
+    tab: "commercial_config" | "panel_pricing" | "capacity" | "financing" = "commercial_config"
+  ) {
+    if (osPresetId !== "commercial_executive") return;
+    setIsWorkspaceBusy(true);
+    try {
+      const saved = await persistProposalToServer();
+      if (!saved) return;
+      toast.success(
+        "Open Workspace",
+        "Configure commercial pricing, scenarios, and narrative — then generate when ready."
+      );
+      router.push(`/workspace/${saved.id}?tab=${tab}`);
+    } catch (error) {
+      toast.error(
+        "Workspace unavailable",
+        error instanceof Error ? error.message : "Could not save draft proposal."
+      );
+    } finally {
+      setIsWorkspaceBusy(false);
+    }
+  }
+
+  const canOpenCommercialWorkspace =
+    osPresetId === "commercial_executive" &&
+    Boolean(manual.leadContactName?.trim() || manual.officialBillName?.trim()) &&
+    (commercialInputMode === "requirement"
+      ? parseFloat(requirementMonthlyKwh) > 0
+      : filledMonths >= 1 || Boolean(latestBill));
 
   function shareLatestOnWhatsApp() {
     if (!latestWebProposalUrl) return;
@@ -1656,6 +1699,9 @@ export default function ProposalPage() {
               }
             }}
             onNotes={setRequirementNotes}
+            canOpenWorkspace={canOpenCommercialWorkspace}
+            workspaceBusy={isWorkspaceBusy}
+            onOpenWorkspace={() => void openCommercialWorkspace("commercial_config")}
           />
         )}
 
@@ -1923,6 +1969,7 @@ export default function ProposalPage() {
 
       <div id="step-3-anchor" className={`ss-card space-y-4 p-4 sm:p-5 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         {osPresetId === "commercial_executive" && commercialConfig ? (
+          <>
           <CommercialNarrativePanel
             config={commercialConfig}
             onChange={(next) => {
@@ -1933,6 +1980,33 @@ export default function ProposalPage() {
             }}
             onOpenReview={() => setShowReviewSheet(true)}
           />
+          <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-r from-indigo-50/80 to-sky-50/60 p-4">
+            <p className="text-sm font-bold text-slate-900">Business intelligence lives in Open Workspace</p>
+            <p className="mt-1 text-xs text-slate-600">
+              Panel registries, DCR comparison, capacity scenarios, and financing are configured after you save a
+              draft — no need to go back.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!canOpenCommercialWorkspace || isWorkspaceBusy || isWebProposalBusy}
+                onClick={() => void openCommercialWorkspace("commercial_config")}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {isWorkspaceBusy ? "Saving…" : "Open Workspace"}
+              </button>
+              {draftProposalId ? (
+                <a
+                  href={`/workspace/${draftProposalId}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"
+                >
+                  Resume workspace
+                </a>
+              ) : null}
+            </div>
+          </div>
+          </>
         ) : null}
 
         {/* Solar System Size â€” editable */}

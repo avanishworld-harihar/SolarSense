@@ -57,6 +57,19 @@ export const dgAssumptionsSchema = z.object({
   monthlyFuelCostInr: z.number().min(0).optional(),
 });
 
+/** Per-catalog overrides in the pricing intelligence registry */
+export const panelRegistryOverrideSchema = z.object({
+  ratePerWpInr: z.number().min(0).max(500).optional(),
+  marginPct: z.number().min(0).max(100).optional(),
+  available: z.boolean().optional(),
+});
+
+export const panelRegistrySchema = z.object({
+  selectedDcrCatalogId: z.string().max(80).optional(),
+  selectedNonDcrCatalogId: z.string().max(80).optional(),
+  overrides: z.record(z.string().max(80), panelRegistryOverrideSchema).optional(),
+});
+
 export const commercialProposalConfigSchema = z.object({
   panel: commercialPanelConfigSchema.optional(),
   dcrComparison: dcrComparisonConfigSchema.optional(),
@@ -74,6 +87,7 @@ export const commercialProposalConfigSchema = z.object({
   dgAssumptions: dgAssumptionsSchema.optional(),
   /** Free-form executive notes woven into commercial deck */
   presentationNotes: z.string().max(600).optional(),
+  panelRegistry: panelRegistrySchema.optional(),
 });
 
 export type CommercialProposalConfig = z.infer<typeof commercialProposalConfigSchema>;
@@ -91,7 +105,11 @@ export function defaultCommercialConfig(
 ): CommercialProposalConfig {
   const scenarios = buildDefaultScenarios(systemKw);
   return {
-    panel: { catalogId },
+    panel: { catalogId: "waaree-540-non-dcr", brandId: "waaree", watt: 540, panelType: "NON_DCR" },
+    panelRegistry: {
+      selectedDcrCatalogId: "waaree-540-dcr",
+      selectedNonDcrCatalogId: "waaree-540-non-dcr",
+    },
     dcrComparison: { enabled: true, brandId: "waaree", watt: 540 },
     capacityScenarios: {
       enabled: true,

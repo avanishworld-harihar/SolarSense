@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import {
+  Download,
   Expand,
   Minimize,
   Maximize2,
@@ -232,13 +233,17 @@ export default function CommercialProposalView({
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleDownload = useCallback(() => {
+  const handleDownloadPpt = useCallback(() => {
     setDownloading(true);
     if (typeof window !== "undefined") {
       window.open(`/api/proposals/${id}/ppt`, "_blank");
     }
     setTimeout(() => setDownloading(false), 3000);
   }, [id]);
+
+  const handleDownloadPdf = useCallback(() => {
+    if (typeof window !== "undefined") window.print();
+  }, []);
 
   const handleShare = useCallback(() => {
     if (typeof navigator === "undefined") return;
@@ -274,7 +279,7 @@ export default function CommercialProposalView({
     profit25,
     lang,
     downloading,
-    onDownload: handleDownload,
+    onDownload: handleDownloadPpt,
     onShare: handleShare,
   };
 
@@ -283,7 +288,7 @@ export default function CommercialProposalView({
   return (
     <MotionConfig reducedMotion="user">
       <div
-        className="commercial-proposal min-h-screen font-sans antialiased"
+        className="commercial-proposal proposal-document mx-auto min-h-screen max-w-[210mm] font-sans antialiased print:max-w-none"
         style={{ colorScheme: "light" }}
       >
 
@@ -362,7 +367,14 @@ export default function CommercialProposalView({
                     <Expand className="h-3 w-3" />
                     <span className="hidden sm:inline">Present</span>
                   </button>
-                  {/* Share */}
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    className="hidden items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200 sm:inline-flex print:hidden"
+                  >
+                    <Download className="h-3 w-3" />
+                    PDF
+                  </button>
                   <button
                     onClick={handleShare}
                     className="flex h-7 w-7 items-center justify-center rounded text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
@@ -446,13 +458,13 @@ export default function CommercialProposalView({
         </div>
 
         {/* ── Section 01 — Cover (full-height dark) ────────────────────── */}
-        <section id="comm-cover">
+        <section id="comm-cover" className="proposal-page">
           <BlockCommercialCover ctx={ctx} />
         </section>
 
         {/* ── Optional C&I intelligence blocks (from commercialConfig) ─── */}
         {pptInput.commercialConfig?.dcrComparison?.enabled !== false ? (
-          <section id="comm-dcr" className="border-b border-slate-100/80 bg-slate-50/70">
+          <section id="comm-dcr" className="proposal-page border-b border-slate-100/80 bg-slate-50/70">
             <BlockDcrComparison
               summary={summary}
               lang={lang}
@@ -462,7 +474,7 @@ export default function CommercialProposalView({
           </section>
         ) : null}
         {pptInput.commercialConfig?.capacityScenarios?.enabled !== false ? (
-          <section id="comm-scenarios" className="border-b border-slate-100/80 bg-white">
+          <section id="comm-scenarios" className="proposal-page border-b border-slate-100/80 bg-white">
             <BlockCapacityScenarios
               summary={summary}
               lang={lang}
@@ -503,7 +515,7 @@ export default function CommercialProposalView({
             <section
               key={anchor}
               id={anchor}
-              className={`${SECTION_BG[idx]} border-b border-slate-100/80 last:border-0`}
+              className={`proposal-page ${SECTION_BG[idx]} border-b border-slate-100/80 last:border-0`}
             >
               <Block ctx={ctx} />
               {anchor === "comm-financials" && pptInput.commercialConfig?.financing?.enabled ? (

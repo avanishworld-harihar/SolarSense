@@ -12,7 +12,18 @@
  */
 
 import { motion, AnimatePresence } from "framer-motion";
-import { FileUp, ClipboardList, Building2, User, Phone, MapPin, Zap, StickyNote, Check } from "lucide-react";
+import {
+  FileUp,
+  ClipboardList,
+  Building2,
+  User,
+  Phone,
+  MapPin,
+  Zap,
+  StickyNote,
+  Check,
+  ExternalLink,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type CommercialInputMode = "bill" | "requirement";
@@ -86,6 +97,9 @@ type RequirementFormProps = {
   onCity: (v: string) => void;
   onMonthlyKwh: (v: string) => void;
   onNotes: (v: string) => void;
+  canOpenWorkspace?: boolean;
+  workspaceBusy?: boolean;
+  onOpenWorkspace?: () => void;
 };
 
 function RequirementForm({
@@ -101,6 +115,9 @@ function RequirementForm({
   onCity,
   onMonthlyKwh,
   onNotes,
+  canOpenWorkspace,
+  workspaceBusy,
+  onOpenWorkspace,
 }: RequirementFormProps) {
   return (
     <motion.div
@@ -175,8 +192,19 @@ function RequirementForm({
       </div>
 
       <p className="text-[10px] text-slate-400">
-        Bill upload is skipped in this mode. System size can be set manually in the next step.
+        Bill upload is skipped in this mode. Open Workspace to configure pricing before generating.
       </p>
+      {canOpenWorkspace && onOpenWorkspace ? (
+        <button
+          type="button"
+          disabled={workspaceBusy}
+          onClick={onOpenWorkspace}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm disabled:opacity-60"
+        >
+          <ExternalLink className="h-4 w-4" />
+          {workspaceBusy ? "Saving draft…" : "Open Workspace — configure & review"}
+        </button>
+      ) : null}
     </motion.div>
   );
 }
@@ -230,6 +258,9 @@ type Props = {
   onCity: (v: string) => void;
   onMonthlyKwh: (v: string) => void;
   onNotes: (v: string) => void;
+  canOpenWorkspace?: boolean;
+  workspaceBusy?: boolean;
+  onOpenWorkspace?: () => void;
 };
 
 export function CommercialInputModeSelector({
@@ -247,6 +278,9 @@ export function CommercialInputModeSelector({
   onCity,
   onMonthlyKwh,
   onNotes,
+  canOpenWorkspace,
+  workspaceBusy,
+  onOpenWorkspace,
 }: Props) {
   return (
     <div className="space-y-2">
@@ -287,6 +321,9 @@ export function CommercialInputModeSelector({
             onCity={onCity}
             onMonthlyKwh={onMonthlyKwh}
             onNotes={onNotes}
+            canOpenWorkspace={canOpenWorkspace}
+            workspaceBusy={workspaceBusy}
+            onOpenWorkspace={onOpenWorkspace}
           />
         )}
       </AnimatePresence>

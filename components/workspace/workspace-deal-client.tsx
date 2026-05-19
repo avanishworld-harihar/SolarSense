@@ -18,7 +18,8 @@
  *   - `/proposals/[id]` continues to work as before (not replaced).
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -31,6 +32,7 @@ import {
   LayoutGrid,
   MessageSquare,
   MoreHorizontal,
+  Sparkles,
   Store,
   TrendingUp,
 } from "lucide-react";
@@ -74,14 +76,15 @@ import { WorkspaceCommercialTab } from "@/components/workspace/commercial/worksp
 type TabId =
   | "overview"
   | "proposal"
+  | "commercial_config"
   | "panel_pricing"
   | "capacity"
   | "financing"
-  | "pricing"
-  | "activity"
   | "files"
   | "approvals"
   | "comments"
+  | "activity"
+  | "pricing"
   | "marketplace";
 
 type TabConfig = {
@@ -98,17 +101,18 @@ function useTabs(isCommercial: boolean): TabConfig[] {
     ];
     if (isCommercial) {
       core.push(
+        { id: "commercial_config", label: "Commercial Config", icon: <Sparkles className="h-3.5 w-3.5" /> },
         { id: "panel_pricing", label: "Panel & Pricing", icon: <Layers className="h-3.5 w-3.5" /> },
-        { id: "capacity", label: "Capacity", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+        { id: "capacity", label: "Capacity Scenarios", icon: <TrendingUp className="h-3.5 w-3.5" /> },
         { id: "financing", label: "Financing", icon: <CreditCard className="h-3.5 w-3.5" /> }
       );
     }
     core.push(
-      { id: "pricing", label: "BOM Pricing", icon: <Coins className="h-3.5 w-3.5" /> },
-      { id: "activity", label: "Activity", icon: <Activity className="h-3.5 w-3.5" /> },
       { id: "files", label: "Files", icon: <FolderOpen className="h-3.5 w-3.5" /> },
       { id: "approvals", label: "Approvals", icon: <BadgeCheck className="h-3.5 w-3.5" /> },
       { id: "comments", label: "Comments", icon: <MessageSquare className="h-3.5 w-3.5" /> },
+      { id: "activity", label: "Activity", icon: <Activity className="h-3.5 w-3.5" /> },
+      { id: "pricing", label: "BOM Pricing", icon: <Coins className="h-3.5 w-3.5" /> },
       { id: "marketplace", label: "Marketplace", icon: <Store className="h-3.5 w-3.5" /> }
     );
     return core;
@@ -228,10 +232,22 @@ export function WorkspaceDealClient({
 }: WorkspaceDealClientProps) {
   const { t } = useLanguage();
   const toast = useToast();
+  const searchParams = useSearchParams();
   const isCommercial = presetId === "commercial_executive";
   const tabs = useTabs(isCommercial);
 
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab = useMemo((): TabId => {
+    const ids = tabs.map((x) => x.id);
+    if (tabFromUrl && ids.includes(tabFromUrl as TabId)) return tabFromUrl as TabId;
+    return "overview";
+  }, [tabFromUrl, tabs]);
+
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   const [pptInput, setPptInput] = useState(initialPpt);
   const [pricing, setPricing] = useState<ProposalPricingRow | null>(initialPricing);
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus>(initialStatus);
@@ -493,11 +509,23 @@ export function WorkspaceDealClient({
 
           {isCommercial && (
             <>
+              <TabPanel id="commercial_config" active={activeTab}>
+                <WorkspaceCommercialTab
+                  proposalId={proposalId}
+                  section="commercial_config"
+                  systemKw={summary.systemKw}
+                  pptInput={pptInput}
+                  initialConfig={pptInput.commercialConfig}
+                  proposalLayout={proposalLayout}
+                  onSaved={onCommercialConfigSaved}
+                />
+              </TabPanel>
               <TabPanel id="panel_pricing" active={activeTab}>
                 <WorkspaceCommercialTab
                   proposalId={proposalId}
                   section="panel"
                   systemKw={summary.systemKw}
+                  pptInput={pptInput}
                   initialConfig={pptInput.commercialConfig}
                   proposalLayout={proposalLayout}
                   onSaved={onCommercialConfigSaved}
@@ -508,6 +536,7 @@ export function WorkspaceDealClient({
                   proposalId={proposalId}
                   section="scenarios"
                   systemKw={summary.systemKw}
+                  pptInput={pptInput}
                   initialConfig={pptInput.commercialConfig}
                   proposalLayout={proposalLayout}
                   onSaved={onCommercialConfigSaved}
@@ -518,6 +547,7 @@ export function WorkspaceDealClient({
                   proposalId={proposalId}
                   section="financing"
                   systemKw={summary.systemKw}
+                  pptInput={pptInput}
                   initialConfig={pptInput.commercialConfig}
                   proposalLayout={proposalLayout}
                   onSaved={onCommercialConfigSaved}
@@ -525,6 +555,31 @@ export function WorkspaceDealClient({
               </TabPanel>
             </>
           )}
+
+          <TabPanel id="files" active={activeTab}>
+            <ProposalDetailSection
+              id="attachments"
+              variant="workspace"
+              title={t("proposals_section_attachments")}
+              subtitle={t("proposals_section_attachmentsSub")}
+            >
+              <p className="rounded-lg bg-slate-50 px-4 py-8 text-center text-sm text-slate-500 dark:bg-white/[0.03] dark:text-slate-400">
+                {t("proposals_attachmentsPlaceholder")}
+              </p>
+            </ProposalDetailSection>
+          </TabPanel>
+
+          <TabPanel id="approvals" active={activeTab}>
+            <WorkspaceApprovalsTab timeline={timeline} snapshots={snapshots} />
+          </TabPanel>
+
+          <TabPanel id="comments" active={activeTab}>
+            <WorkspaceCommentsTab proposalId={proposalId} />
+          </TabPanel>
+
+          <TabPanel id="activity" active={activeTab}>
+            <WorkspaceActivityTab timeline={timeline} />
+          </TabPanel>
 
           {/* Pricing — BOM table */}
           <TabPanel id="pricing" active={activeTab}>
@@ -542,35 +597,6 @@ export function WorkspaceDealClient({
                 chrome="workspace"
               />
             </ProposalDetailSection>
-          </TabPanel>
-
-          {/* Activity */}
-          <TabPanel id="activity" active={activeTab}>
-            <WorkspaceActivityTab timeline={timeline} />
-          </TabPanel>
-
-          {/* Files */}
-          <TabPanel id="files" active={activeTab}>
-            <ProposalDetailSection
-              id="attachments"
-              variant="workspace"
-              title={t("proposals_section_attachments")}
-              subtitle={t("proposals_section_attachmentsSub")}
-            >
-              <p className="rounded-lg bg-slate-50 px-4 py-8 text-center text-sm text-slate-500 dark:bg-white/[0.03] dark:text-slate-400">
-                {t("proposals_attachmentsPlaceholder")}
-              </p>
-            </ProposalDetailSection>
-          </TabPanel>
-
-          {/* Approvals */}
-          <TabPanel id="approvals" active={activeTab}>
-            <WorkspaceApprovalsTab timeline={timeline} snapshots={snapshots} />
-          </TabPanel>
-
-          {/* Comments — Wave 4 P9 */}
-          <TabPanel id="comments" active={activeTab}>
-            <WorkspaceCommentsTab proposalId={proposalId} />
           </TabPanel>
 
           {/* Marketplace — P10 deferred (UI-only placeholder, ZERO schema) */}
