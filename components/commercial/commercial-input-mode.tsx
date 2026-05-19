@@ -22,9 +22,12 @@ import {
   Zap,
   StickyNote,
   Check,
-  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  CommercialRequirementFlowCard,
+  type WorkspaceTabId,
+} from "@/components/commercial/commercial-requirement-flow-card";
 
 export type CommercialInputMode = "bill" | "requirement";
 
@@ -100,6 +103,12 @@ type RequirementFormProps = {
   canOpenWorkspace?: boolean;
   workspaceBusy?: boolean;
   onOpenWorkspace?: () => void;
+  workspaceBlockReason?: string | null;
+  hasClient?: boolean;
+  hasSizing?: boolean;
+  hasCategory?: boolean;
+  draftProposalId?: string | null;
+  onOpenWorkspaceTab?: (tab: WorkspaceTabId) => void;
 };
 
 function RequirementForm({
@@ -115,9 +124,15 @@ function RequirementForm({
   onCity,
   onMonthlyKwh,
   onNotes,
-  canOpenWorkspace,
+  canOpenWorkspace = false,
   workspaceBusy,
   onOpenWorkspace,
+  workspaceBlockReason = null,
+  hasClient = false,
+  hasSizing = false,
+  hasCategory = false,
+  draftProposalId,
+  onOpenWorkspaceTab,
 }: RequirementFormProps) {
   return (
     <motion.div
@@ -191,19 +206,20 @@ function RequirementForm({
         </div>
       </div>
 
-      <p className="text-[10px] text-slate-400">
-        Bill upload is skipped in this mode. Open Workspace to configure pricing before generating.
-      </p>
-      {canOpenWorkspace && onOpenWorkspace ? (
-        <button
-          type="button"
-          disabled={workspaceBusy}
-          onClick={onOpenWorkspace}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm disabled:opacity-60"
-        >
-          <ExternalLink className="h-4 w-4" />
-          {workspaceBusy ? "Saving draft…" : "Open Workspace — configure & review"}
-        </button>
+      {onOpenWorkspace ? (
+        <CommercialRequirementFlowCard
+          variant="step2"
+          hasClient={hasClient}
+          hasSizing={hasSizing}
+          hasCategory={hasCategory}
+          canOpenWorkspace={canOpenWorkspace}
+          workspaceBlockReason={workspaceBlockReason}
+          workspaceBusy={Boolean(workspaceBusy)}
+          onOpenWorkspace={onOpenWorkspace}
+          draftProposalId={draftProposalId}
+          onOpenWorkspaceTab={onOpenWorkspaceTab}
+          className="mt-2 border-sky-200/60"
+        />
       ) : null}
     </motion.div>
   );
@@ -261,6 +277,12 @@ type Props = {
   canOpenWorkspace?: boolean;
   workspaceBusy?: boolean;
   onOpenWorkspace?: () => void;
+  workspaceBlockReason?: string | null;
+  hasClient?: boolean;
+  hasSizing?: boolean;
+  hasCategory?: boolean;
+  draftProposalId?: string | null;
+  onOpenWorkspaceTab?: (tab: WorkspaceTabId) => void;
 };
 
 export function CommercialInputModeSelector({
@@ -281,6 +303,12 @@ export function CommercialInputModeSelector({
   canOpenWorkspace,
   workspaceBusy,
   onOpenWorkspace,
+  workspaceBlockReason,
+  hasClient,
+  hasSizing,
+  hasCategory,
+  draftProposalId,
+  onOpenWorkspaceTab,
 }: Props) {
   return (
     <div className="space-y-2">
@@ -324,6 +352,12 @@ export function CommercialInputModeSelector({
             canOpenWorkspace={canOpenWorkspace}
             workspaceBusy={workspaceBusy}
             onOpenWorkspace={onOpenWorkspace}
+            workspaceBlockReason={workspaceBlockReason}
+            hasClient={hasClient}
+            hasSizing={hasSizing}
+            hasCategory={hasCategory}
+            draftProposalId={draftProposalId}
+            onOpenWorkspaceTab={onOpenWorkspaceTab}
           />
         )}
       </AnimatePresence>

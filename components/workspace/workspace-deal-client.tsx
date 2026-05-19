@@ -69,6 +69,7 @@ import {
   type CommercialProposalConfig,
 } from "@/lib/commercial-proposal-config";
 import { WorkspaceCommercialTab } from "@/components/workspace/commercial/workspace-commercial-tab";
+import { RequirementSetupBanner } from "@/components/workspace/commercial/requirement-setup-banner";
 
 // ─── Tab definitions ───────────────────────────────────────────────────────
 
@@ -237,6 +238,7 @@ export function WorkspaceDealClient({
   const tabs = useTabs(isCommercial);
 
   const tabFromUrl = searchParams.get("tab");
+  const fromRequirementFlow = searchParams.get("from") === "requirement";
   const initialTab = useMemo((): TabId => {
     const ids = tabs.map((x) => x.id);
     if (tabFromUrl && ids.includes(tabFromUrl as TabId)) return tabFromUrl as TabId;
@@ -450,6 +452,13 @@ export function WorkspaceDealClient({
 
       {/* ── Sticky tab bar ───────────────────────────────────────────── */}
       <TabBar tabs={tabs} active={activeTab} onChange={setActiveTab} />
+
+      {fromRequirementFlow && isCommercial ? (
+        <RequirementSetupBanner
+          activeTab={activeTab}
+          onGoToTab={(tab) => setActiveTab(tab)}
+        />
+      ) : null}
 
       {/* ── Tab panels ──────────────────────────────────────────────── */}
       <AnimatePresence mode="wait" initial={false}>

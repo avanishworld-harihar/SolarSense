@@ -18,13 +18,15 @@ import { motion } from "framer-motion";
 import {
   BarChart2,
   CheckCircle2,
+  ClipboardList,
   FileText,
+  LayoutGrid,
   User,
   Zap,
 } from "lucide-react";
 import type { ProposalPresetId } from "@/components/proposals/os/preset-picker";
 
-type Stage = {
+export type BuilderStage = {
   id: string;
   number: number;
   label: string;
@@ -33,7 +35,42 @@ type Stage = {
   anchor: string;
 };
 
-const STAGES: Stage[] = [
+export const COMMERCIAL_REQUIREMENT_STAGES: BuilderStage[] = [
+  {
+    id: "client",
+    number: 1,
+    label: "Client",
+    subLabel: "Customer",
+    icon: <User className="h-3.5 w-3.5" />,
+    anchor: "step-1-anchor",
+  },
+  {
+    id: "requirement",
+    number: 2,
+    label: "Requirement",
+    subLabel: "Need & sizing",
+    icon: <ClipboardList className="h-3.5 w-3.5" />,
+    anchor: "step-2-anchor",
+  },
+  {
+    id: "workspace",
+    number: 3,
+    label: "Workspace",
+    subLabel: "Configure",
+    icon: <LayoutGrid className="h-3.5 w-3.5" />,
+    anchor: "step-workspace-anchor",
+  },
+  {
+    id: "proposal",
+    number: 4,
+    label: "Proposal",
+    subLabel: "Generate",
+    icon: <FileText className="h-3.5 w-3.5" />,
+    anchor: "step-4-anchor",
+  },
+];
+
+const STAGES: BuilderStage[] = [
   {
     id: "client",
     number: 1,
@@ -74,6 +111,8 @@ type Props = {
   activeStageIndex?: number;
   /** Which stages have sufficient data (0-based indices). */
   completedStages?: number[];
+  /** Override default residential stages (e.g. commercial requirement flow). */
+  stages?: BuilderStage[];
 };
 
 function scrollToAnchor(anchor: string) {
@@ -88,8 +127,10 @@ export function BuilderStageBar({
   presetId,
   activeStageIndex = 0,
   completedStages = [],
+  stages: stagesOverride,
 }: Props) {
   const completedSet = new Set(completedStages);
+  const stages = stagesOverride ?? STAGES;
 
   return (
     <motion.div
@@ -99,10 +140,10 @@ export function BuilderStageBar({
       className="mb-4 overflow-x-auto"
     >
       <div className="flex min-w-max items-stretch gap-0 rounded-2xl border border-slate-200/80 bg-white/80 p-1 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/70 sm:min-w-0">
-        {STAGES.map((stage, i) => {
+        {stages.map((stage, i) => {
           const isActive = i === activeStageIndex;
           const isDone = completedSet.has(i);
-          const isLast = i === STAGES.length - 1;
+          const isLast = i === stages.length - 1;
 
           return (
             <div key={stage.id} className="flex items-center">

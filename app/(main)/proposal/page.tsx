@@ -44,7 +44,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { parsePrefillFromSearchParams } from "@/lib/quick-actions";
 import { ProposalPresetPicker, type ProposalPresetId } from "@/components/proposals/os/preset-picker";
 import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
-import { BuilderStageBar } from "@/components/proposals/os/builder-stage-bar";
+import {
+  BuilderStageBar,
+  COMMERCIAL_REQUIREMENT_STAGES,
+} from "@/components/proposals/os/builder-stage-bar";
+import { CommercialRequirementFlowCard } from "@/components/commercial/commercial-requirement-flow-card";
+import type { WorkspaceTabId } from "@/components/commercial/commercial-requirement-flow-card";
+import {
+  commercialRequirementHasSizing,
+  getCommercialWorkspaceBlockReason,
+} from "@/lib/commercial-requirement-readiness";
 import { ProposalLivePreviewPanel } from "@/components/proposals/os/live-preview-panel";
 import { BlockPlaylistEditor } from "@/components/proposals/os/block-playlist-editor";
 import { CommercialNarrativePanel } from "@/components/commercial/commercial-narrative-panel";
@@ -661,8 +670,27 @@ export default function ProposalPage() {
   const isBillBackedLive = latestBill != null;
 
   // â”€â”€ Builder stage progress tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const isCommercialRequirement =
+    osPresetId === "commercial_executive" && commercialInputMode === "requirement";
+
+  const commercialFlowHasClient = Boolean(
+    manual.leadContactName?.trim() || manual.officialBillName?.trim() || selectedLeadId
+  );
+  const commercialFlowHasSizing = commercialRequirementHasSizing(
+    requirementMonthlyKwh,
+    overrideSolarKw,
+    effectiveResult.solarKw
+  );
+  const commercialFlowHasCategory = Boolean(commercialConfig?.orgType);
+
   // Drives BuilderStageBar active/completed state in real-time.
   const osActiveStageIndex = useMemo(() => {
+    if (isCommercialRequirement) {
+      if (!commercialFlowHasClient) return 0;
+      if (!commercialFlowHasSizing) return 1;
+      if (!draftProposalId) return 2;
+      return 3;
+    }
     const hasClient = Boolean(manual.leadContactName || manual.officialBillName || selectedLeadId);
     const hasEnergy = isBillBackedLive || Object.values(monthlyUnits).some((v) => v > 0);
     const hasSystem = effectiveResult.solarKw > 0;
@@ -670,9 +698,27 @@ export default function ProposalPage() {
     if (!hasEnergy) return 1;
     if (!hasSystem) return 2;
     return 3;
-  }, [manual.leadContactName, manual.officialBillName, selectedLeadId, isBillBackedLive, monthlyUnits, effectiveResult.solarKw]);
+  }, [
+    isCommercialRequirement,
+    commercialFlowHasClient,
+    commercialFlowHasSizing,
+    draftProposalId,
+    manual.leadContactName,
+    manual.officialBillName,
+    selectedLeadId,
+    isBillBackedLive,
+    monthlyUnits,
+    effectiveResult.solarKw,
+  ]);
 
   const osCompletedStages = useMemo(() => {
+    if (isCommercialRequirement) {
+      const stages: number[] = [];
+      if (commercialFlowHasClient) stages.push(0);
+      if (commercialFlowHasSizing) stages.push(1);
+      if (draftProposalId) stages.push(2);
+      return stages;
+    }
     const stages: number[] = [];
     const hasClient = Boolean(manual.leadContactName || manual.officialBillName || selectedLeadId);
     const hasEnergy = isBillBackedLive || Object.values(monthlyUnits).some((v) => v > 0);
@@ -681,7 +727,18 @@ export default function ProposalPage() {
     if (hasEnergy) stages.push(1);
     if (hasSystem) stages.push(2);
     return stages;
-  }, [manual.leadContactName, manual.officialBillName, selectedLeadId, isBillBackedLive, monthlyUnits, effectiveResult.solarKw]);
+  }, [
+    isCommercialRequirement,
+    commercialFlowHasClient,
+    commercialFlowHasSizing,
+    draftProposalId,
+    manual.leadContactName,
+    manual.officialBillName,
+    selectedLeadId,
+    isBillBackedLive,
+    monthlyUnits,
+    effectiveResult.solarKw,
+  ]);
 
   useEffect(() => {
     setAdditionalBills((prev) => {
@@ -1439,12 +1496,19 @@ export default function ProposalPage() {
     setIsWorkspaceBusy(true);
     try {
       const saved = await persistProposalToServer();
-      if (!saved) return;
+      if (!saved) {
+        toast.error(
+          "Could not open workspace",
+          "Draft proposal was not saved. Check your connection or database, then try again."
+        );
+        return;
+      }
       toast.success(
         "Open Workspace",
         "Configure commercial pricing, scenarios, and narrative — then generate when ready."
       );
-      router.push(`/workspace/${saved.id}?tab=${tab}`);
+      const fromReq = commercialInputMode === "requirement" ? "&from=requirement" : "";
+      router.push(`/workspace/${saved.id}?tab=${tab}${fromReq}`);
     } catch (error) {
       toast.error(
         "Workspace unavailable",
@@ -1455,12 +1519,28 @@ export default function ProposalPage() {
     }
   }
 
+  const commercialWorkspaceBlockReason = useMemo(
+    () =>
+      osPresetId === "commercial_executive"
+        ? getCommercialWorkspaceBlockReason({
+            hasClient: commercialFlowHasClient,
+            hasSizing: commercialFlowHasSizing,
+            isRequirementMode: commercialInputMode === "requirement",
+            hasBillOrUsage: filledMonths >= 1 || Boolean(latestBill),
+          })
+        : null,
+    [
+      osPresetId,
+      commercialFlowHasClient,
+      commercialFlowHasSizing,
+      commercialInputMode,
+      filledMonths,
+      latestBill,
+    ]
+  );
+
   const canOpenCommercialWorkspace =
-    osPresetId === "commercial_executive" &&
-    Boolean(manual.leadContactName?.trim() || manual.officialBillName?.trim()) &&
-    (commercialInputMode === "requirement"
-      ? parseFloat(requirementMonthlyKwh) > 0
-      : filledMonths >= 1 || Boolean(latestBill));
+    osPresetId === "commercial_executive" && commercialWorkspaceBlockReason === null;
 
   function shareLatestOnWhatsApp() {
     if (!latestWebProposalUrl) return;
@@ -1562,6 +1642,7 @@ export default function ProposalPage() {
               presetId={osPresetId}
               activeStageIndex={osActiveStageIndex}
               completedStages={osCompletedStages}
+              stages={isCommercialRequirement ? COMMERCIAL_REQUIREMENT_STAGES : undefined}
             />
 
             {/* Commercial Executive â€” Category selector (PHASE A) */}
@@ -1701,7 +1782,13 @@ export default function ProposalPage() {
             onNotes={setRequirementNotes}
             canOpenWorkspace={canOpenCommercialWorkspace}
             workspaceBusy={isWorkspaceBusy}
+            workspaceBlockReason={commercialWorkspaceBlockReason}
+            hasClient={commercialFlowHasClient}
+            hasSizing={commercialFlowHasSizing}
+            hasCategory={commercialFlowHasCategory}
+            draftProposalId={draftProposalId}
             onOpenWorkspace={() => void openCommercialWorkspace("commercial_config")}
+            onOpenWorkspaceTab={(tab: WorkspaceTabId) => void openCommercialWorkspace(tab)}
           />
         )}
 
@@ -1968,9 +2055,32 @@ export default function ProposalPage() {
       )}
 
       <div id="step-3-anchor" className={`ss-card space-y-4 p-4 sm:p-5 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
-        {osPresetId === "commercial_executive" && commercialConfig ? (
+        {isCommercialRequirement && commercialConfig ? (
+          <div id="step-workspace-anchor">
+            <CommercialRequirementFlowCard
+              variant="step3"
+              hasClient={commercialFlowHasClient}
+              hasSizing={commercialFlowHasSizing}
+              hasCategory={commercialFlowHasCategory}
+              canOpenWorkspace={canOpenCommercialWorkspace}
+              workspaceBlockReason={commercialWorkspaceBlockReason}
+              workspaceBusy={isWorkspaceBusy}
+              onOpenWorkspace={() => void openCommercialWorkspace("commercial_config")}
+              draftProposalId={draftProposalId}
+              showTabStrip={Boolean(draftProposalId)}
+              onOpenWorkspaceTab={(tab) => void openCommercialWorkspace(tab)}
+            />
+            {draftProposalId ? (
+              <p className="mt-3 text-xs text-slate-500">
+                Executive narrative and pricing are saved in workspace. Adjust system kW below if needed, then
+                generate in Step 4.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+        {osPresetId === "commercial_executive" && commercialConfig && !isCommercialRequirement ? (
           <>
-          <CommercialNarrativePanel
+            <CommercialNarrativePanel
             config={commercialConfig}
             onChange={(next) => {
               setCommercialConfig(next);
