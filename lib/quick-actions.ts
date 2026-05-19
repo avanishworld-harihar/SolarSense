@@ -35,6 +35,8 @@ export type BuilderPrefill = {
   lang?: "en" | "hi" | "bilingual";
   /** Story narrative mode to pre-select */
   story?: StoryMode;
+  /** Panel catalog id e.g. waaree-540-dcr */
+  panelCatalogId?: string;
 };
 
 /**
@@ -48,6 +50,7 @@ export function buildProposalUrl(prefill: BuilderPrefill): string {
   if (prefill.kw != null && Number.isFinite(prefill.kw)) params.set("kw", String(prefill.kw));
   if (prefill.lang) params.set("lang", prefill.lang);
   if (prefill.story) params.set("story", prefill.story);
+  if (prefill.panelCatalogId) params.set("panel", prefill.panelCatalogId);
   const qs = params.toString();
   return qs ? `/proposal?${qs}` : "/proposal";
 }

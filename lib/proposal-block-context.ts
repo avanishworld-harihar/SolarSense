@@ -10,6 +10,7 @@
 import type { ProposalDeckSummary } from "@/lib/proposal-ppt";
 import type { PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import type { ProposalDict, ProposalLang } from "@/lib/proposal-i18n";
+import type { CommercialProposalConfig } from "@/lib/commercial-proposal-config";
 import type { ProposalPresetId, StoryVariant } from "@/lib/proposal-preset-engine";
 
 export type BlockRenderContext = {
@@ -59,6 +60,9 @@ export type BlockRenderContext = {
    * Null when no story mode is configured (use built-in block copy instead).
    */
   storyVariant?: StoryVariant | null;
+
+  /** C&I configuration — panel, DCR, scenarios, financing */
+  commercialConfig?: CommercialProposalConfig | null;
 };
 
 // ─── Eligibility context (subset used by the registry) ───────────────────────

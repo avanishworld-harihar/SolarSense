@@ -40,6 +40,9 @@ import { BlockExecutionTimeline } from "./blocks/commercial/block-execution-time
 import { BlockMonitoringAMC } from "./blocks/commercial/block-monitoring-amc";
 import { BlockCommercialTerms } from "./blocks/commercial/block-commercial-terms";
 import { BlockPremiumClosing } from "./blocks/commercial/block-premium-closing";
+import { BlockDcrComparison } from "./blocks/commercial/block-dcr-comparison";
+import { BlockCapacityScenarios } from "./blocks/commercial/block-capacity-scenarios";
+import { BlockCommercialFinancing } from "./blocks/commercial/block-commercial-financing";
 
 // ─── Shared context ───────────────────────────────────────────────────────────
 
@@ -446,6 +449,28 @@ export default function CommercialProposalView({
           <BlockCommercialCover ctx={ctx} />
         </section>
 
+        {/* ── Optional C&I intelligence blocks (from commercialConfig) ─── */}
+        {pptInput.commercialConfig?.dcrComparison?.enabled !== false ? (
+          <section id="comm-dcr" className="border-b border-slate-100/80 bg-slate-50/70">
+            <BlockDcrComparison
+              summary={summary}
+              lang={lang}
+              darkMode={false}
+              commercialConfig={pptInput.commercialConfig}
+            />
+          </section>
+        ) : null}
+        {pptInput.commercialConfig?.capacityScenarios?.enabled !== false ? (
+          <section id="comm-scenarios" className="border-b border-slate-100/80 bg-white">
+            <BlockCapacityScenarios
+              summary={summary}
+              lang={lang}
+              darkMode={false}
+              commercialConfig={pptInput.commercialConfig}
+            />
+          </section>
+        ) : null}
+
         {/* ── Content sections — alternating white/light backgrounds ───── */}
         <div>
           {(
@@ -467,6 +492,14 @@ export default function CommercialProposalView({
               className={`${SECTION_BG[idx]} border-b border-slate-100/80 last:border-0`}
             >
               <Block ctx={ctx} />
+              {anchor === "comm-financials" && pptInput.commercialConfig?.financing?.enabled ? (
+                <BlockCommercialFinancing
+                  summary={summary}
+                  lang={lang}
+                  darkMode={false}
+                  commercialConfig={pptInput.commercialConfig}
+                />
+              ) : null}
             </section>
           ))}
         </div>

@@ -50,7 +50,10 @@ export type BlockRenderKey =
   | "engineering_rationale"
   | "payback_analysis"
   /** Wave 3 P7 — brand comparison card */
-  | "brand_comparison";
+  | "brand_comparison"
+  | "dcr_comparison"
+  | "capacity_scenarios"
+  | "commercial_financing";
 
 export type WebBlockMeta = {
   /** Value for `data-page` attribute on the `.proposal-page` wrapper div. */
@@ -227,6 +230,27 @@ export const WEB_RENDERER_REGISTRY: Partial<Record<ProposalBlockId, WebBlockMeta
     pageDataAttr: "brand-comparison",
     eligibility: commercialOnly,
     renderKey: "brand_comparison",
+  },
+
+  dcr_comparison_card: {
+    pageDataAttr: "dcr-comparison",
+    bridgeKey: "afterRequirement",
+    eligibility: commercialOnly,
+    renderKey: "dcr_comparison",
+  },
+
+  capacity_scenarios_card: {
+    pageDataAttr: "capacity-scenarios",
+    bridgeKey: "afterPayback",
+    eligibility: commercialOnly,
+    renderKey: "capacity_scenarios",
+  },
+
+  commercial_financing_card: {
+    pageDataAttr: "commercial-financing",
+    bridgeKey: "afterPay",
+    eligibility: commercialOnly,
+    renderKey: "commercial_financing",
   },
 };
 

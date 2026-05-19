@@ -77,6 +77,9 @@ import { BlockFinancialIntelligence } from "@/components/proposal/blocks/block-f
 import { BlockEngineeringRationale } from "@/components/proposal/blocks/block-engineering-rationale";
 // Wave 3 P7
 import { BrandComparisonCard } from "@/components/proposals/blocks/brand-comparison";
+import { BlockDcrComparison } from "@/components/proposal/blocks/commercial/block-dcr-comparison";
+import { BlockCapacityScenarios } from "@/components/proposal/blocks/commercial/block-capacity-scenarios";
+import { BlockCommercialFinancing } from "@/components/proposal/blocks/commercial/block-commercial-financing";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -259,6 +262,36 @@ export function renderBlockByKey(
           summary={summary}
           lang={lang}
           darkMode={darkMode}
+        />
+      );
+
+    case "dcr_comparison":
+      return (
+        <BlockDcrComparison
+          summary={summary}
+          lang={lang}
+          darkMode={darkMode}
+          commercialConfig={ctx.commercialConfig}
+        />
+      );
+
+    case "capacity_scenarios":
+      return (
+        <BlockCapacityScenarios
+          summary={summary}
+          lang={lang}
+          darkMode={darkMode}
+          commercialConfig={ctx.commercialConfig}
+        />
+      );
+
+    case "commercial_financing":
+      return (
+        <BlockCommercialFinancing
+          summary={summary}
+          lang={lang}
+          darkMode={darkMode}
+          commercialConfig={ctx.commercialConfig}
         />
       );
 
@@ -455,6 +488,7 @@ function ProposalWebRendererInner({
     onDownload: downloadPpt,
     downloading,
     storyVariant,
+    commercialConfig: rawInput.commercialConfig ?? null,
   };
 
   const eligibilityCtx = { billAuditBacked, presetId, showSurveySection: showSurveyWorkflowSection };

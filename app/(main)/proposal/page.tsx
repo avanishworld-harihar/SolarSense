@@ -46,6 +46,16 @@ import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
 import { BuilderStageBar } from "@/components/proposals/os/builder-stage-bar";
 import { ProposalLivePreviewPanel } from "@/components/proposals/os/live-preview-panel";
 import { BlockPlaylistEditor } from "@/components/proposals/os/block-playlist-editor";
+import { CommercialBuilderPanel } from "@/components/commercial/commercial-builder-panel";
+import { ProposalReviewSheet } from "@/components/commercial/proposal-review-sheet";
+import {
+  applyCommercialFlagsToLayout,
+  defaultCommercialConfig,
+  withOrgStory,
+  type CommercialProposalConfig,
+} from "@/lib/commercial-proposal-config";
+import { getPresetDefaultLayout } from "@/lib/proposal-preset-engine";
+import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
 import useSWR, { useSWRConfig } from "swr";
 
 const BillAnalysisCharts = dynamic(
@@ -262,6 +272,9 @@ export default function ProposalPage() {
   // When a preset is pre-selected via URL, skip the preset picker overlay.
   const [showPresetPicker, setShowPresetPicker] = useState(!urlPrefill.preset);
   const [showBlockPlaylist, setShowBlockPlaylist] = useState(false);
+  const [showReviewSheet, setShowReviewSheet] = useState(false);
+  const [commercialConfig, setCommercialConfig] = useState<CommercialProposalConfig | null>(null);
+  const [proposalLayout, setProposalLayout] = useState<ProposalTemplateV1 | null>(null);
 
   const lastCalcPersistSignatureRef = useRef("");
   const uploadQueueRef = useRef<UploadTask[]>([]);
@@ -1155,9 +1168,26 @@ export default function ProposalPage() {
       installerLogoUrl: branding.installerLogoUrl.trim() || undefined,
       companyProfile: {
         gstNumber: branding.companyGstNumber.trim() || undefined
-      }
+      },
+      proposalLayout:
+        osPresetId === "commercial_executive" && proposalLayout
+          ? applyCommercialFlagsToLayout(proposalLayout, commercialConfig ?? {})
+          : proposalLayout ?? undefined,
+      commercialConfig:
+        osPresetId === "commercial_executive" ? commercialConfig ?? undefined : undefined,
+      storyMode: urlPrefill.story ?? commercialConfig?.storyMode,
+      storySegment: commercialConfig?.orgType ?? urlPrefill.orgType,
     };
   }
+
+  useEffect(() => {
+    if (osPresetId !== "commercial_executive") return;
+    const kw = effectiveResult?.solarKw ?? urlPrefill.kw ?? 60;
+    setCommercialConfig((prev) =>
+      prev ?? withOrgStory(defaultCommercialConfig(kw), urlPrefill.orgType, urlPrefill.story)
+    );
+    setProposalLayout((prev) => prev ?? getPresetDefaultLayout("commercial_executive"));
+  }, [osPresetId, effectiveResult?.solarKw, urlPrefill.kw, urlPrefill.orgType, urlPrefill.story]);
 
   async function downloadPremiumPpt() {
     setIsPptDownloading(true);
@@ -1439,6 +1469,16 @@ export default function ProposalPage() {
           onClose={() => setShowBlockPlaylist(false)}
         />
       )}
+
+      {osPresetId === "commercial_executive" && proposalLayout ? (
+        <ProposalReviewSheet
+          open={showReviewSheet}
+          onClose={() => setShowReviewSheet(false)}
+          presetId="commercial_executive"
+          layout={proposalLayout}
+          onLayoutChange={setProposalLayout}
+        />
+      ) : null}
 
       {/*
        * Mobile floating generate FAB — visible below lg when customer name is filled.
@@ -1841,6 +1881,19 @@ export default function ProposalPage() {
       </div>
 
       <div id="step-3-anchor" className={`ss-card space-y-4 p-4 sm:p-5 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
+        {osPresetId === "commercial_executive" && commercialConfig ? (
+          <CommercialBuilderPanel
+            systemKw={effectiveResult.solarKw}
+            config={commercialConfig}
+            onChange={(next) => {
+              setCommercialConfig(next);
+              if (proposalLayout) {
+                setProposalLayout(applyCommercialFlagsToLayout(proposalLayout, next));
+              }
+            }}
+          />
+        ) : null}
+
         {/* Solar System Size — editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -1986,6 +2039,15 @@ export default function ProposalPage() {
         </div>
 
         <div id="step-4-anchor" className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {osPresetId === "commercial_executive" ? (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+              onClick={() => setShowReviewSheet(true)}
+            >
+              Review sections
+            </button>
+          ) : null}
           <button
             type="button"
             className={`ss-cta-primary sm:text-base ${osPresetId === "commercial_executive" ? "from-sky-600 via-sky-500 to-indigo-600 hover:from-sky-700 hover:to-indigo-700" : ""}`}

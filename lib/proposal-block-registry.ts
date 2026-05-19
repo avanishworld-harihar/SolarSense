@@ -33,6 +33,12 @@ export const PROPOSAL_BLOCK_IDS = [
   "amc_maintenance",
   /** Wave 3 P7 — side-by-side panel/inverter brand comparison. Commercial preset optional block. */
   "brand_comparison_card",
+  /** C&I — DCR vs NON-DCR cost comparison */
+  "dcr_comparison_card",
+  /** C&I — multi-kW capacity scenario comparison */
+  "capacity_scenarios_card",
+  /** C&I — EMI / financing scenarios */
+  "commercial_financing_card",
 ] as const;
 
 export type ProposalBlockId = (typeof PROPOSAL_BLOCK_IDS)[number];
@@ -233,6 +239,30 @@ export const PROPOSAL_BLOCK_REGISTRY: Record<ProposalBlockId, ProposalBlockMeta>
     defaultEnabled: false,
     preset_affinity: ["commercial_executive"],
   },
+
+  dcr_comparison_card: {
+    id: "dcr_comparison_card",
+    labelKey: "proposal_block_dcr_comparison",
+    group: "commercial",
+    defaultEnabled: true,
+    preset_affinity: ["commercial_executive"],
+  },
+
+  capacity_scenarios_card: {
+    id: "capacity_scenarios_card",
+    labelKey: "proposal_block_capacity_scenarios",
+    group: "commercial",
+    defaultEnabled: true,
+    preset_affinity: ["commercial_executive"],
+  },
+
+  commercial_financing_card: {
+    id: "commercial_financing_card",
+    labelKey: "proposal_block_commercial_financing",
+    group: "commercial",
+    defaultEnabled: false,
+    preset_affinity: ["commercial_executive"],
+  },
 };
 
 /** Default narrative order used when no preset is active. Maintains backward compatibility. */
@@ -254,4 +284,7 @@ export const DEFAULT_PROPOSAL_BLOCK_ORDER: ProposalBlockId[] = [
   "customer_documents_required",
   "amc_maintenance",
   "brand_comparison_card",
+  "dcr_comparison_card",
+  "capacity_scenarios_card",
+  "commercial_financing_card",
 ];

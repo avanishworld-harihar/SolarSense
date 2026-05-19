@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { commercialProposalConfigSchema } from "@/lib/commercial-proposal-config";
 import { proposalTemplateV1Schema } from "@/lib/proposal-template-schema";
 
 /**
@@ -99,5 +100,7 @@ export const proposalExtrasShape = {
    * Modular proposal engine: ordered blocks, each toggleable. Stored in `ppt_input` JSONB.
    * Renderers (web / future quote PDF) consume this; Phase 1 deck generation unchanged if omitted.
    */
-  proposalLayout: proposalTemplateV1Schema.optional()
+  proposalLayout: proposalTemplateV1Schema.optional(),
+  /** C&I panel pricing, DCR compare, capacity scenarios, financing (see migration 028). */
+  commercialConfig: commercialProposalConfigSchema.optional()
 } as const;

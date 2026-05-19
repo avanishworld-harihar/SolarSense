@@ -167,6 +167,9 @@ export type PremiumProposalPptInput = {
    * Drives which StoryCopy variant to load for the above storyMode.
    */
   storySegment?: import("@/lib/proposal-story-copy").StorySegment | null;
+
+  /** C&I commercial intelligence — panel catalog, scenarios, financing, DCR compare */
+  commercialConfig?: import("@/lib/commercial-proposal-config").CommercialProposalConfig | null;
 };
 
 export type ProposalDeckSummary = {
