@@ -24,10 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  CommercialRequirementFlowCard,
-  type WorkspaceTabId,
-} from "@/components/commercial/commercial-requirement-flow-card";
+import { ExternalLink } from "lucide-react";
 
 export type CommercialInputMode = "bill" | "requirement";
 
@@ -104,11 +101,7 @@ type RequirementFormProps = {
   workspaceBusy?: boolean;
   onOpenWorkspace?: () => void;
   workspaceBlockReason?: string | null;
-  hasClient?: boolean;
-  hasSizing?: boolean;
-  hasCategory?: boolean;
-  draftProposalId?: string | null;
-  onOpenWorkspaceTab?: (tab: WorkspaceTabId) => void;
+  proposalsHref?: string | null;
 };
 
 function RequirementForm({
@@ -128,11 +121,7 @@ function RequirementForm({
   workspaceBusy,
   onOpenWorkspace,
   workspaceBlockReason = null,
-  hasClient = false,
-  hasSizing = false,
-  hasCategory = false,
-  draftProposalId,
-  onOpenWorkspaceTab,
+  proposalsHref,
 }: RequirementFormProps) {
   return (
     <motion.div
@@ -206,21 +195,31 @@ function RequirementForm({
         </div>
       </div>
 
-      {onOpenWorkspace ? (
-        <CommercialRequirementFlowCard
-          variant="step2"
-          hasClient={hasClient}
-          hasSizing={hasSizing}
-          hasCategory={hasCategory}
-          canOpenWorkspace={canOpenWorkspace}
-          workspaceBlockReason={workspaceBlockReason}
-          workspaceBusy={Boolean(workspaceBusy)}
-          onOpenWorkspace={onOpenWorkspace}
-          draftProposalId={draftProposalId}
-          onOpenWorkspaceTab={onOpenWorkspaceTab}
-          className="mt-2 border-sky-200/60"
-        />
-      ) : null}
+      <div className="mt-2 rounded-xl border border-indigo-200/70 bg-indigo-50/50 px-3 py-3">
+        <p className="text-[11px] font-semibold text-indigo-900">
+          Panel pricing (DCR / Non-DCR) lives in the Proposals tab — Commercial BOM, not on this page.
+        </p>
+        {onOpenWorkspace ? (
+          <button
+            type="button"
+            disabled={!canOpenWorkspace || workspaceBusy}
+            onClick={onOpenWorkspace}
+            title={workspaceBlockReason ?? undefined}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ExternalLink className="h-4 w-4" />
+            {workspaceBusy ? "Saving…" : "Go to Proposals — configure panel & BOM"}
+          </button>
+        ) : null}
+        {!canOpenWorkspace && workspaceBlockReason ? (
+          <p className="mt-2 text-center text-[11px] font-medium text-amber-800">{workspaceBlockReason}</p>
+        ) : null}
+        {proposalsHref && canOpenWorkspace ? (
+          <p className="mt-2 text-center text-[10px] text-slate-500">
+            Opens your deal in Proposals → Commercial panel pricing + full BOM.
+          </p>
+        ) : null}
+      </div>
     </motion.div>
   );
 }
@@ -278,11 +277,7 @@ type Props = {
   workspaceBusy?: boolean;
   onOpenWorkspace?: () => void;
   workspaceBlockReason?: string | null;
-  hasClient?: boolean;
-  hasSizing?: boolean;
-  hasCategory?: boolean;
-  draftProposalId?: string | null;
-  onOpenWorkspaceTab?: (tab: WorkspaceTabId) => void;
+  proposalsHref?: string | null;
 };
 
 export function CommercialInputModeSelector({
@@ -304,11 +299,7 @@ export function CommercialInputModeSelector({
   workspaceBusy,
   onOpenWorkspace,
   workspaceBlockReason,
-  hasClient,
-  hasSizing,
-  hasCategory,
-  draftProposalId,
-  onOpenWorkspaceTab,
+  proposalsHref,
 }: Props) {
   return (
     <div className="space-y-2">
@@ -353,11 +344,7 @@ export function CommercialInputModeSelector({
             workspaceBusy={workspaceBusy}
             onOpenWorkspace={onOpenWorkspace}
             workspaceBlockReason={workspaceBlockReason}
-            hasClient={hasClient}
-            hasSizing={hasSizing}
-            hasCategory={hasCategory}
-            draftProposalId={draftProposalId}
-            onOpenWorkspaceTab={onOpenWorkspaceTab}
+            proposalsHref={proposalsHref}
           />
         )}
       </AnimatePresence>

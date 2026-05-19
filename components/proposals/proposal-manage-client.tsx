@@ -5,6 +5,7 @@ import { ProposalDetailActionsSheet } from "@/components/proposals/proposal-deta
 import { ProposalDetailSection } from "@/components/proposals/proposal-detail-section";
 import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
 import { ProposalModulesStrip } from "@/components/proposals/proposal-modules-strip";
+import { CommercialPanelBomSection } from "@/components/proposals/commercial-panel-bom-section";
 import { ProposalPricingConfigurator, type ProposalPricingConfiguratorLabels } from "@/components/proposals/proposal-pricing-configurator";
 import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ export type ProposalManageClientProps = {
   customerName: string;
   generatedAt: string;
   location?: string | null;
+  presetId?: string;
   proposalStatus: ProposalStatus;
   annualSavingInr: number;
   pptInput: PremiumProposalPptInput;
@@ -46,6 +48,7 @@ export function ProposalManageClient({
   customerName,
   generatedAt,
   location,
+  presetId = "residential_smart",
   proposalStatus: initialStatus,
   annualSavingInr,
   pptInput: initialPpt,
@@ -347,6 +350,21 @@ export function ProposalManageClient({
           </div>
         </div>
       </div>
+
+      {presetId === "commercial_executive" ? (
+        <ProposalDetailSection
+          id="commercial-panels"
+          variant="workspace"
+          title="Commercial panel pricing"
+          subtitle="DCR and Non-DCR modules — wattage sets panel count for this plant size."
+        >
+          <CommercialPanelBomSection
+            proposalId={proposalId}
+            pptInput={pptInput}
+            onPptInputChange={setPptInput}
+          />
+        </ProposalDetailSection>
+      ) : null}
 
       <ProposalDetailSection id="bom" variant="workspace" title={t("proposals_section_bom")} subtitle={t("proposals_section_bomSub")}>
         <ProposalPricingConfigurator

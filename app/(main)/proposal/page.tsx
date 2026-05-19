@@ -44,12 +44,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { parsePrefillFromSearchParams } from "@/lib/quick-actions";
 import { ProposalPresetPicker, type ProposalPresetId } from "@/components/proposals/os/preset-picker";
 import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
-import {
-  BuilderStageBar,
-  COMMERCIAL_REQUIREMENT_STAGES,
-} from "@/components/proposals/os/builder-stage-bar";
-import { CommercialRequirementFlowCard } from "@/components/commercial/commercial-requirement-flow-card";
-import type { WorkspaceTabId } from "@/components/commercial/commercial-requirement-flow-card";
+import { BuilderStageBar } from "@/components/proposals/os/builder-stage-bar";
 import {
   commercialRequirementHasSizing,
   getCommercialWorkspaceBlockReason,
@@ -681,16 +676,8 @@ export default function ProposalPage() {
     overrideSolarKw,
     effectiveResult.solarKw
   );
-  const commercialFlowHasCategory = Boolean(commercialConfig?.orgType);
-
   // Drives BuilderStageBar active/completed state in real-time.
   const osActiveStageIndex = useMemo(() => {
-    if (isCommercialRequirement) {
-      if (!commercialFlowHasClient) return 0;
-      if (!commercialFlowHasSizing) return 1;
-      if (!draftProposalId) return 2;
-      return 3;
-    }
     const hasClient = Boolean(manual.leadContactName || manual.officialBillName || selectedLeadId);
     const hasEnergy = isBillBackedLive || Object.values(monthlyUnits).some((v) => v > 0);
     const hasSystem = effectiveResult.solarKw > 0;
@@ -699,10 +686,6 @@ export default function ProposalPage() {
     if (!hasSystem) return 2;
     return 3;
   }, [
-    isCommercialRequirement,
-    commercialFlowHasClient,
-    commercialFlowHasSizing,
-    draftProposalId,
     manual.leadContactName,
     manual.officialBillName,
     selectedLeadId,
@@ -712,13 +695,6 @@ export default function ProposalPage() {
   ]);
 
   const osCompletedStages = useMemo(() => {
-    if (isCommercialRequirement) {
-      const stages: number[] = [];
-      if (commercialFlowHasClient) stages.push(0);
-      if (commercialFlowHasSizing) stages.push(1);
-      if (draftProposalId) stages.push(2);
-      return stages;
-    }
     const stages: number[] = [];
     const hasClient = Boolean(manual.leadContactName || manual.officialBillName || selectedLeadId);
     const hasEnergy = isBillBackedLive || Object.values(monthlyUnits).some((v) => v > 0);
@@ -728,10 +704,6 @@ export default function ProposalPage() {
     if (hasSystem) stages.push(2);
     return stages;
   }, [
-    isCommercialRequirement,
-    commercialFlowHasClient,
-    commercialFlowHasSizing,
-    draftProposalId,
     manual.leadContactName,
     manual.officialBillName,
     selectedLeadId,
@@ -739,6 +711,10 @@ export default function ProposalPage() {
     monthlyUnits,
     effectiveResult.solarKw,
   ]);
+
+  const proposalsBomHref = draftProposalId
+    ? `/proposals/${draftProposalId}#commercial-panels`
+    : null;
 
   useEffect(() => {
     setAdditionalBills((prev) => {
@@ -1489,29 +1465,27 @@ export default function ProposalPage() {
     }
   }
 
-  async function openCommercialWorkspace(
-    tab: "commercial_config" | "panel_pricing" | "capacity" | "financing" = "commercial_config"
-  ) {
+  /** Opens the existing Proposals-tab workspace (BOM + DCR / Non-DCR panel pricing). */
+  async function goToProposalsCommercialBom() {
     if (osPresetId !== "commercial_executive") return;
     setIsWorkspaceBusy(true);
     try {
       const saved = await persistProposalToServer();
       if (!saved) {
         toast.error(
-          "Could not open workspace",
-          "Draft proposal was not saved. Check your connection or database, then try again."
+          "Could not open Proposals",
+          "Draft was not saved. Check your connection or database, then try again."
         );
         return;
       }
       toast.success(
-        "Open Workspace",
-        "Configure commercial pricing, scenarios, and narrative — then generate when ready."
+        "Proposals workspace",
+        "Configure DCR / Non-DCR panels and commercial BOM, then return here to generate."
       );
-      const fromReq = commercialInputMode === "requirement" ? "&from=requirement" : "";
-      router.push(`/workspace/${saved.id}?tab=${tab}${fromReq}`);
+      router.push(`/proposals/${saved.id}#commercial-panels`);
     } catch (error) {
       toast.error(
-        "Workspace unavailable",
+        "Proposals unavailable",
         error instanceof Error ? error.message : "Could not save draft proposal."
       );
     } finally {
@@ -1642,7 +1616,6 @@ export default function ProposalPage() {
               presetId={osPresetId}
               activeStageIndex={osActiveStageIndex}
               completedStages={osCompletedStages}
-              stages={isCommercialRequirement ? COMMERCIAL_REQUIREMENT_STAGES : undefined}
             />
 
             {/* Commercial Executive â€” Category selector (PHASE A) */}
@@ -1783,12 +1756,8 @@ export default function ProposalPage() {
             canOpenWorkspace={canOpenCommercialWorkspace}
             workspaceBusy={isWorkspaceBusy}
             workspaceBlockReason={commercialWorkspaceBlockReason}
-            hasClient={commercialFlowHasClient}
-            hasSizing={commercialFlowHasSizing}
-            hasCategory={commercialFlowHasCategory}
-            draftProposalId={draftProposalId}
-            onOpenWorkspace={() => void openCommercialWorkspace("commercial_config")}
-            onOpenWorkspaceTab={(tab: WorkspaceTabId) => void openCommercialWorkspace(tab)}
+            proposalsHref={proposalsBomHref}
+            onOpenWorkspace={() => void goToProposalsCommercialBom()}
           />
         )}
 
@@ -2055,27 +2024,30 @@ export default function ProposalPage() {
       )}
 
       <div id="step-3-anchor" className={`ss-card space-y-4 p-4 sm:p-5 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
-        {isCommercialRequirement && commercialConfig ? (
-          <div id="step-workspace-anchor">
-            <CommercialRequirementFlowCard
-              variant="step3"
-              hasClient={commercialFlowHasClient}
-              hasSizing={commercialFlowHasSizing}
-              hasCategory={commercialFlowHasCategory}
-              canOpenWorkspace={canOpenCommercialWorkspace}
-              workspaceBlockReason={commercialWorkspaceBlockReason}
-              workspaceBusy={isWorkspaceBusy}
-              onOpenWorkspace={() => void openCommercialWorkspace("commercial_config")}
-              draftProposalId={draftProposalId}
-              showTabStrip={Boolean(draftProposalId)}
-              onOpenWorkspaceTab={(tab) => void openCommercialWorkspace(tab)}
-            />
+        {isCommercialRequirement ? (
+          <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 px-3 py-2.5 text-xs text-sky-900">
+            <p className="font-semibold">Panel &amp; BOM configuration</p>
+            <p className="mt-1 text-sky-800/90">
+              Use the Proposals tab workspace (Commercial panel pricing + BOM). Adjust system kW below, then generate
+              when ready.
+            </p>
             {draftProposalId ? (
-              <p className="mt-3 text-xs text-slate-500">
-                Executive narrative and pricing are saved in workspace. Adjust system kW below if needed, then
-                generate in Step 4.
-              </p>
-            ) : null}
+              <a
+                href={`/proposals/${draftProposalId}#commercial-panels`}
+                className="mt-2 inline-flex text-[11px] font-bold text-indigo-700 underline"
+              >
+                Open Proposals — panel &amp; BOM
+              </a>
+            ) : (
+              <button
+                type="button"
+                disabled={!canOpenCommercialWorkspace || isWorkspaceBusy}
+                onClick={() => void goToProposalsCommercialBom()}
+                className="mt-2 text-[11px] font-bold text-indigo-700 underline disabled:opacity-50"
+              >
+                {isWorkspaceBusy ? "Saving…" : "Save & open Proposals workspace"}
+              </button>
+            )}
           </div>
         ) : null}
         {osPresetId === "commercial_executive" && commercialConfig && !isCommercialRequirement ? (
@@ -2091,27 +2063,26 @@ export default function ProposalPage() {
             onOpenReview={() => setShowReviewSheet(true)}
           />
           <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-r from-indigo-50/80 to-sky-50/60 p-4">
-            <p className="text-sm font-bold text-slate-900">Business intelligence lives in Open Workspace</p>
+            <p className="text-sm font-bold text-slate-900">Commercial BOM &amp; panel pricing</p>
             <p className="mt-1 text-xs text-slate-600">
-              Panel registries, DCR comparison, capacity scenarios, and financing are configured after you save a
-              draft — no need to go back.
+              DCR / Non-DCR modules and full BOM are configured in the Proposals tab — same workspace as before.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 disabled={!canOpenCommercialWorkspace || isWorkspaceBusy || isWebProposalBusy}
-                onClick={() => void openCommercialWorkspace("commercial_config")}
+                onClick={() => void goToProposalsCommercialBom()}
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                {isWorkspaceBusy ? "Saving…" : "Open Workspace"}
+                {isWorkspaceBusy ? "Saving…" : "Go to Proposals — BOM"}
               </button>
               {draftProposalId ? (
                 <a
-                  href={`/workspace/${draftProposalId}`}
+                  href={`/proposals/${draftProposalId}#commercial-panels`}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"
                 >
-                  Resume workspace
+                  Open Proposals workspace
                 </a>
               ) : null}
             </div>

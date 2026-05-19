@@ -40,6 +40,7 @@ export default async function ProposalManagePage({ params }: PageProps) {
       customerName={proposal.customer_name}
       generatedAt={proposal.generated_at}
       location={proposal.location}
+      presetId={proposal.preset_id ?? "residential_smart"}
       proposalStatus={normalizeProposalStatus(proposal.proposal_status)}
       annualSavingInr={Math.max(0, annualSavingInr)}
       pptInput={merged}

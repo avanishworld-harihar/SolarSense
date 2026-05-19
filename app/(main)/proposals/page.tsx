@@ -29,6 +29,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import useSWR from "swr";
@@ -70,6 +71,8 @@ async function fetchProposals(url: string) {
 }
 
 export default function ProposalsHubPage() {
+  const searchParams = useSearchParams();
+  const dealFromUrl = searchParams.get("deal")?.trim() || null;
   const { t, locale } = useLanguage();
   const { data, error, isLoading, mutate } = useSWR(PROPOSALS_SWR_KEY, fetchProposals, {
     revalidateOnFocus: true,
@@ -118,6 +121,13 @@ export default function ProposalsHubPage() {
   const pipelineRef = useRef<HTMLElement>(null);
   const workspaceRef = useRef<HTMLElement>(null);
   const [pipelineVisible, setPipelineVisible] = useState(true);
+
+  useEffect(() => {
+    if (dealFromUrl && filteredRows.some((r) => r.id === dealFromUrl)) {
+      setFocusId(dealFromUrl);
+      requestAnimationFrame(() => workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  }, [dealFromUrl, filteredRows]);
 
   useEffect(() => {
     if (filteredRows.length === 0) { setFocusId(null); return; }
