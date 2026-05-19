@@ -96,6 +96,9 @@ const PRESETS: PresetDefinition[] = [
   },
 ];
 
+/** Above `#ss-bottom-nav-portal` (z-index 9999) so modals fully cover mobile chrome. */
+const MODAL_Z = "z-[10050]";
+
 export function ProposalPresetPicker({ currentPresetId, onSelect, onSkip }: Props) {
   return (
     <AnimatePresence>
@@ -105,22 +108,29 @@ export function ProposalPresetPicker({ currentPresetId, onSelect, onSkip }: Prop
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="preset-picker-title"
+        className={`proposal-os-glass-backdrop fixed inset-0 ${MODAL_Z} flex items-end justify-center p-0 sm:items-center sm:p-4`}
       >
         <motion.div
           initial={{ opacity: 0, y: 24, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.97 }}
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-3xl"
+          className="proposal-os-glass-sheet flex max-h-[min(96dvh,100%)] w-full max-w-3xl flex-col rounded-t-3xl sm:max-h-[min(90vh,920px)] sm:rounded-3xl"
         >
+          <div className="proposal-os-glass-sheet-inner flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 sm:pb-6">
           {/* Header */}
           <div className="mb-6 text-center">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-md">
               <Sparkles className="h-3 w-3 text-amber-400" />
               SOL.52 Proposal OS
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            <h2
+              id="preset-picker-title"
+              className="text-2xl font-bold tracking-tight text-white sm:text-3xl"
+            >
               Choose your proposal type
             </h2>
             <p className="mt-2 text-sm text-slate-400">
@@ -140,19 +150,18 @@ export function ProposalPresetPicker({ currentPresetId, onSelect, onSkip }: Prop
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.07 + 0.1, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                   onClick={() => onSelect(preset.id)}
-                  className={`group relative w-full overflow-hidden rounded-2xl border bg-white/5 p-6 text-left backdrop-blur-sm transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
-                    isSelected
-                      ? "border-white/40 ring-2 ring-white/20"
-                      : "border-white/10 hover:border-white/25"
+                  className={`proposal-os-glass-card group w-full rounded-2xl p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/50 sm:p-6 ${
+                    isSelected ? "proposal-os-glass-card--selected ring-2 ring-teal-400/30" : ""
                   }`}
                 >
-                  {/* Background gradient on hover */}
+                  {/* Accent wash on hover */}
                   <div
-                    className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${preset.accentFrom} ${preset.accentTo} opacity-0 transition-opacity duration-300 group-hover:opacity-5`}
+                    className={`pointer-events-none absolute inset-0 z-0 bg-gradient-to-br ${preset.accentFrom} ${preset.accentTo} opacity-0 transition-opacity duration-300 group-hover:opacity-[0.12]`}
+                    aria-hidden
                   />
 
                   {/* Icon + badge */}
-                  <div className="mb-4 flex items-start justify-between">
+                  <div className="relative z-[1] mb-4 flex items-start justify-between">
                     <div
                       className={`inline-flex items-center justify-center rounded-xl bg-gradient-to-br ${preset.accentFrom} ${preset.accentTo} p-3 text-white shadow-lg`}
                     >
@@ -164,21 +173,21 @@ export function ProposalPresetPicker({ currentPresetId, onSelect, onSkip }: Prop
                   </div>
 
                   {/* Title + subtitle */}
-                  <h3 className="text-lg font-bold text-white">{preset.title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                  <h3 className="relative z-[1] text-lg font-bold text-white">{preset.title}</h3>
+                  <p className="relative z-[1] mt-1 text-sm leading-relaxed text-slate-300/95">
                     {preset.subtitle}
                   </p>
 
                   {/* Audience */}
-                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-300">
-                    <Zap className="h-2.5 w-2.5" />
+                  <div className="relative z-[1] mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-200 backdrop-blur-sm">
+                    <Zap className="h-2.5 w-2.5" aria-hidden />
                     {preset.audience}
                   </div>
 
                   {/* Included sections */}
-                  <ul className="mt-4 space-y-1.5">
+                  <ul className="relative z-[1] mt-4 space-y-1.5">
                     {preset.sections.map((s) => (
-                      <li key={s} className="flex items-start gap-2 text-xs text-slate-400">
+                      <li key={s} className="flex items-start gap-2 text-xs text-slate-300/90">
                         <span className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-500" />
                         {s}
                       </li>
@@ -187,7 +196,7 @@ export function ProposalPresetPicker({ currentPresetId, onSelect, onSkip }: Prop
 
                   {/* CTA */}
                   <div
-                    className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-lg transition-all ${preset.ctaClass}`}
+                    className={`relative z-[1] mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-lg backdrop-blur-sm transition-all ${preset.ctaClass}`}
                   >
                     Start Building
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -202,10 +211,11 @@ export function ProposalPresetPicker({ currentPresetId, onSelect, onSkip }: Prop
             <button
               type="button"
               onClick={onSkip}
-              className="text-xs text-slate-500 underline-offset-2 transition-colors hover:text-slate-300 hover:underline"
+              className="text-xs text-slate-400/90 underline-offset-2 transition-colors hover:text-white hover:underline"
             >
               Skip and use Residential Smart (default)
             </button>
+          </div>
           </div>
         </motion.div>
       </motion.div>

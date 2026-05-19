@@ -152,18 +152,18 @@ export function BlockPlaylistEditor({ presetId, onClose }: Props) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm"
+        className="proposal-os-glass-backdrop fixed inset-0 z-[10040]"
       />
 
       {/* Drawer */}
-      <motion.div
-        key="playlist-drawer"
-        initial={{ x: "100%" }}
-        animate={{ x: 0 }}
-        exit={{ x: "100%" }}
-        transition={{ type: "spring", stiffness: 320, damping: 32 }}
-        className="fixed right-0 top-0 bottom-0 z-50 flex w-full max-w-sm flex-col overflow-hidden border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-      >
+        <motion.div
+          key="playlist-drawer"
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", stiffness: 320, damping: 32 }}
+          className="proposal-os-glass-drawer fixed inset-y-0 right-0 z-[10050] flex w-full max-w-sm flex-col overflow-hidden shadow-2xl max-lg:max-h-[100dvh]"
+        >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
@@ -266,7 +266,7 @@ export function BlockPlaylistEditor({ presetId, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 px-5 py-4 dark:border-slate-800">
+        <div className="shrink-0 border-t border-slate-100 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-slate-800">
           <button
             type="button"
             onClick={onClose}
