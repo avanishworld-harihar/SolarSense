@@ -1688,42 +1688,12 @@ export default function ProposalPage() {
             {t("proposal_walkInCrmHint")}
           </p>
         ) : null}
-      </div>
 
-      {leadSelected && manual.leadContactName ? (
-        <ProposalQuickPreview
-          customerName={manual.leadContactName}
-          city={activeLead?.city ?? manual.city}
-          discom={activeLead?.discom ?? manual.discom}
-          systemKw={effectiveResult.solarKw}
-          annualSavingsInr={effectiveResult.annualSavings}
-          netCostInr={effectiveResult.netCost}
-          paybackLabel={effectiveResult.paybackDisplay}
-          billOptionalHint={t("proposal_quickPathHint")}
-          onGenerate={() => void generateWebProposal()}
-          busy={isWebProposalBusy}
-        />
-      ) : null}
-
-      <div id="step-2-anchor" className={`ss-step-card ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
-        <span className="ss-step-chip">Step 2</span>
-        <h2 className="flex flex-col gap-1 text-base font-bold text-brand-900 sm:flex-row sm:items-center sm:gap-2 sm:text-lg">
-          <span className="flex items-center gap-2">
-            <FileUp className="h-5 w-5 shrink-0 text-brand-600" />
-            <span className="leading-snug">{step2Label}</span>
-          </span>
-        </h2>
-        <p className="mt-2 text-xs font-medium leading-snug text-slate-600 sm:text-sm">
-          {t("proposal_step2BillUploadsSub")} {billingRule.averagingHint}
-        </p>
-
-        {/* Commercial mode â€” bill-based vs requirement-based selector (PHASE A) */}
-        {osPresetId === "commercial_executive" && (
+        {osPresetId === "commercial_executive" ? (
           <CommercialInputModeSelector
             mode={commercialInputMode}
             onModeChange={(m) => {
               setCommercialInputMode(m);
-              // Reset requirement fields when switching back to bill mode
               if (m === "bill") {
                 setRequirementMonthlyKwh("");
                 setRequirementNotes("");
@@ -1741,7 +1711,6 @@ export default function ProposalPage() {
             onCity={(v) => setManual((p) => ({ ...p, city: v }))}
             onMonthlyKwh={(v) => {
               setRequirementMonthlyKwh(v);
-              // Seed monthly kWh into the January unit (simple proxy for sizing engine)
               const kwhPerMonth = parseFloat(v);
               if (!isNaN(kwhPerMonth) && kwhPerMonth > 0) {
                 const flat = Math.round(kwhPerMonth);
@@ -1759,10 +1728,37 @@ export default function ProposalPage() {
             proposalsHref={proposalsBomHref}
             onOpenWorkspace={() => void goToProposalsCommercialBom()}
           />
-        )}
+        ) : null}
+      </div>
 
-        {/* Bill upload area â€” hidden when commercial requirement mode is selected */}
-        {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
+      {leadSelected && manual.leadContactName && !isCommercialRequirement ? (
+        <ProposalQuickPreview
+          customerName={manual.leadContactName}
+          city={activeLead?.city ?? manual.city}
+          discom={activeLead?.discom ?? manual.discom}
+          systemKw={effectiveResult.solarKw}
+          annualSavingsInr={effectiveResult.annualSavings}
+          netCostInr={effectiveResult.netCost}
+          paybackLabel={effectiveResult.paybackDisplay}
+          billOptionalHint={t("proposal_quickPathHint")}
+          onGenerate={() => void generateWebProposal()}
+          busy={isWebProposalBusy}
+        />
+      ) : null}
+
+      {!isCommercialRequirement ? (
+      <div id="step-2-anchor" className={`ss-step-card ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
+        <span className="ss-step-chip">Step 2</span>
+        <h2 className="flex flex-col gap-1 text-base font-bold text-brand-900 sm:flex-row sm:items-center sm:gap-2 sm:text-lg">
+          <span className="flex items-center gap-2">
+            <FileUp className="h-5 w-5 shrink-0 text-brand-600" />
+            <span className="leading-snug">{step2Label}</span>
+          </span>
+        </h2>
+        <p className="mt-2 text-xs font-medium leading-snug text-slate-600 sm:text-sm">
+          {t("proposal_step2BillUploadsSub")} {billingRule.averagingHint}
+        </p>
+
         <>
         {!leadSelected ? (
           <p className="mt-2 rounded-lg border border-amber-200/90 bg-amber-50/90 px-2.5 py-2 text-[11px] font-semibold leading-snug text-amber-950 sm:text-xs">
@@ -1859,9 +1855,8 @@ export default function ProposalPage() {
           {t("proposal_annualUnitsLine", { annual: annualUnits.toLocaleString("en-IN"), filled: filledMonths })}
         </p>
         </>
-        )}
-        {/* END: bill upload area */}
       </div>
+      ) : null}
 
       {/* Bill analysis charts â€” hidden in commercial requirement mode */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
@@ -2028,8 +2023,7 @@ export default function ProposalPage() {
           <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 px-3 py-2.5 text-xs text-sky-900">
             <p className="font-semibold">Panel &amp; BOM configuration</p>
             <p className="mt-1 text-sky-800/90">
-              Use the Proposals tab workspace (Commercial panel pricing + BOM). Adjust system kW below, then generate
-              when ready.
+              Configure DCR / Non-DCR panels and BOM in the Proposals tab, then generate when ready.
             </p>
             {draftProposalId ? (
               <a
@@ -2090,6 +2084,8 @@ export default function ProposalPage() {
           </>
         ) : null}
 
+        {!isCommercialRequirement ? (
+        <>
         {/* Solar System Size â€” editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -2178,6 +2174,8 @@ export default function ProposalPage() {
             )}
           </div>
         </div>
+        </>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
           <p className="text-xs font-semibold text-slate-700 sm:text-sm">
@@ -2187,7 +2185,7 @@ export default function ProposalPage() {
             {t("proposal_payback")}: <span className="font-extrabold text-brand-700">{effectiveResult.paybackDisplay}</span>
           </p>
         </div>
-        {/* Proposal language â€” inline toggle */}
+        {/* Proposal language — inline toggle */}
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Language</span>
           <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-0.5">
