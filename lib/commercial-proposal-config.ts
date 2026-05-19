@@ -50,6 +50,13 @@ export const commercialFinancingConfigSchema = z.object({
   lenderLabel: z.string().max(120).optional(),
 });
 
+/** DG / diesel backup assumptions for executive storytelling (hotel, factory, etc.) */
+export const dgAssumptionsSchema = z.object({
+  enabled: z.boolean().default(false),
+  hoursPerDay: z.number().min(0).max(24).optional(),
+  monthlyFuelCostInr: z.number().min(0).optional(),
+});
+
 export const commercialProposalConfigSchema = z.object({
   panel: commercialPanelConfigSchema.optional(),
   dcrComparison: dcrComparisonConfigSchema.optional(),
@@ -63,6 +70,10 @@ export const commercialProposalConfigSchema = z.object({
     .optional(),
   /** Inverter phase for BOM specification */
   inverterPhase: z.enum(["single", "three"]).optional(),
+  /** Diesel generator context for savings narrative */
+  dgAssumptions: dgAssumptionsSchema.optional(),
+  /** Free-form executive notes woven into commercial deck */
+  presentationNotes: z.string().max(600).optional(),
 });
 
 export type CommercialProposalConfig = z.infer<typeof commercialProposalConfigSchema>;

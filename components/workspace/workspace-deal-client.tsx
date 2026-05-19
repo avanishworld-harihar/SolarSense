@@ -24,12 +24,15 @@ import {
   Activity,
   BadgeCheck,
   Coins,
+  CreditCard,
   FileText,
   FolderOpen,
+  Layers,
   LayoutGrid,
   MessageSquare,
   MoreHorizontal,
   Store,
+  TrendingUp,
 } from "lucide-react";
 
 import { ProposalDetailActionsSheet } from "@/components/proposals/proposal-detail-actions-sheet";
@@ -58,12 +61,28 @@ import type { ProposalHubRow } from "@/lib/proposal-hub-insights";
 import { useToast } from "@/components/ui/toast-center";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import {
+  defaultCommercialConfig,
+  parseCommercialConfig,
+  type CommercialProposalConfig,
+} from "@/lib/commercial-proposal-config";
+import { WorkspaceCommercialTab } from "@/components/workspace/commercial/workspace-commercial-tab";
 
 // ─── Tab definitions ───────────────────────────────────────────────────────
 
 // Note: "marketplace" tab is intentionally the last — it is disabled (P10 deferred).
-const TABS = ["overview", "proposal", "pricing", "activity", "files", "approvals", "comments", "marketplace"] as const;
-type TabId = (typeof TABS)[number];
+type TabId =
+  | "overview"
+  | "proposal"
+  | "panel_pricing"
+  | "capacity"
+  | "financing"
+  | "pricing"
+  | "activity"
+  | "files"
+  | "approvals"
+  | "comments"
+  | "marketplace";
 
 type TabConfig = {
   id: TabId;
@@ -71,22 +90,29 @@ type TabConfig = {
   icon: React.ReactNode;
 };
 
-function useTabs(t: (key: string) => string): TabConfig[] {
-  return useMemo(
-    () => [
-      { id: "overview",  label: "Overview",   icon: <LayoutGrid className="h-3.5 w-3.5" /> },
-      { id: "proposal",  label: "Proposal",   icon: <FileText className="h-3.5 w-3.5" /> },
-      { id: "pricing",   label: "Pricing",    icon: <Coins className="h-3.5 w-3.5" /> },
-      { id: "activity",  label: "Activity",   icon: <Activity className="h-3.5 w-3.5" /> },
-      { id: "files",     label: "Files",      icon: <FolderOpen className="h-3.5 w-3.5" /> },
-      { id: "approvals", label: "Approvals",  icon: <BadgeCheck className="h-3.5 w-3.5" /> },
-      { id: "comments",  label: "Comments",   icon: <MessageSquare className="h-3.5 w-3.5" /> },
-      // P10 — disabled marketplace tab placeholder (UI-only, no schema)
-      { id: "marketplace", label: "Marketplace", icon: <Store className="h-3.5 w-3.5" /> },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t]
-  );
+function useTabs(isCommercial: boolean): TabConfig[] {
+  return useMemo(() => {
+    const core: TabConfig[] = [
+      { id: "overview", label: "Overview", icon: <LayoutGrid className="h-3.5 w-3.5" /> },
+      { id: "proposal", label: "Proposal", icon: <FileText className="h-3.5 w-3.5" /> },
+    ];
+    if (isCommercial) {
+      core.push(
+        { id: "panel_pricing", label: "Panel & Pricing", icon: <Layers className="h-3.5 w-3.5" /> },
+        { id: "capacity", label: "Capacity", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+        { id: "financing", label: "Financing", icon: <CreditCard className="h-3.5 w-3.5" /> }
+      );
+    }
+    core.push(
+      { id: "pricing", label: "BOM Pricing", icon: <Coins className="h-3.5 w-3.5" /> },
+      { id: "activity", label: "Activity", icon: <Activity className="h-3.5 w-3.5" /> },
+      { id: "files", label: "Files", icon: <FolderOpen className="h-3.5 w-3.5" /> },
+      { id: "approvals", label: "Approvals", icon: <BadgeCheck className="h-3.5 w-3.5" /> },
+      { id: "comments", label: "Comments", icon: <MessageSquare className="h-3.5 w-3.5" /> },
+      { id: "marketplace", label: "Marketplace", icon: <Store className="h-3.5 w-3.5" /> }
+    );
+    return core;
+  }, [isCommercial]);
 }
 
 // ─── Tab bar ───────────────────────────────────────────────────────────────
@@ -202,7 +228,8 @@ export function WorkspaceDealClient({
 }: WorkspaceDealClientProps) {
   const { t } = useLanguage();
   const toast = useToast();
-  const tabs = useTabs(t);
+  const isCommercial = presetId === "commercial_executive";
+  const tabs = useTabs(isCommercial);
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [pptInput, setPptInput] = useState(initialPpt);
@@ -304,6 +331,24 @@ export function WorkspaceDealClient({
   const onModulesSaved = useCallback((layout: ProposalTemplateV1) => {
     setPptInput((prev) => ({ ...prev, proposalLayout: layout }));
   }, []);
+
+  const commercialConfig = useMemo(
+    () =>
+      parseCommercialConfig(pptInput.commercialConfig) ??
+      defaultCommercialConfig(summary.systemKw),
+    [pptInput.commercialConfig, summary.systemKw]
+  );
+
+  const onCommercialConfigSaved = useCallback(
+    (config: CommercialProposalConfig, layout?: ProposalTemplateV1) => {
+      setPptInput((prev) => ({
+        ...prev,
+        commercialConfig: config,
+        ...(layout ? { proposalLayout: layout } : {}),
+      }));
+    },
+    []
+  );
 
   const loc = (location ?? pptInput.location ?? "").trim();
   const headerSub = [loc, `Generated · ${new Date(generatedAt).toLocaleString("en-IN")}`]
@@ -445,6 +490,41 @@ export function WorkspaceDealClient({
               </ProposalDetailSection>
             </div>
           </TabPanel>
+
+          {isCommercial && (
+            <>
+              <TabPanel id="panel_pricing" active={activeTab}>
+                <WorkspaceCommercialTab
+                  proposalId={proposalId}
+                  section="panel"
+                  systemKw={summary.systemKw}
+                  initialConfig={pptInput.commercialConfig}
+                  proposalLayout={proposalLayout}
+                  onSaved={onCommercialConfigSaved}
+                />
+              </TabPanel>
+              <TabPanel id="capacity" active={activeTab}>
+                <WorkspaceCommercialTab
+                  proposalId={proposalId}
+                  section="scenarios"
+                  systemKw={summary.systemKw}
+                  initialConfig={pptInput.commercialConfig}
+                  proposalLayout={proposalLayout}
+                  onSaved={onCommercialConfigSaved}
+                />
+              </TabPanel>
+              <TabPanel id="financing" active={activeTab}>
+                <WorkspaceCommercialTab
+                  proposalId={proposalId}
+                  section="financing"
+                  systemKw={summary.systemKw}
+                  initialConfig={pptInput.commercialConfig}
+                  proposalLayout={proposalLayout}
+                  onSaved={onCommercialConfigSaved}
+                />
+              </TabPanel>
+            </>
+          )}
 
           {/* Pricing — BOM table */}
           <TabPanel id="pricing" active={activeTab}>

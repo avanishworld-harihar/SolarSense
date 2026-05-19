@@ -47,7 +47,7 @@ import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
 import { BuilderStageBar } from "@/components/proposals/os/builder-stage-bar";
 import { ProposalLivePreviewPanel } from "@/components/proposals/os/live-preview-panel";
 import { BlockPlaylistEditor } from "@/components/proposals/os/block-playlist-editor";
-import { CommercialBuilderPanel } from "@/components/commercial/commercial-builder-panel";
+import { CommercialNarrativePanel } from "@/components/commercial/commercial-narrative-panel";
 import { ProposalReviewSheet } from "@/components/commercial/proposal-review-sheet";
 import { CommercialCategorySelector } from "@/components/commercial/commercial-category-selector";
 import { CommercialInputModeSelector } from "@/components/commercial/commercial-input-mode";
@@ -1923,8 +1923,7 @@ export default function ProposalPage() {
 
       <div id="step-3-anchor" className={`ss-card space-y-4 p-4 sm:p-5 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         {osPresetId === "commercial_executive" && commercialConfig ? (
-          <CommercialBuilderPanel
-            systemKw={effectiveResult.solarKw}
+          <CommercialNarrativePanel
             config={commercialConfig}
             onChange={(next) => {
               setCommercialConfig(next);
@@ -1932,6 +1931,7 @@ export default function ProposalPage() {
                 setProposalLayout(applyCommercialFlagsToLayout(proposalLayout, next));
               }
             }}
+            onOpenReview={() => setShowReviewSheet(true)}
           />
         ) : null}
 

@@ -2,6 +2,10 @@ import type { PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import { mergeProposalPricingIntoPptInput } from "@/lib/proposal-pricing-merge";
 import { getProposalPricingByProposalId } from "@/lib/proposal-pricing-store";
+import {
+  applyCommercialFlagsToLayout,
+  type CommercialProposalConfig,
+} from "@/lib/commercial-proposal-config";
 import { normalizeProposalTemplateV1, type ProposalTemplateV1 } from "@/lib/proposal-template-schema";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
@@ -52,6 +56,31 @@ export async function persistProposalLayoutChange(proposalId: string, layout: Pr
   const normalized = normalizeProposalTemplateV1(layout);
   const mergedPpt = mergeProposalPricingIntoPptInput(
     { ...proposal.ppt_input, proposalLayout: normalized },
+    pricing
+  );
+  return persistMergedProposalDeck(proposalId, mergedPpt);
+}
+
+/** Persists `commercialConfig` (+ optional layout sync) into `ppt_input`. */
+export async function persistCommercialConfigChange(
+  proposalId: string,
+  commercialConfig: CommercialProposalConfig,
+  proposalLayout?: ProposalTemplateV1
+): Promise<boolean> {
+  const proposal = await getProposalById(proposalId);
+  if (!proposal) return false;
+  const pricing = await getProposalPricingByProposalId(proposalId);
+  const baseLayout =
+    proposalLayout ??
+    proposal.ppt_input.proposalLayout ??
+    normalizeProposalTemplateV1({ version: 1, blocks: [] });
+  const syncedLayout = applyCommercialFlagsToLayout(baseLayout, commercialConfig);
+  const mergedPpt = mergeProposalPricingIntoPptInput(
+    {
+      ...proposal.ppt_input,
+      commercialConfig,
+      proposalLayout: syncedLayout,
+    },
     pricing
   );
   return persistMergedProposalDeck(proposalId, mergedPpt);
