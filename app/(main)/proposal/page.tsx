@@ -48,6 +48,7 @@ import { ProposalLivePreviewPanel } from "@/components/proposals/os/live-preview
 import { BlockPlaylistEditor } from "@/components/proposals/os/block-playlist-editor";
 import { CommercialBuilderPanel } from "@/components/commercial/commercial-builder-panel";
 import { ProposalReviewSheet } from "@/components/commercial/proposal-review-sheet";
+import { CommercialCategorySelector } from "@/components/commercial/commercial-category-selector";
 import {
   applyCommercialFlagsToLayout,
   defaultCommercialConfig,
@@ -1531,21 +1532,22 @@ export default function ProposalPage() {
               completedStages={osCompletedStages}
             />
 
-            {/* Commercial-executive mode activation banner */}
-            {osPresetId === "commercial_executive" && (
-              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50 px-4 py-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 shadow-sm">
-                  <Building2 className="h-4.5 w-4.5 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-sky-900">Commercial Executive Mode</p>
-                  <p className="text-[11px] text-sky-700">Bill upload is optional · Executive ROI + engineering output · DISCOM compliance included</p>
-                </div>
-                <div className="flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-1 text-[10px] font-bold text-sky-700">
-                  <Sparkles className="h-3 w-3" />
-                  Active
-                </div>
-              </div>
+            {/* Commercial Executive — Category selector (PHASE A) */}
+            {osPresetId === "commercial_executive" && commercialConfig && (
+              <CommercialCategorySelector
+                value={commercialConfig.orgType}
+                onChange={(orgType, defaultKw) => {
+                  setCommercialConfig((prev) =>
+                    prev ? { ...prev, orgType } : { orgType }
+                  );
+                  // Seed kW only when the field is empty / default
+                  if (!overrideSolarKw || parseFloat(overrideSolarKw) === (effectiveResult?.solarKw ?? 0)) {
+                    setOverrideSolarKw(String(defaultKw));
+                    setOverridePanels("");
+                  }
+                }}
+                className="mb-4"
+              />
             )}
 
             {/* ─── EXISTING FORM CONTENT (unchanged) ─── */}
@@ -2039,13 +2041,17 @@ export default function ProposalPage() {
         </div>
 
         <div id="step-4-anchor" className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          {osPresetId === "commercial_executive" ? (
+          {osPresetId === "commercial_executive" && proposalLayout ? (
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 shadow-sm transition hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
               onClick={() => setShowReviewSheet(true)}
             >
+              <Building2 className="h-4 w-4" />
               Review sections
+              <span className="rounded-full bg-sky-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {proposalLayout.blocks.filter((b) => b.enabled).length}
+              </span>
             </button>
           ) : null}
           <button

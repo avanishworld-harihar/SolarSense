@@ -54,7 +54,7 @@ export const commercialProposalConfigSchema = z.object({
   capacityScenarios: capacityScenariosConfigSchema.optional(),
   financing: commercialFinancingConfigSchema.optional(),
   orgType: z
-    .enum(["hotel", "hospital", "factory", "warehouse", "dairy", "school", "generic"])
+    .enum(["hotel", "hospital", "factory", "warehouse", "dairy", "school", "mall", "office", "industry", "generic"])
     .optional(),
   storyMode: z
     .enum(["executive_pitch", "cfo_brief", "operations_brief", "sustainability_story"])
