@@ -100,11 +100,11 @@ export function ProposalOSHeader({ presetId, onChangePreset, customerName }: Pro
         </div>
       </div>
 
-      {/* Right: change preset button */}
+      {/* Right: change preset button — self-start so it never stretches full-width on mobile */}
       <button
         type="button"
         onClick={onChangePreset}
-        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+        className="self-start inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
       >
         <RefreshCw className="h-3 w-3" />
         Change preset

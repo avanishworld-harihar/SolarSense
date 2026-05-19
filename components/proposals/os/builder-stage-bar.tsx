@@ -159,9 +159,9 @@ export function BuilderStageBar({
           );
         })}
 
-        {/* Preset label — far right */}
+        {/* Preset label — far right; hidden on mobile to prevent min-w-max overflow */}
         {presetId && (
-          <div className="ml-auto flex items-center pl-2 pr-2">
+          <div className="ml-auto hidden items-center pl-2 pr-2 sm:flex">
             <span
               className={`inline-flex items-center rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
                 presetId === "commercial_executive"

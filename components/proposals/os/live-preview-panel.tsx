@@ -153,7 +153,7 @@ export function ProposalLivePreviewPanel({
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="sticky top-20 flex flex-col gap-3"
     >
-      {/* Card */}
+      {/* Card — this panel is desktop-only (hidden lg:block in parent); backdrop-blur-sm is intentional. */}
       <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-[0_4px_32px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/90">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">

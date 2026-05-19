@@ -1425,6 +1425,39 @@ export default function ProposalPage() {
         />
       )}
 
+      {/*
+       * Mobile floating generate FAB — visible below lg when customer name is filled.
+       * Sits above the bottom nav (bottom-[5.5rem] matches the nav height + safe area).
+       * Hidden on lg+ since the LivePreviewPanel already has a visible generate button.
+       * z-[90] — below shell topbar (z-100) and modals (z-10050+) but above page content.
+       */}
+      {osCustomerName && !showPresetPicker && !showBlockPlaylist && (
+        <div className="fixed bottom-[5.5rem] right-4 z-[90] lg:hidden">
+          <button
+            type="button"
+            disabled={isWebProposalBusy}
+            onClick={() => void generateWebProposal()}
+            aria-label={osPresetId === "commercial_executive" ? "Generate Commercial Proposal" : "Generate Web Proposal"}
+            className={cn(
+              "flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] transition-all active:scale-95",
+              osPresetId === "commercial_executive"
+                ? "bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 shadow-sky-900/20"
+                : "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-teal-900/20",
+              isWebProposalBusy && "opacity-70 cursor-not-allowed"
+            )}
+          >
+            {isWebProposalBusy ? (
+              <Skeleton className="h-4 w-4 rounded-full bg-white/30" />
+            ) : osPresetId === "commercial_executive" ? (
+              <Building2 className="h-4 w-4 shrink-0" aria-hidden />
+            ) : (
+              <Globe className="h-4 w-4 shrink-0" aria-hidden />
+            )}
+            <span>{isWebProposalBusy ? "Generating…" : "Generate"}</span>
+          </button>
+        </div>
+      )}
+
       <WorkspacePage tone="workflow" stagger={false}>
         {/* Proposal OS — branded header */}
         <ProposalOSHeader

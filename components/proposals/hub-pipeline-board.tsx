@@ -156,8 +156,10 @@ export function HubPipelineBoard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: colIdx * 0.06, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              "flex w-[17.5rem] shrink-0 snap-start flex-col gap-3",
-              "sm:w-[18rem]",
+              // Mobile: 256px — leaves ~95px peek for the next column at 375px,
+              // giving a clear horizontal-scroll affordance without being too narrow.
+              "flex w-64 shrink-0 snap-start flex-col gap-3",
+              "sm:w-[17.5rem]",
               // On lg+, grow columns to fill available space evenly
               "lg:min-w-[15rem] lg:flex-1"
             )}

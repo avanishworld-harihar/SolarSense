@@ -398,7 +398,42 @@ export function containerClass(size: ContainerSize, extra?: string): string {
   return cn(bases[size], extra);
 }
 
-// ─── 8. Breakpoint reference (informational, not Tailwind config) ─────────────
+// ─── 8. Glass tier tokens ────────────────────────────────────────────────────
+//
+// Canonical definitions for the four Proposal OS glass tiers.
+// These reference the CSS utility classes defined in globals.css so all blur
+// values live in one place — never write inline backdrop-blur on Proposal OS surfaces.
+//
+// Tier hierarchy (bottom → top):
+//   "surface"  — subtle card inside a panel (live preview card, stage bar)
+//   "elevated" — elevated modal sheet (PresetPicker, bottom sheets)
+//   "overlay"  — full-screen dark backdrop scrim
+//   "drawer"   — slide-in drawer (BlockPlaylistEditor)
+//
+// CSS class mapping (from globals.css):
+//   proposal-os-glass-card      → tier "surface"
+//   proposal-os-glass-sheet     → tier "elevated"
+//   proposal-os-glass-backdrop  → tier "overlay"
+//   proposal-os-glass-drawer    → tier "drawer"
+//
+// Shell surfaces (NavRail, TopBar, CommandPalette) use their own glass recipe
+// and are NOT managed by these tokens — they are more saturated and lighter
+// to distinguish navigation chrome from proposal content.
+
+export const GLASS_TIER = {
+  /** Subtle card on a dark/glass background (e.g. metric tiles, stage bar) */
+  surface: "proposal-os-glass-card" as const,
+  /** Bottom sheet or elevated modal panel (e.g. PresetPicker) */
+  elevated: "proposal-os-glass-sheet" as const,
+  /** Full-screen dark backdrop scrim */
+  overlay: "proposal-os-glass-backdrop" as const,
+  /** Side drawer (e.g. BlockPlaylistEditor) */
+  drawer: "proposal-os-glass-drawer" as const,
+} as const;
+
+export type GlassTier = keyof typeof GLASS_TIER;
+
+// ─── 9. Breakpoint reference (informational, not Tailwind config) ─────────────
 
 /** Named breakpoints for documentation and runtime checks (do not use for CSS) */
 export const BREAKPOINTS = {
@@ -431,6 +466,8 @@ export const DS = {
   radius: RADIUS,
   shadow: SHADOW,
   surface: SURFACE,
+  /** Proposal OS glass tiers — use instead of inline backdrop-blur on OS surfaces */
+  glass: GLASS_TIER,
   presetTheme: getPresetTheme,
   container: containerClass,
   breakpoint: BREAKPOINTS,

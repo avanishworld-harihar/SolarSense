@@ -29,10 +29,19 @@
  */
 
 import { cn } from "@/lib/utils";
-import { PAD, SHADOW } from "@/lib/design-system";
+import { GLASS_TIER, PAD, SHADOW } from "@/lib/design-system";
 import type { ReactNode } from "react";
 
-export type PanelTone = "light" | "dark" | "glass" | "subtle";
+/**
+ * Panel tone options:
+ *   "light"       — white glass card on light background
+ *   "dark"        — dark slate glass on dark background
+ *   "glass"       — heavy backdrop-blur workspace panel
+ *   "subtle"      — quiet tinted panel
+ *   "os-surface"  — Proposal OS surface tier (uses DS.glass.surface CSS class)
+ *   "os-elevated" — Proposal OS elevated sheet tier (uses DS.glass.elevated CSS class)
+ */
+export type PanelTone = "light" | "dark" | "glass" | "subtle" | "os-surface" | "os-elevated";
 export type PanelPadding = "none" | "sm" | "md" | "lg";
 
 export interface PanelProps {
@@ -79,6 +88,10 @@ const BASE_CLASSES: Record<PanelTone, string> = {
     "border border-white/55 bg-white/70",
     "dark:border-white/10 dark:bg-slate-800/60"
   ),
+  // Proposal OS glass tiers — reference the CSS utility classes (see globals.css + GLASS_TIER tokens).
+  // These keep all blur recipes in one place rather than scattered as inline values.
+  "os-surface":  GLASS_TIER.surface,   // proposal-os-glass-card
+  "os-elevated": GLASS_TIER.elevated,  // proposal-os-glass-sheet
 };
 
 const PAD_CLASSES: Record<PanelPadding, string> = {

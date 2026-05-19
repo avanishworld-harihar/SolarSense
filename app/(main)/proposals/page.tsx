@@ -275,11 +275,13 @@ export default function ProposalsHubPage() {
       {/* ── Main content ─────────────────────────────────────────────────── */}
       {hasData ? (
         <>
-          {/* Controls bar: view toggle + version dedupe */}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          {/* Controls bar: view toggle + version dedupe
+               Mobile: stacked column so neither item wraps unexpectedly.
+               sm+: single flex row with space-between. */}
+          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <HubViewToggle value={viewMode} onChange={handleViewChange} />
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {/* Version dedupe toggle */}
               <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
                 <input
