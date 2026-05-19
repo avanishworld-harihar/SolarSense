@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import dynamic from "next/dynamic";
 import { useLanguage } from "@/lib/language-context";
@@ -39,7 +39,7 @@ import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { Building2, Download, FileUp, Globe, MessageCircle, Send, Sparkles, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { parsePrefillFromSearchParams } from "@/lib/quick-actions";
 import { ProposalPresetPicker, type ProposalPresetId } from "@/components/proposals/os/preset-picker";
 import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
@@ -111,8 +111,8 @@ function billInrFromParsed(v: number | string | null | undefined): number | unde
  */
 function truncateConnectionType(raw: string): string {
   if (!raw) return "";
-  // Remove " - " and anything after it (AI often appends " - Low Tension / Commercial…")
-  const cleaned = raw.replace(/\s*[-–]\s+(low tension|high tension|commercial|domestic|industrial|lt|ht).*/i, "").trim();
+  // Remove " - " and anything after it (AI often appends " - Low Tension / Commercialâ€¦")
+  const cleaned = raw.replace(/\s*[-â€“]\s+(low tension|high tension|commercial|domestic|industrial|lt|ht).*/i, "").trim();
   return cleaned.slice(0, 40).trim();
 }
 
@@ -133,7 +133,7 @@ function parseManualContractKva(s: string): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
-/** MP smart billing — bill OCR cross-checks forwarded to the PPT / proposal API. */
+/** MP smart billing â€” bill OCR cross-checks forwarded to the PPT / proposal API. */
 function buildMpSmartBillingApiPayload(manual: ManualProposalCustomer, latestBill: ParsedBillShape | null, previousBill: ParsedBillShape | null) {
   const ref = latestBill ?? previousBill;
   const purpose =
@@ -202,7 +202,7 @@ function saveSession(snap: SessionSnap) {
   try {
     sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify(snap));
   } catch {
-    /* quota exceeded or private mode — ignore */
+    /* quota exceeded or private mode â€” ignore */
   }
 }
 
@@ -243,10 +243,11 @@ export default function ProposalPage() {
   const [isCopyingSummary, setIsCopyingSummary] = useState(false);
   const [isWebProposalBusy, setIsWebProposalBusy] = useState(false);
   const [latestWebProposalUrl, setLatestWebProposalUrl] = useState<string | null>(null);
-  // Proposal Builder Settings — language + EMI only (logo, bank, AMC, site photos live in More > Company Profile).
+  // Proposal Builder Settings â€” language + EMI only (logo, bank, AMC, site photos live in More > Company Profile).
   const [proposalLang, setProposalLang] = useState<"en" | "hi">("en");
   const [financeRatePct, setFinanceRatePct] = useState(7);
-  const [isSavingPipeline, setIsSavingPipeline] = useState(false);
+  /** Set when a walk-in lead was auto-created during the last generate (for CRM deep-link). */
+  const [lastAutoLeadId, setLastAutoLeadId] = useState<string | null>(null);
   const [showProposalSettings, setShowProposalSettings] = useState(false);
   const [overrideSolarKw, setOverrideSolarKw] = useState(sessionSnap?.overrideSolarKw ?? "");
   const [overridePanels, setOverridePanels] = useState(sessionSnap?.overridePanels ?? "");
@@ -257,9 +258,10 @@ export default function ProposalPage() {
   const [hydratedFromServer, setHydratedFromServer] = useState(false);
   const [learnedBillProfiles, setLearnedBillProfiles] = useState<Record<string, LearnedBillProfile>>({});
 
-  // ── URL prefill (Wave 2 P5) ─────────────────────────────────────────────────
-  // Read ?preset=…&orgType=…&kw=…&lang=…&story=… on first render only.
-  // useSearchParams() is safe here — the page is already a client component.
+  // â”€â”€ URL prefill (Wave 2 P5) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Read ?preset=â€¦&orgType=â€¦&kw=â€¦&lang=â€¦&story=â€¦ on first render only.
+  // useSearchParams() is safe here â€” the page is already a client component.
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlPrefill = useMemo(
     () => parsePrefillFromSearchParams(searchParams),
@@ -267,7 +269,7 @@ export default function ProposalPage() {
     [] // intentionally run once; URL params are consumed on mount
   );
 
-  // ── Proposal OS UI state ────────────────────────────────────────────────────
+  // â”€â”€ Proposal OS UI state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [osPresetId, setOsPresetId] = useState<ProposalPresetId | null>(
     urlPrefill.preset ?? null
   );
@@ -277,7 +279,7 @@ export default function ProposalPage() {
   const [showReviewSheet, setShowReviewSheet] = useState(false);
   const [commercialConfig, setCommercialConfig] = useState<CommercialProposalConfig | null>(null);
   const [proposalLayout, setProposalLayout] = useState<ProposalTemplateV1 | null>(null);
-  // Commercial input mode — "bill" uses existing upload flow; "requirement" shows simple form
+  // Commercial input mode â€” "bill" uses existing upload flow; "requirement" shows simple form
   const [commercialInputMode, setCommercialInputMode] = useState<"bill" | "requirement">("bill");
   // Requirement-mode form fields (written to manual state on change)
   const [requirementMonthlyKwh, setRequirementMonthlyKwh] = useState("");
@@ -337,7 +339,7 @@ export default function ProposalPage() {
     localStorage.setItem(LEARNED_BILL_PROFILE_KEY, JSON.stringify(learnedBillProfiles));
   }, [learnedBillProfiles]);
 
-  // Persist session across tab switches — debounced so typing does not freeze the UI.
+  // Persist session across tab switches â€” debounced so typing does not freeze the UI.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       saveSession({
@@ -537,7 +539,7 @@ export default function ProposalPage() {
   /**
    * Deep-link auto-select: `/proposal?leadId=<id>` lands here from the CRM
    * "Send proposal" CTA. Declared here so `customers` is in scope (it is a
-   * `const` derived from SWR data above — referencing it earlier causes a
+   * `const` derived from SWR data above â€” referencing it earlier causes a
    * TypeScript "used before declaration" error).
    */
   const deepLinkLeadIdRef = useRef<string | null>(null);
@@ -649,7 +651,7 @@ export default function ProposalPage() {
   // Reactive bill-backed status for live preview
   const isBillBackedLive = latestBill != null;
 
-  // ── Builder stage progress tracking ─────────────────────────────────────────
+  // â”€â”€ Builder stage progress tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Drives BuilderStageBar active/completed state in real-time.
   const osActiveStageIndex = useMemo(() => {
     const hasClient = Boolean(manual.leadContactName || manual.officialBillName || selectedLeadId);
@@ -699,7 +701,7 @@ export default function ProposalPage() {
       return;
     }
 
-    // If sessionStorage already had a snapshot, session data takes priority —
+    // If sessionStorage already had a snapshot, session data takes priority â€”
     // skip server overwrite to prevent stale server data clobbering fresher local state.
     if (sessionSnap) {
       setHydratedFromServer(true);
@@ -721,7 +723,7 @@ export default function ProposalPage() {
     }
 
     if (calc?.manualSnapshot) {
-      // Merge only empty fields — never overwrite data the user has already typed.
+      // Merge only empty fields â€” never overwrite data the user has already typed.
       setManual((prev) => {
         const snap = calc.manualSnapshot as Partial<ManualProposalCustomer>;
         const merged: ManualProposalCustomer = { ...prev };
@@ -760,7 +762,7 @@ export default function ProposalPage() {
       result,
       stateForSizing: stateForSizing || undefined,
       discom: manual.discom.trim() || undefined,
-      tariffLabel: `${effectiveTariffContext.discomLabel} • ${effectiveTariffContext.source}`,
+      tariffLabel: `${effectiveTariffContext.discomLabel} â€¢ ${effectiveTariffContext.source}`,
       manualSnapshot: manualSnapshot(manual),
       latestBill,
       previousBill: additionalBills[0] ?? null
@@ -842,7 +844,7 @@ export default function ProposalPage() {
             ? "Local PDF Parser"
             : "Manual Verify";
       const seconds = scanDurationMs > 0 ? (scanDurationMs / 1000).toFixed(1) : null;
-      setScanTimingBadge(seconds ? `${modelLabel} • ${seconds}s` : modelLabel);
+      setScanTimingBadge(seconds ? `${modelLabel} â€¢ ${seconds}s` : modelLabel);
       if (analysisMessages.length > 0) {
         const joined = analysisMessages.join(" ");
         const withScannerNote =
@@ -857,7 +859,7 @@ export default function ProposalPage() {
 
       const data = payload.data as ParsedBillShape;
       // Build parsedUnits with smart priority:
-      //   1. History fills histBase (from consumption_history — most reliable for past months).
+      //   1. History fills histBase (from consumption_history â€” most reliable for past months).
       //   2. data.months: only the CURRENT bill month overwrites; other months only fill empties.
       const histUnits = buildUnitsFromConsumptionHistory(data);
       const histBase = emptyMonthlyUnits();
@@ -945,13 +947,13 @@ export default function ProposalPage() {
 
       setMonthlyUnits((prev) => {
         const base = slot === "latest" ? emptyMonthlyUnits() : prev;
-        // History fills first (lower priority) — only for empty slots.
+        // History fills first (lower priority) â€” only for empty slots.
         const histU = buildUnitsFromConsumptionHistory(data);
         for (const k of MONTH_KEYS) { if (histU[k] && !base[k]) base[k] = histU[k] as number; }
 
         // Smart merge from data.months:
-        //   • Current bill month key → always trust the AI/safety-net metered value.
-        //   • All other months (history) → only fill if slot is STILL EMPTY.
+        //   â€¢ Current bill month key â†’ always trust the AI/safety-net metered value.
+        //   â€¢ All other months (history) â†’ only fill if slot is STILL EMPTY.
         //     This prevents the AI from overwriting a history-derived correct value
         //     with a neighbouring-month value it confused (e.g., putting DEC's 194
         //     into the NOV slot when processing the DEC-2025 bill).
@@ -1116,12 +1118,52 @@ export default function ProposalPage() {
   }
 
   /**
-   * Server-owned conversion as of CRM v2: when "Generate Web Proposal" succeeds,
-   * `POST /api/proposals` upserts the pipeline project and bumps the lead to
-   * `proposal-sent`. The client only refreshes its SWR caches afterwards
-   * (`syncCrmCachesAfterProposal`). The legacy "Save to pipeline" button has
-   * been retired — installers no longer need to remember a second step.
+   * CRM v2: every generated proposal is tied to a lead. Existing CRM picks pass
+   * through; walk-ins get a lead row on first generate (Customers + pipeline).
    */
+  function syncCrmCachesAfterProposal(leadId: string) {
+    const proposalPhone = pickProposalLeadPhone(manual.leadPhone, manual.billPhone);
+    if (proposalPhone) void patchLeadPhoneIfProvided(leadId, proposalPhone);
+    void mutateGlobal(PIPELINE_SWR_KEY);
+    void mutateGlobal(CUSTOMERS_SWR_KEY, undefined, { revalidate: true });
+    void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
+  }
+
+  async function ensureLeadIdForProposal(): Promise<{ leadId: string; created: boolean }> {
+    if (selectedLeadId) {
+      return { leadId: selectedLeadId, created: false };
+    }
+    const merged = mergeCustomerForProposal(manual, latestBill || previousBill);
+    const customerName =
+      merged?.name?.trim() || manual.officialBillName.trim() || manual.leadContactName.trim();
+    if (!customerName) {
+      throw new Error(t("proposal_needCustomerName"));
+    }
+    const proposalPhone = pickProposalLeadPhone(manual.leadPhone, manual.billPhone);
+    const createLeadResp = await fetch("/api/customers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: customerName,
+        city: manual.city.trim() || "Unknown",
+        state: manual.state.trim() || undefined,
+        discom: manual.discom.trim() || installerDiscom || "Unknown",
+        monthly_bill: Math.max(0, Math.round(effectiveResult.currentMonthlyBill || 0)),
+        phone: proposalPhone || undefined,
+        status: "new"
+      })
+    });
+    if (!createLeadResp.ok) {
+      const j = (await createLeadResp.json().catch(() => ({}))) as { error?: string };
+      throw new Error(j.error || "Could not create lead in Customers");
+    }
+    const j = (await createLeadResp.json()) as { data?: { id?: string } };
+    const leadId = j.data?.id ?? "";
+    if (!leadId) throw new Error("Lead create response missing id");
+    setSelectedLeadId(leadId);
+    setLastAutoLeadId(leadId);
+    return { leadId, created: true };
+  }
 
   function buildProposalExtrasPayload() {
     const branding = readProposalBrandingSettings();
@@ -1266,10 +1308,10 @@ export default function ProposalPage() {
         `SOL.52 Solar Snapshot`,
         `Customer: ${customer}`,
         `System size: ${effectiveResult.solarKw} kW`,
-        `Net investment: ₹${effectiveResult.netCost.toLocaleString("en-IN")}`,
-        `Annual saving: ₹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
+        `Net investment: â‚¹${effectiveResult.netCost.toLocaleString("en-IN")}`,
+        `Annual saving: â‚¹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
         `Payback: ${effectiveResult.paybackDisplay}`,
-        `25Y profit estimate: ₹${effectiveResult.profit25yr.toLocaleString("en-IN")}`
+        `25Y profit estimate: â‚¹${effectiveResult.profit25yr.toLocaleString("en-IN")}`
       ].join("\n");
       await navigator.clipboard.writeText(text);
       toast.success("Summary copied", "WhatsApp-ready proposal summary copied.");
@@ -1282,7 +1324,9 @@ export default function ProposalPage() {
 
   async function generateWebProposal() {
     setIsWebProposalBusy(true);
+    setLastAutoLeadId(null);
     try {
+      const { leadId, created: leadCreated } = await ensureLeadIdForProposal();
       const merged = mergeCustomerForProposal(manual, latestBill || previousBill);
       const customerName = merged?.name?.trim() || manual.officialBillName || manual.leadContactName || "Customer";
       const location = [merged?.district || manual.city, merged?.state || manual.state].filter(Boolean).join(", ");
@@ -1323,7 +1367,7 @@ export default function ProposalPage() {
           monthlyBillActuals,
           monthlyAuditOverrides,
           clientRef: clientRef || undefined,
-          leadId: selectedLeadId || undefined,
+          leadId,
           ...buildMpSmartBillingApiPayload(manual, latestBill, previousBill),
           grossSystemCostInr: effectiveResult.grossCost,
           pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
@@ -1347,23 +1391,18 @@ export default function ProposalPage() {
       const shareUrl = json.shareUrl || (json.id ? `${window.location.origin}/proposal/${json.id}` : null);
       if (!shareUrl) throw new Error("No share URL returned");
       setLatestWebProposalUrl(shareUrl);
+      syncCrmCachesAfterProposal(leadId);
       try {
         await navigator.clipboard.writeText(shareUrl);
-        toast.success("Web proposal ready", "Share link copied — paste on WhatsApp.");
+        toast.success(
+          "Web proposal ready",
+          leadCreated ? t("proposal_leadCreatedSub") : "Share link copied â€” paste on WhatsApp."
+        );
       } catch {
-        toast.success("Web proposal ready", "Share link saved below.");
-      }
-      /**
-       * Server has just upserted the project + bumped the lead to `proposal-sent`.
-       * Revalidate every CRM-touching SWR cache so dashboard / customers /
-       * projects all reflect the new state without a hard refresh.
-       */
-      if (selectedLeadId) {
-        const proposalPhone = pickProposalLeadPhone(manual.leadPhone, manual.billPhone);
-        if (proposalPhone) void patchLeadPhoneIfProvided(selectedLeadId, proposalPhone);
-        void mutateGlobal(PIPELINE_SWR_KEY);
-        void mutateGlobal(CUSTOMERS_SWR_KEY, undefined, { revalidate: true });
-        void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
+        toast.success(
+          "Web proposal ready",
+          leadCreated ? t("proposal_leadCreatedSub") : "Share link saved below."
+        );
       }
       window.open(shareUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
@@ -1373,79 +1412,16 @@ export default function ProposalPage() {
     }
   }
 
-  async function saveToPipeline() {
-    setIsSavingPipeline(true);
-    try {
-      const customerName = manual.officialBillName || manual.leadContactName || "Customer";
-      const proposalPhone = pickProposalLeadPhone(manual.leadPhone, manual.billPhone);
-      let leadId = selectedLeadId;
-      if (!leadId) {
-        const createLeadResp = await fetch("/api/customers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: customerName,
-            city: manual.city.trim() || "Unknown",
-            state: manual.state.trim() || undefined,
-            discom: manual.discom.trim() || installerDiscom || "Unknown",
-            monthly_bill: Math.max(0, Math.round(effectiveResult.currentMonthlyBill || 0)),
-            phone: proposalPhone || undefined
-          })
-        });
-        if (!createLeadResp.ok) {
-          const j = (await createLeadResp.json().catch(() => ({}))) as { error?: string };
-          throw new Error(j.error || "Lead create failed");
-        }
-        const j = (await createLeadResp.json()) as { data?: { id?: string } };
-        leadId = j.data?.id ?? "";
-        if (!leadId) throw new Error("Lead create response missing id");
-        setSelectedLeadId(leadId);
-      } else if (proposalPhone) {
-        await patchLeadPhoneIfProvided(leadId, proposalPhone);
-      }
-      const resp = await fetch("/api/pipeline", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lead_id: leadId,
-          official_name: customerName,
-          capacity_kw: `${effectiveResult.solarKw} kW`,
-          detail: manual.city.trim() || undefined,
-          status: "pending",
-          install_progress: 10,
-          next_action: "Site survey pending"
-        })
-      });
-      if (!resp.ok) {
-        const j = (await resp.json().catch(() => ({}))) as { error?: string };
-        throw new Error(j.error || "Pipeline save failed");
-      }
-      const pj = (await resp.json().catch(() => ({}))) as { ok?: boolean; data?: { id?: string }; error?: string };
-      if (!pj.ok || !pj.data?.id) {
-        throw new Error(pj.error || "Pipeline record was not created");
-      }
-      void mutateGlobal(PIPELINE_SWR_KEY);
-      void mutateGlobal(CUSTOMERS_SWR_KEY, undefined, { revalidate: true });
-      void mutateGlobal(DASHBOARD_STATS_SWR_KEY);
-      toast.success("Saved to pipeline", `${customerName} — ${effectiveResult.solarKw} kW added to project pipeline.`);
-      resetProposalForm();
-    } catch (err) {
-      toast.error("Pipeline save failed", err instanceof Error ? err.message : "Could not save.");
-    } finally {
-      setIsSavingPipeline(false);
-    }
-  }
-
   function shareLatestOnWhatsApp() {
     if (!latestWebProposalUrl) return;
     const customer = manual.officialBillName || manual.leadContactName || "Customer";
     const text = [
-      `Namaste ${customer} 🌞`,
+      `Namaste ${customer} ðŸŒž`,
       ``,
       `${effectiveResult.solarKw} kW solar proposal aapke liye taiyaar hai:`,
-      `• Net cost: ₹${effectiveResult.netCost.toLocaleString("en-IN")}`,
-      `• Annual saving: ₹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
-      `• Payback: ${effectiveResult.paybackDisplay}`,
+      `â€¢ Net cost: â‚¹${effectiveResult.netCost.toLocaleString("en-IN")}`,
+      `â€¢ Annual saving: â‚¹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
+      `â€¢ Payback: ${effectiveResult.paybackDisplay}`,
       ``,
       `Full interactive proposal: ${latestWebProposalUrl}`
     ].join("\n");
@@ -1460,7 +1436,7 @@ export default function ProposalPage() {
 
   return (
     <>
-      {/* Proposal OS — Preset Picker overlay */}
+      {/* Proposal OS â€” Preset Picker overlay */}
       {showPresetPicker && (
         <ProposalPresetPicker
           currentPresetId={osPresetId}
@@ -1488,10 +1464,10 @@ export default function ProposalPage() {
       ) : null}
 
       {/*
-       * Mobile floating generate FAB — visible below lg when customer name is filled.
+       * Mobile floating generate FAB â€” visible below lg when customer name is filled.
        * Sits above the bottom nav (bottom-[5.5rem] matches the nav height + safe area).
        * Hidden on lg+ since the LivePreviewPanel already has a visible generate button.
-       * z-[90] — below shell topbar (z-100) and modals (z-10050+) but above page content.
+       * z-[90] â€” below shell topbar (z-100) and modals (z-10050+) but above page content.
        */}
       {osCustomerName && !showPresetPicker && !showBlockPlaylist && (
         <div className="fixed bottom-[5.5rem] right-4 z-[90] lg:hidden">
@@ -1515,13 +1491,13 @@ export default function ProposalPage() {
             ) : (
               <Globe className="h-4 w-4 shrink-0" aria-hidden />
             )}
-            <span>{isWebProposalBusy ? "Generating…" : "Generate"}</span>
+            <span>{isWebProposalBusy ? "Generatingâ€¦" : "Generate"}</span>
           </button>
         </div>
       )}
 
       <WorkspacePage tone="workflow" stagger={false}>
-        {/* Proposal OS — branded header */}
+        {/* Proposal OS â€” branded header */}
         <ProposalOSHeader
           presetId={osPresetId}
           onChangePreset={() => setShowPresetPicker(true)}
@@ -1538,7 +1514,7 @@ export default function ProposalPage() {
               completedStages={osCompletedStages}
             />
 
-            {/* Commercial Executive — Category selector (PHASE A) */}
+            {/* Commercial Executive â€” Category selector (PHASE A) */}
             {osPresetId === "commercial_executive" && commercialConfig && (
               <CommercialCategorySelector
                 value={commercialConfig.orgType}
@@ -1556,7 +1532,7 @@ export default function ProposalPage() {
               />
             )}
 
-            {/* ─── EXISTING FORM CONTENT (unchanged) ─── */}
+            {/* â”€â”€â”€ EXISTING FORM CONTENT (unchanged) â”€â”€â”€ */}
             <div id="step-1-anchor" className={`ss-step-card space-y-2 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -1594,15 +1570,20 @@ export default function ProposalPage() {
           }}
         >
               <option value="">
-                {isCustomersLoading ? "लोड हो रही है..." : " "}
+                {isCustomersLoading ? "à¤²à¥‹à¤¡ à¤¹à¥‹ à¤°à¤¹à¥€ à¤¹à¥ˆ..." : " "}
               </option>
           {customers.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name} — {c.city} ({c.discom})
+              {c.name} â€” {c.city} ({c.discom})
             </option>
           ))}
         </FloatingLabelSelect>
         <p className="text-[11px] font-medium leading-snug text-slate-600 sm:text-xs">{t("proposal_step1LeadHint")}</p>
+        {!leadSelected ? (
+          <p className="rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2 text-[11px] font-medium leading-snug text-sky-800">
+            {t("proposal_walkInCrmHint")}
+          </p>
+        ) : null}
       </div>
 
       {leadSelected && manual.leadContactName ? (
@@ -1632,7 +1613,7 @@ export default function ProposalPage() {
           {t("proposal_step2BillUploadsSub")} {billingRule.averagingHint}
         </p>
 
-        {/* Commercial mode — bill-based vs requirement-based selector (PHASE A) */}
+        {/* Commercial mode â€” bill-based vs requirement-based selector (PHASE A) */}
         {osPresetId === "commercial_executive" && (
           <CommercialInputModeSelector
             mode={commercialInputMode}
@@ -1671,7 +1652,7 @@ export default function ProposalPage() {
           />
         )}
 
-        {/* Bill upload area — hidden when commercial requirement mode is selected */}
+        {/* Bill upload area â€” hidden when commercial requirement mode is selected */}
         {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
         <>
         {!leadSelected ? (
@@ -1701,8 +1682,8 @@ export default function ProposalPage() {
             const alignState = secondaryAlignment[idx];
             const mismatchHint =
               alignState && alignState.current && !alignState.aligned
-                ? `Uploaded ${alignState.current} • Please match ${targetLabel}`
-                : `Required • ${targetLabel}`;
+                ? `Uploaded ${alignState.current} â€¢ Please match ${targetLabel}`
+                : `Required â€¢ ${targetLabel}`;
             return (
               <UploadCard
                 key={`secondary-card-${idx}`}
@@ -1773,7 +1754,7 @@ export default function ProposalPage() {
         {/* END: bill upload area */}
       </div>
 
-      {/* Bill analysis charts — hidden in commercial requirement mode */}
+      {/* Bill analysis charts â€” hidden in commercial requirement mode */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
         <div className="ss-card p-4 sm:p-5">
           <BillAnalysisCharts
@@ -1785,7 +1766,7 @@ export default function ProposalPage() {
         </div>
       )}
 
-      {/* Connection & manual fields — hidden in commercial requirement mode (handled by CommercialInputModeSelector) */}
+      {/* Connection & manual fields â€” hidden in commercial requirement mode (handled by CommercialInputModeSelector) */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
       <div className="ss-card space-y-3 p-4 sm:space-y-4 sm:p-5">
         <div>
@@ -1873,7 +1854,7 @@ export default function ProposalPage() {
             onChange={(e) => setManual((p) => ({ ...p, sanctionedLoad: e.target.value }))}
           />
           <FloatingLabelInput
-            label="Contract demand — kVA (if printed separately)"
+            label="Contract demand â€” kVA (if printed separately)"
             value={manual.contractDemandKva}
             onChange={(e) => setManual((p) => ({ ...p, contractDemandKva: e.target.value }))}
           />
@@ -1893,13 +1874,13 @@ export default function ProposalPage() {
       )}
       {/* END: connection & manual fields */}
 
-      {/* Bill details summary — hidden in commercial requirement mode */}
+      {/* Bill details summary â€” hidden in commercial requirement mode */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (latestBill || previousBill || manual.officialBillName) && (
         <div className="ss-card space-y-2 p-4 sm:p-5">
           <h3 className="text-xs font-bold uppercase tracking-wide text-brand-700 sm:text-sm">{t("proposal_billDetails")}</h3>
           <div className="grid gap-1 text-xs font-semibold text-slate-800 sm:text-sm">
             {[
-              [t("proposal_rowLeadContact"), manual.leadContactName || "—"],
+              [t("proposal_rowLeadContact"), manual.leadContactName || "â€”"],
               [t("proposal_rowOfficialBillName"), manual.officialBillName || latestBill?.name || previousBill?.name],
               ["Consumer ID", latestBill?.consumer_id || previousBill?.consumer_id || manual.consumerId],
               ["Meter", latestBill?.meter_number || previousBill?.meter_number || manual.meterNumber],
@@ -1922,12 +1903,12 @@ export default function ProposalPage() {
         </div>
       )}
 
-      {/* Recommended solar card — hidden in commercial requirement mode */}
+      {/* Recommended solar card â€” hidden in commercial requirement mode */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
         <div className="ss-card p-4 sm:p-5">
           <h2 className="text-base font-extrabold text-brand-900 sm:text-lg">{t("proposal_recommended")}</h2>
           <p className="mt-2 break-words text-2xl font-extrabold tabular-nums text-solar-600 sm:text-3xl lg:text-4xl">
-            ₹{effectiveResult.annualSavings.toLocaleString("en-IN")}
+            â‚¹{effectiveResult.annualSavings.toLocaleString("en-IN")}
           </p>
           <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">{t("proposal_annualSavingsLine")}</p>
         </div>
@@ -1947,7 +1928,7 @@ export default function ProposalPage() {
           />
         ) : null}
 
-        {/* Solar System Size — editable */}
+        {/* Solar System Size â€” editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
             {t("proposal_solarSizeLabel")}
@@ -1956,7 +1937,7 @@ export default function ProposalPage() {
             )}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Editable custom input — text mode prevents browser mangling of digits */}
+            {/* Editable custom input â€” text mode prevents browser mangling of digits */}
             <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
               <input
                 type="text"
@@ -2004,7 +1985,7 @@ export default function ProposalPage() {
           </div>
         </div>
 
-        {/* Panels — editable */}
+        {/* Panels â€” editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
             {t("proposal_panelsLabel")}
@@ -2037,13 +2018,13 @@ export default function ProposalPage() {
 
         <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
           <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-            {t("proposal_netCost")}: <span className="break-words font-extrabold text-brand-700">₹{effectiveResult.netCost.toLocaleString("en-IN")}</span>
+            {t("proposal_netCost")}: <span className="break-words font-extrabold text-brand-700">â‚¹{effectiveResult.netCost.toLocaleString("en-IN")}</span>
           </p>
           <p className="text-xs font-semibold text-slate-700 sm:text-sm">
             {t("proposal_payback")}: <span className="font-extrabold text-brand-700">{effectiveResult.paybackDisplay}</span>
           </p>
         </div>
-        {/* Proposal language — inline toggle */}
+        {/* Proposal language â€” inline toggle */}
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Language</span>
           <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-0.5">
@@ -2059,7 +2040,7 @@ export default function ProposalPage() {
               onClick={() => setProposalLang("hi")}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${proposalLang === "hi" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
-              हिंदी
+              à¤¹à¤¿à¤‚à¤¦à¥€
             </button>
           </div>
         </div>
@@ -2111,20 +2092,23 @@ export default function ProposalPage() {
             {isCopyingSummary ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <MessageCircle className="mr-2 h-4 w-4" />}
             Copy Summary
           </button>
-          <button
-            type="button"
-            className="ss-cta-secondary border-indigo-400 text-indigo-700 hover:bg-indigo-50 sm:text-base"
-            disabled={isSavingPipeline}
-            onClick={() => void saveToPipeline()}
-          >
-            {isSavingPipeline ? <Skeleton className="mr-2 h-4 w-4 rounded-full" /> : <FileUp className="mr-2 h-4 w-4" />}
-            Save to Pipeline
-          </button>
         </div>
         {latestWebProposalUrl ? (
           <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50/60 p-3 text-xs sm:text-sm">
             <p className="font-semibold text-teal-900">Web proposal link ready</p>
             <p className="mt-1 break-all font-mono text-[11px] text-teal-800 sm:text-xs">{latestWebProposalUrl}</p>
+            {lastAutoLeadId ? (
+              <p className="mt-2 text-[11px] text-teal-800">
+                {t("proposal_leadCreatedSub")}{" "}
+                <button
+                  type="button"
+                  className="font-bold underline underline-offset-2"
+                  onClick={() => router.push(`/customers?lead=${encodeURIComponent(lastAutoLeadId)}`)}
+                >
+                  Open in Customers
+                </button>
+              </p>
+            ) : null}
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -2145,7 +2129,7 @@ export default function ProposalPage() {
       </div>{/* closes system size ss-card */}
           </div>{/* end main builder column */}
 
-          {/* Live preview panel — visible at lg+ (iPad Pro, desktop) */}
+          {/* Live preview panel â€” visible at lg+ (iPad Pro, desktop) */}
           <div className="hidden lg:block lg:w-60 lg:shrink-0 xl:w-72 2xl:w-80">
             <ProposalLivePreviewPanel
               presetId={osPresetId}
@@ -2493,7 +2477,7 @@ function buildUnitsFromConsumptionHistory(parsed: ParsedBillShape | null): Parti
     const rawMonth = String(row.month ?? "");
     const parts = rawMonth.split(/[\s/-]+/).map((part) => part.trim()).filter(Boolean);
 
-    // Extract year from the month string (e.g. "APR-2025" → year 2025)
+    // Extract year from the month string (e.g. "APR-2025" â†’ year 2025)
     let rowYear = 0;
     for (const part of parts) {
       const n = Number(part);
@@ -2558,14 +2542,14 @@ function buildSixMonthAutofill(parsed: ParsedBillShape): Partial<MonthlyUnits> {
 
 function stripStepPrefix(label: string): string {
   return label
-    .replace(/^\s*(step|चरण|படி)\s*\d+\s*[:\-]\s*/iu, "")
+    .replace(/^\s*(step|à¤šà¤°à¤£|à®ªà®Ÿà®¿)\s*\d+\s*[:\-]\s*/iu, "")
     .trim();
 }
 
 function stripManualSuffix(label: string): string {
   return label
     .replace(/\s*\(\s*manual override\s*\)\s*/iu, "")
-    .replace(/\s*\(\s*मैनुअल ओवरराइड\s*\)\s*/iu, "")
+    .replace(/\s*\(\s*à¤®à¥ˆà¤¨à¥à¤…à¤² à¤“à¤µà¤°à¤°à¤¾à¤‡à¤¡\s*\)\s*/iu, "")
     .trim();
 }
 
@@ -2650,7 +2634,7 @@ function UploadCard({
                     : "border-slate-200 bg-slate-100 text-slate-500"
                 )}
               >
-                {checked ? `✓ ${MONTH_LABELS[month]}` : MONTH_LABELS[month]}
+                {checked ? `âœ“ ${MONTH_LABELS[month]}` : MONTH_LABELS[month]}
               </span>
             );
           })}
@@ -2668,7 +2652,7 @@ function UploadCard({
                     : "border-slate-200 bg-slate-100 text-slate-500"
                 )}
               >
-                {checked ? `✓ ${MONTH_LABELS[month]}` : MONTH_LABELS[month]}
+                {checked ? `âœ“ ${MONTH_LABELS[month]}` : MONTH_LABELS[month]}
               </span>
             );
           })}
@@ -2686,3 +2670,4 @@ function fileToBase64(file: File) {
     reader.readAsDataURL(file);
   });
 }
+

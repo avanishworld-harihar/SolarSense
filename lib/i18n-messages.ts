@@ -173,6 +173,12 @@ export const EN = {
   proposal_step1SelectLead: "Step 1: Choose lead from CRM",
   proposal_step1LeadHint:
     "After you pick a lead, contact name and phone lock here; bill name stays in a separate field.",
+  proposal_walkInCrmHint:
+    "Walk-in? Leave the dropdown empty — when you generate a proposal, SOL.52 creates the lead in Customers and adds them to the pipeline. Edit or delete from the Customers tab.",
+  proposal_needCustomerName:
+    "Enter a customer or bill name (Step 1 or bill upload) before generating.",
+  proposal_leadCreatedSub:
+    "Lead saved in Customers · status moves to Proposal sent. Manage or delete from Customers.",
   proposal_billPersistLeadHint:
     "Select the CRM lead in Step 1 before uploading bills — SOL.52 saves the scan and numbers on that lead so you can reopen this proposal later without uploading again (Customers → Proposal, or Projects → Resume proposal).",
   proposal_leadContactBlockTitle: "Lead contact (CRM — call here)",
@@ -666,6 +672,12 @@ export const HI: Partial<Record<keyof typeof EN, string>> = {
   proposal_step1SelectLead: "CRM लीड सूची से चुनें",
   proposal_step1LeadHint:
     "लीड चुनते ही संपर्क नाम और फ़ोन लॉक; बिल पर नाम अलग फ़ील्ड में।",
+  proposal_walkInCrmHint:
+    "वॉक-इन? ड्रॉपडाउन खाली छोड़ें — प्रपोज़ल जनरेट करते ही लीड Customers में बनेगी और पाइपलाइन में जुड़ेगी। संपादन/हटाना Customers टैब से।",
+  proposal_needCustomerName:
+    "जनरेट से पहले ग्राहक या बिल नाम भरें (Step 1 या बिल अपलोड)।",
+  proposal_leadCreatedSub:
+    "लीड Customers में सेव · स्टेटस Proposal sent। Customers से मैनेज या डिलीट करें।",
   proposal_billPersistLeadHint:
     "बिल अपलोड से पहले चरण 1 में CRM लीड चुनें — स्कैन और नंबर उसी लीड पर सेव होंगे, बाद में दोबारा अपलोड किए बिना प्रस्ताव खोल सकेंगे (ग्राहक → प्रस्ताव या प्रोजेक्ट्स से)।",
   proposal_step2BillUploads: "चरण 2: दो बिल अपलोड करें (नया + पिछला)",
