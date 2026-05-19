@@ -19,7 +19,12 @@ export function BlockDcrComparison({ summary, lang, darkMode, commercialConfig }
 
   const brandId = cfg?.brandId ?? commercialConfig?.panel?.brandId ?? "waaree";
   const watt = cfg?.watt ?? commercialConfig?.panel?.watt ?? 540;
-  const cmp = buildDcrComparison(summary.systemKw, brandId, watt);
+  const reg = commercialConfig?.panelRegistry;
+  const dcrId = reg?.selectedDcrCatalogId;
+  const nonId = reg?.selectedNonDcrCatalogId;
+  const dcrRate = dcrId ? reg?.overrides?.[dcrId]?.ratePerWpInr : commercialConfig?.panel?.ratePerWpInr;
+  const nonRate = nonId ? reg?.overrides?.[nonId]?.ratePerWpInr : undefined;
+  const cmp = buildDcrComparison(summary.systemKw, brandId, watt, dcrRate, nonRate);
   if (!cmp) return null;
 
   return (

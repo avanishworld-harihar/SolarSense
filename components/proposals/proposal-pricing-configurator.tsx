@@ -22,6 +22,16 @@ import { grossSubtotalInr } from "@/lib/proposal-pricing-merge";
 import type { ProposalPricingRow } from "@/lib/proposal-pricing-schema";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
+import {
+  CommercialPanelMobileFields,
+  CommercialPanelTableCells,
+  type CommercialPanelFieldLabels,
+} from "@/components/proposals/commercial-panel-line-fields";
+import {
+  ensureCommercialPanelLines,
+  isTrackedCommercialPanelLine,
+  recalcCommercialPanelQuantities,
+} from "@/lib/commercial-bom-panels";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
@@ -60,6 +70,9 @@ export type ProposalPricingConfiguratorProps = {
   onSaved?: (row: ProposalPricingRow) => void;
   /** `workspace` — flat chrome for proposal detail (less marketing, more ERP). */
   chrome?: "default" | "workspace";
+  /** Commercial executive — DCR / Non-DCR panel rows inside solar_panels BOM group. */
+  commercialBom?: boolean;
+  commercialPanelLabels?: CommercialPanelFieldLabels;
 };
 
 function num(s: string): number {
@@ -100,23 +113,40 @@ export function ProposalPricingConfigurator({
   labels,
   className,
   onSaved,
-  chrome = "default"
+  chrome = "default",
+  commercialBom = false,
+  commercialPanelLabels,
 }: ProposalPricingConfiguratorProps) {
   const { t } = useLanguage();
   const toast = useToast();
   const isWorkspace = chrome === "workspace";
-  const [lines, setLines] = useState<PricingLineItem[]>(() => hydrateLineItems(initial));
+  const panelFieldLabels: CommercialPanelFieldLabels = commercialPanelLabels ?? {
+    trackLabel: "Module track",
+    wattLabel: "Watt (Wp)",
+    technologyLabel: "Technology",
+    rateHint: "Rate = ₹ per module (nos × rate = line amount)",
+  };
+  const [lines, setLines] = useState<PricingLineItem[]>(() => {
+    const hydrated = hydrateLineItems(initial);
+    return commercialBom ? ensureCommercialPanelLines(hydrated, initial.system_kw) : hydrated;
+  });
   const [systemKw, setSystemKw] = useState(initial.system_kw);
   const [manualFinal, setManualFinal] = useState(initial.manual_final_override);
   const [manualFinalAmt, setManualFinalAmt] = useState(initial.final_amount_inr);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setLines(hydrateLineItems(initial));
+    const hydrated = hydrateLineItems(initial);
+    setLines(commercialBom ? ensureCommercialPanelLines(hydrated, initial.system_kw) : hydrated);
     setSystemKw(initial.system_kw);
     setManualFinal(initial.manual_final_override);
     setManualFinalAmt(initial.final_amount_inr);
-  }, [initial]);
+  }, [initial, commercialBom]);
+
+  useEffect(() => {
+    if (!commercialBom) return;
+    setLines((prev) => recalcCommercialPanelQuantities(prev, systemKw));
+  }, [systemKw, commercialBom]);
 
   const preview = useMemo(() => {
     return proposalPricingRowFromLineItems(
@@ -137,8 +167,9 @@ export function ProposalPricingConfigurator({
   async function save() {
     setSaving(true);
     try {
+      const payloadLines = commercialBom ? ensureCommercialPanelLines(lines, systemKw) : lines;
       const body: Record<string, unknown> = {
-        line_items: lines,
+        line_items: payloadLines,
         system_kw: systemKw,
         manual_final_override: manualFinal
       };
@@ -167,7 +198,12 @@ export function ProposalPricingConfigurator({
   }
 
   function removeLine(id: string) {
-    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((L) => L.id !== id)));
+    setLines((prev) => {
+      if (prev.length <= 1) return prev;
+      const target = prev.find((L) => L.id === id);
+      if (commercialBom && target && isTrackedCommercialPanelLine(target)) return prev;
+      return prev.filter((L) => L.id !== id);
+    });
   }
 
   function addLine() {
@@ -201,8 +237,11 @@ export function ProposalPricingConfigurator({
     return order.map((key) => ({ key, lines: m.get(key)! }));
   }, [lines]);
 
+  const tableColSpan = commercialBom ? 12 : 9;
+
   function formatBomGroupLabel(key: string) {
     if (key === "__adj__") return t("proposals_bomGroupAdjustments");
+    if (commercialBom && key === "solar_panels") return "Solar panels — DCR & Non-DCR";
     return key
       .split("_")
       .filter(Boolean)
@@ -257,6 +296,15 @@ export function ProposalPricingConfigurator({
               <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.categoryCol}</th>
               <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.itemCol}</th>
               <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.brandCol}</th>
+              {commercialBom ? (
+                <>
+                  <th className="sticky top-0 w-20 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{panelFieldLabels.trackLabel}</th>
+                  <th className="sticky top-0 w-20 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{panelFieldLabels.wattLabel}</th>
+                  <th className="sticky top-0 min-w-[7rem] bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">
+                    {panelFieldLabels.technologyLabel}
+                  </th>
+                </>
+              ) : null}
               <th className="sticky top-0 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.qtyCol}</th>
               <th className="sticky top-0 w-16 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.unitCol}</th>
               <th className="sticky top-0 w-24 bg-slate-50 px-2 py-2.5 dark:bg-[#0a0e14]">{labels.rateCol}</th>
@@ -270,7 +318,7 @@ export function ProposalPricingConfigurator({
               <Fragment key={key}>
                 <tr className="border-b border-slate-200/80 bg-slate-100/90 dark:border-white/[0.06] dark:bg-slate-900/50">
                   <td
-                    colSpan={9}
+                    colSpan={tableColSpan}
                     className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300"
                   >
                     {formatBomGroupLabel(key)}
@@ -291,17 +339,22 @@ export function ProposalPricingConfigurator({
                           value={L.kind}
                           onChange={(e) => {
                             const k = e.target.value as PricingLineKind;
+                            if (commercialBom && k === "panels") return;
                             updateLine(L.id, {
                               kind: k,
                               label: defaultLabelForKind(k),
                               catalog_category: defaultCatalogCategoryForLineKind(k),
-                              unit: defaultUnitForKind(k)
+                              unit: defaultUnitForKind(k),
+                              panel_track: undefined,
+                              watt: undefined,
+                              technology: undefined,
                             });
                           }}
+                          disabled={commercialBom && isTrackedCommercialPanelLine(L)}
                           className="h-9 rounded-md border-slate-200 text-[11px] font-bold dark:border-white/10"
                           aria-label={labels.categoryCol}
                         >
-                          {PRICING_LINE_KINDS.map((k) => (
+                          {PRICING_LINE_KINDS.filter((k) => !(commercialBom && k === "panels")).map((k) => (
                             <option key={k} value={k}>
                               {t(`proposals_lineKind_${k}`)}
                             </option>
@@ -335,6 +388,13 @@ export function ProposalPricingConfigurator({
                           </datalist>
                         ) : null}
                       </td>
+                      {commercialBom ? (
+                        <CommercialPanelTableCells
+                          line={L}
+                          onPatch={(patch) => updateLine(L.id, patch)}
+                          labels={panelFieldLabels}
+                        />
+                      ) : null}
                       <td className="px-2 py-1.5 align-top">
                         <input
                           type="text"
@@ -381,7 +441,7 @@ export function ProposalPricingConfigurator({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-slate-400 hover:text-rose-600"
-                          disabled={lines.length <= 1}
+                          disabled={lines.length <= 1 || (commercialBom && isTrackedCommercialPanelLine(L))}
                           onClick={() => removeLine(L.id)}
                           aria-label="Remove line"
                         >
@@ -437,17 +497,22 @@ export function ProposalPricingConfigurator({
                         value={L.kind}
                         onChange={(e) => {
                           const k = e.target.value as PricingLineKind;
+                          if (commercialBom && k === "panels") return;
                           updateLine(L.id, {
                             kind: k,
                             label: defaultLabelForKind(k),
                             catalog_category: defaultCatalogCategoryForLineKind(k),
-                            unit: defaultUnitForKind(k)
+                            unit: defaultUnitForKind(k),
+                            panel_track: undefined,
+                            watt: undefined,
+                            technology: undefined,
                           });
                         }}
+                        disabled={commercialBom && isTrackedCommercialPanelLine(L)}
                         className="h-11 rounded-xl border-slate-200 text-sm font-bold dark:border-white/10"
                         aria-label={labels.categoryCol}
                       >
-                        {PRICING_LINE_KINDS.map((k) => (
+                        {PRICING_LINE_KINDS.filter((k) => !(commercialBom && k === "panels")).map((k) => (
                           <option key={k} value={k}>
                             {t(`proposals_lineKind_${k}`)}
                           </option>
@@ -472,6 +537,13 @@ export function ProposalPricingConfigurator({
                             <option key={b} value={b} />
                           ))}
                         </datalist>
+                      ) : null}
+                      {commercialBom ? (
+                        <CommercialPanelMobileFields
+                          line={L}
+                          onPatch={(patch) => updateLine(L.id, patch)}
+                          labels={panelFieldLabels}
+                        />
                       ) : null}
                       <div className="grid grid-cols-2 gap-3">
                         <FloatingLabelInput
@@ -509,7 +581,7 @@ export function ProposalPricingConfigurator({
                         type="button"
                         variant="ghost"
                         className="h-11 w-full touch-manipulation font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                        disabled={lines.length <= 1}
+                        disabled={lines.length <= 1 || (commercialBom && isTrackedCommercialPanelLine(L))}
                         onClick={() => removeLine(L.id)}
                       >
                         <Trash2 className="mr-2 h-4 w-4 shrink-0" aria-hidden />

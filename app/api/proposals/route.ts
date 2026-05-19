@@ -156,7 +156,11 @@ export async function POST(req: NextRequest) {
 
     let responseSummary = summary;
     try {
-      await ensureProposalPricingRow(defaultProposalPricingFromDeck(created.id, pptInput, summary));
+      await ensureProposalPricingRow(
+        defaultProposalPricingFromDeck(created.id, pptInput, summary, {
+          presetId: payload.presetId ?? "residential_smart",
+        })
+      );
       await persistProposalDeckAfterPricingChange(created.id);
       const pr = await getProposalPricingByProposalId(created.id);
       if (pr) {

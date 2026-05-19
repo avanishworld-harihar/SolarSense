@@ -18,7 +18,10 @@ export const pricingLineItemSchema = z.object({
   /** Line notes for quotation / internal use. */
   notes: z.string().max(500).optional(),
   /** EPC BOM taxonomy — optional; defaults derived from `kind` when absent. */
-  catalog_category: epcComponentCategorySchema.nullable().optional()
+  catalog_category: epcComponentCategorySchema.nullable().optional(),
+  panel_track: z.enum(["dcr", "non_dcr"]).optional(),
+  watt: z.number().min(100).max(900).optional(),
+  technology: z.string().max(80).optional()
 });
 
 export const proposalPricingRowSchema = z.object({

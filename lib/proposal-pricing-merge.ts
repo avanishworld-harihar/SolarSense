@@ -2,6 +2,7 @@ import type { PremiumProposalPptInput, ProposalDeckSummary } from "@/lib/proposa
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import { computeGrossSystemCostInr } from "@/lib/solar-engine";
 import { computePmSuryaGharSubsidy } from "@/lib/proposal-deck-helpers";
+import { defaultCommercialPanelLineItems } from "@/lib/commercial-bom-panels";
 import {
   defaultLineItemsFromSeed,
   proposalPricingRowFromLineItems
@@ -53,7 +54,8 @@ export type ProposalPricingInsert = Omit<ProposalPricingRow, "id" | "updated_at"
 export function defaultProposalPricingFromDeck(
   proposalId: string,
   ppt: PremiumProposalPptInput,
-  summary: ProposalDeckSummary
+  summary: ProposalDeckSummary,
+  opts?: { presetId?: string | null }
 ): ProposalPricingInsert {
   const systemKw = Math.max(0, Number(ppt.systemKw) || 0);
   const gross = Math.max(
@@ -68,14 +70,26 @@ export function defaultProposalPricingFromDeck(
   const w = wattsFromSystemKw(systemKw);
   const pricePerWatt = w > 0 ? Math.round((gross / w) * 10000) / 10000 : 0;
 
-  const line_items = defaultLineItemsFromSeed({
-    hardware_inr: gross,
-    installation_inr: 0,
-    structure_inr: 0,
-    subsidy_inr: subsidy,
-    discount_inr: 0,
-    panelBrandHint: typeof ppt.panelBrand === "string" ? ppt.panelBrand : null
-  });
+  const panelBrandHint = typeof ppt.panelBrand === "string" ? ppt.panelBrand : null;
+  const line_items =
+    opts?.presetId === "commercial_executive"
+      ? defaultCommercialPanelLineItems({
+          hardware_inr: gross,
+          installation_inr: 0,
+          structure_inr: 0,
+          subsidy_inr: subsidy,
+          discount_inr: 0,
+          system_kw: systemKw,
+          panelBrandHint,
+        })
+      : defaultLineItemsFromSeed({
+          hardware_inr: gross,
+          installation_inr: 0,
+          structure_inr: 0,
+          subsidy_inr: subsidy,
+          discount_inr: 0,
+          panelBrandHint,
+        });
 
   return {
     proposal_id: proposalId,

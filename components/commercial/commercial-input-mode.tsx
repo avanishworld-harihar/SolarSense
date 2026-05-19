@@ -197,7 +197,7 @@ function RequirementForm({
 
       <div className="mt-2 rounded-xl border border-indigo-200/70 bg-indigo-50/50 px-3 py-3">
         <p className="text-[11px] font-semibold text-indigo-900">
-          Panel pricing (DCR / Non-DCR) lives in the Proposals tab — Commercial BOM, not on this page.
+          DCR / Non-DCR solar modules are configured in Proposals → Commercial BOM (Solar panels group), not on this page.
         </p>
         {onOpenWorkspace ? (
           <button
@@ -216,7 +216,7 @@ function RequirementForm({
         ) : null}
         {proposalsHref && canOpenWorkspace ? (
           <p className="mt-2 text-center text-[10px] text-slate-500">
-            Opens your deal in Proposals → Commercial panel pricing + full BOM.
+            Opens your deal in Proposals → BOM with DCR & Non-DCR panel rows.
           </p>
         ) : null}
       </div>

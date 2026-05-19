@@ -35,7 +35,11 @@ export async function PATCH(req: NextRequest, ctx: RouteCtx) {
     let pricing = await getProposalPricingByProposalId(proposal.id);
     if (!pricing) {
       const summary = summarizeProposalDeck(proposal.ppt_input);
-      await ensureProposalPricingRow(defaultProposalPricingFromDeck(proposal.id, proposal.ppt_input, summary));
+      await ensureProposalPricingRow(
+        defaultProposalPricingFromDeck(proposal.id, proposal.ppt_input, summary, {
+          presetId: proposal.preset_id,
+        })
+      );
       pricing = await getProposalPricingByProposalId(proposal.id);
     }
     if (!pricing) {

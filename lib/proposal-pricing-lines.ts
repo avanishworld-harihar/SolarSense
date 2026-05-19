@@ -10,6 +10,8 @@ import type { ProposalPricingRow } from "@/lib/proposal-pricing-schema";
 export type { PricingLineKind };
 export { PRICING_LINE_KINDS };
 
+export type PanelTrack = "dcr" | "non_dcr";
+
 export type PricingLineItem = {
   id: string;
   kind: PricingLineKind;
@@ -22,6 +24,12 @@ export type PricingLineItem = {
   notes?: string;
   /** EPC master catalog — drives future BOM / marketplace SKUs. */
   catalog_category?: EpcComponentCategory | null;
+  /** Commercial BOM — DCR vs Non-DCR module track (panels kind only). */
+  panel_track?: PanelTrack;
+  /** Module wattage (540, 580, 625, 700, …). */
+  watt?: number;
+  /** Cell technology — Mono PERC, TOPCon, etc. */
+  technology?: string;
 };
 
 export const PANEL_BRAND_PRESETS = ["Waaree", "Adani", "Longi", "Jinko"] as const;
@@ -250,7 +258,34 @@ export function normalizeLineItems(raw: unknown[]): PricingLineItem[] {
         : defaultUnitForKind(kind as PricingLineKind);
     const notesRaw = o.notes;
     const notes = typeof notesRaw === "string" ? notesRaw.slice(0, 500) : undefined;
-    out.push({ id, kind: kind as PricingLineKind, label, brand, quantity, unit_rate_inr, unit, notes, catalog_category });
+    const panel_track =
+      o.panel_track === "dcr" || o.panel_track === "non_dcr" ? o.panel_track : undefined;
+    const wattRaw = o.watt;
+    const watt =
+      typeof wattRaw === "number" && Number.isFinite(wattRaw)
+        ? Math.round(wattRaw)
+        : typeof wattRaw === "string" && wattRaw.trim()
+          ? Math.round(Number(wattRaw)) || undefined
+          : undefined;
+    const technologyRaw = o.technology;
+    const technology =
+      typeof technologyRaw === "string" && technologyRaw.trim()
+        ? technologyRaw.trim().slice(0, 80)
+        : undefined;
+    out.push({
+      id,
+      kind: kind as PricingLineKind,
+      label,
+      brand,
+      quantity,
+      unit_rate_inr,
+      unit,
+      notes,
+      catalog_category,
+      panel_track,
+      watt,
+      technology,
+    });
   }
   return out.length > 0 ? out : defaultLineItemsFromSeed({ hardware_inr: 0, installation_inr: 0, structure_inr: 0, subsidy_inr: 0, discount_inr: 0 });
 }

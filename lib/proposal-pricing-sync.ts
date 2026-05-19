@@ -1,12 +1,22 @@
+import {
+  ensureCommercialPanelLines,
+  syncCommercialConfigFromPanelLines,
+} from "@/lib/commercial-bom-panels";
+import {
+  applyCommercialFlagsToLayout,
+  defaultCommercialConfig,
+  parseCommercialConfig,
+  type CommercialProposalConfig,
+} from "@/lib/commercial-proposal-config";
 import type { PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import { mergeProposalPricingIntoPptInput } from "@/lib/proposal-pricing-merge";
+import { normalizeLineItems } from "@/lib/proposal-pricing-lines";
 import { getProposalPricingByProposalId } from "@/lib/proposal-pricing-store";
 import {
-  applyCommercialFlagsToLayout,
-  type CommercialProposalConfig,
-} from "@/lib/commercial-proposal-config";
-import { normalizeProposalTemplateV1, type ProposalTemplateV1 } from "@/lib/proposal-template-schema";
+  normalizeProposalTemplateV1,
+  type ProposalTemplateV1,
+} from "@/lib/proposal-template-schema";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { supabase } from "@/lib/supabase";
 import { getProposalById } from "@/lib/proposals-store";
@@ -44,8 +54,29 @@ export async function persistProposalDeckAfterPricingChange(proposalId: string):
   const proposal = await getProposalById(proposalId);
   const pricing = await getProposalPricingByProposalId(proposalId);
   if (!proposal) return false;
-  const mergedPpt = mergeProposalPricingIntoPptInput(proposal.ppt_input, pricing);
-  return persistMergedProposalDeck(proposalId, mergedPpt);
+
+  let ppt = mergeProposalPricingIntoPptInput(proposal.ppt_input, pricing);
+  const presetId = proposal.preset_id ?? "residential_smart";
+
+  if (presetId === "commercial_executive" && pricing?.line_items?.length) {
+    const lines = ensureCommercialPanelLines(
+      normalizeLineItems(pricing.line_items as unknown[]),
+      pricing.system_kw
+    );
+    const baseCfg =
+      parseCommercialConfig(ppt.commercialConfig) ?? defaultCommercialConfig(pricing.system_kw);
+    const syncedCfg = syncCommercialConfigFromPanelLines(baseCfg, lines, pricing.system_kw);
+    const baseLayout = normalizeProposalTemplateV1(
+      ppt.proposalLayout ?? { version: 1, blocks: [] }
+    );
+    ppt = {
+      ...ppt,
+      commercialConfig: syncedCfg,
+      proposalLayout: applyCommercialFlagsToLayout(baseLayout, syncedCfg),
+    };
+  }
+
+  return persistMergedProposalDeck(proposalId, ppt);
 }
 
 /** Persists modular `proposalLayout` into `ppt_input` without touching pricing rows. */

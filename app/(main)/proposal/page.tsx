@@ -713,7 +713,7 @@ export default function ProposalPage() {
   ]);
 
   const proposalsBomHref = draftProposalId
-    ? `/proposals/${draftProposalId}#commercial-panels`
+    ? `/proposals/${draftProposalId}#bom`
     : null;
 
   useEffect(() => {
@@ -1465,7 +1465,7 @@ export default function ProposalPage() {
     }
   }
 
-  /** Opens the existing Proposals-tab workspace (BOM + DCR / Non-DCR panel pricing). */
+  /** Opens Proposals tab BOM (DCR / Non-DCR panel lines under Solar panels). */
   async function goToProposalsCommercialBom() {
     if (osPresetId !== "commercial_executive") return;
     setIsWorkspaceBusy(true);
@@ -1482,7 +1482,7 @@ export default function ProposalPage() {
         "Proposals workspace",
         "Configure DCR / Non-DCR panels and commercial BOM, then return here to generate."
       );
-      router.push(`/proposals/${saved.id}#commercial-panels`);
+      router.push(`/proposals/${saved.id}#bom`);
     } catch (error) {
       toast.error(
         "Proposals unavailable",
@@ -2027,7 +2027,7 @@ export default function ProposalPage() {
             </p>
             {draftProposalId ? (
               <a
-                href={`/proposals/${draftProposalId}#commercial-panels`}
+                href={`/proposals/${draftProposalId}#bom`}
                 className="mt-2 inline-flex text-[11px] font-bold text-indigo-700 underline"
               >
                 Open Proposals — panel &amp; BOM
@@ -2057,7 +2057,7 @@ export default function ProposalPage() {
             onOpenReview={() => setShowReviewSheet(true)}
           />
           <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-r from-indigo-50/80 to-sky-50/60 p-4">
-            <p className="text-sm font-bold text-slate-900">Commercial BOM &amp; panel pricing</p>
+            <p className="text-sm font-bold text-slate-900">Commercial BOM — DCR &amp; Non-DCR panels</p>
             <p className="mt-1 text-xs text-slate-600">
               DCR / Non-DCR modules and full BOM are configured in the Proposals tab — same workspace as before.
             </p>
@@ -2073,7 +2073,7 @@ export default function ProposalPage() {
               </button>
               {draftProposalId ? (
                 <a
-                  href={`/proposals/${draftProposalId}#commercial-panels`}
+                  href={`/proposals/${draftProposalId}#bom`}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"
                 >
                   Open Proposals workspace
