@@ -170,14 +170,13 @@ function PaletteInner() {
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
               "fixed inset-x-4 top-[8vh] z-[501] mx-auto max-w-lg overflow-hidden",
-              "rounded-2xl border border-white/50",
-              "bg-white/96 shadow-[0_24px_80px_rgba(11,34,64,0.22)]",
-              "backdrop-blur-2xl backdrop-saturate-150",
-              "dark:border-white/10 dark:bg-slate-900/96 dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+              "rounded-2xl border border-slate-200/90",
+              "bg-white shadow-[0_24px_80px_rgba(11,34,64,0.22)]",
+              "dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
             )}
           >
             {/* Search field */}
-            <div className="flex items-center gap-3 border-b border-slate-200/80 px-4 py-3.5 dark:border-white/8">
+            <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3.5 dark:border-slate-700 dark:bg-slate-900">
               <Search
                 className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500"
                 strokeWidth={2.25}
@@ -206,8 +205,11 @@ function PaletteInner() {
               </kbd>
             </div>
 
-            {/* Results */}
-            <div className="max-h-[min(65vh,32rem)] overflow-y-auto p-2" role="listbox">
+            {/* Results — solid surface so page content does not bleed through */}
+            <div
+              className="max-h-[min(65vh,32rem)] overflow-y-auto bg-white p-2 dark:bg-slate-900"
+              role="listbox"
+            >
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-10 text-center">
                   <Zap className="h-5 w-5 text-slate-300 dark:text-slate-600" aria-hidden />
@@ -243,8 +245,8 @@ function PaletteInner() {
                             className={cn(
                               "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
                               selected
-                                ? "bg-teal-50 text-teal-800 dark:bg-teal-500/15 dark:text-teal-100"
-                                : "text-slate-700 hover:bg-slate-100/80 dark:text-slate-200 dark:hover:bg-white/5"
+                                ? "bg-teal-50 text-teal-800 dark:bg-teal-950 dark:text-teal-100"
+                                : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
                             )}
                           >
                             {/* Icon well */}
@@ -254,7 +256,7 @@ function PaletteInner() {
                                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
                                 selected
                                   ? "bg-teal-600 text-white dark:bg-teal-500"
-                                  : "bg-slate-100 text-slate-500 dark:bg-white/8 dark:text-slate-400"
+                                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                               )}
                             >
                               <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
@@ -306,7 +308,7 @@ function PaletteInner() {
             </div>
 
             {/* Footer hint */}
-            <div className="flex items-center justify-between border-t border-slate-200/80 px-4 py-2 dark:border-white/8">
+            <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-2 dark:border-slate-700 dark:bg-slate-900">
               <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
                 SOL.52 Command Center
               </span>
