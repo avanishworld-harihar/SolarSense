@@ -25,43 +25,80 @@ import { ProposalJourneySection } from "@/components/proposal/proposal-journey";
 
 type Props = Pick<
   BlockRenderContext,
-  "summary" | "lang" | "D" | "darkMode" | "installer" | "honoredDisplay"
+  "summary" | "lang" | "D" | "darkMode" | "installer" | "honoredDisplay" | "storyVariant"
 >;
 
 const inr = (v: number) => `₹${Math.max(0, Math.round(v)).toLocaleString("en-IN")}`;
 
-export function BlockExecutiveSummary({ summary, lang, darkMode, installer, honoredDisplay }: Props) {
+export function BlockExecutiveSummary({ summary, lang, darkMode, installer, honoredDisplay, storyVariant }: Props) {
   const isHi = lang === "hi";
   const dark = darkMode;
 
-  const kicker = isHi
-    ? "कार्यकारी सारांश — वाणिज्यिक सौर प्रस्ताव"
-    : "Executive Summary — Commercial Solar Proposal";
-  const title = isHi
-    ? `${honoredDisplay} के लिए सौर प्रस्ताव`
-    : `Solar Proposal for ${honoredDisplay}`;
-  const subtitle = isHi
-    ? `${summary.systemKw} kW ऑन-ग्रिड सौर संयंत्र · ${installer.name}`
-    : `${summary.systemKw} kW On-Grid Solar System · ${installer.name}`;
+  // Wave 3 P6: use story variant copy when available, fall back to built-in.
+  const kicker = storyVariant
+    ? (isHi ? "कार्यकारी सारांश — वाणिज्यिक सौर प्रस्ताव" : "Executive Summary — Commercial Solar Proposal")
+    : (isHi
+        ? "कार्यकारी सारांश — वाणिज्यिक सौर प्रस्ताव"
+        : "Executive Summary — Commercial Solar Proposal");
+  const title = storyVariant
+    ? storyVariant.headline
+        .replace("{kw}", String(summary.systemKw))
+        .replace("{savings_annual}", Math.round(summary.annualSaving).toLocaleString("en-IN"))
+        .replace("{payback_years}", summary.paybackYears.toFixed(1))
+        .replace("{net_cost}", Math.round(summary.netCost).toLocaleString("en-IN"))
+    : (isHi
+        ? `${honoredDisplay} के लिए सौर प्रस्ताव`
+        : `Solar Proposal for ${honoredDisplay}`);
+  const subtitle = storyVariant
+    ? storyVariant.opening
+        .replace("{kw}", String(summary.systemKw))
+        .replace("{savings_annual}", Math.round(summary.annualSaving).toLocaleString("en-IN"))
+        .replace("{payback_years}", summary.paybackYears.toFixed(1))
+        .replace("{net_cost}", Math.round(summary.netCost).toLocaleString("en-IN"))
+    : (isHi
+        ? `${summary.systemKw} kW ऑन-ग्रिड सौर संयंत्र · ${installer.name}`
+        : `${summary.systemKw} kW On-Grid Solar System · ${installer.name}`);
 
   const roiPct =
     summary.netCost > 0
       ? Math.round((summary.annualSaving / summary.netCost) * 100)
       : 0;
 
-  const points = isHi
+  const interpolate = (s: string) =>
+    s
+      .replace("{kw}", String(summary.systemKw))
+      .replace("{savings_annual}", Math.round(summary.annualSaving).toLocaleString("en-IN"))
+      .replace("{payback_years}", summary.paybackYears.toFixed(1))
+      .replace("{net_cost}", Math.round(summary.netCost).toLocaleString("en-IN"));
+
+  // Wave 3 P6: when storyVariant is present, build points from roi_hook + closing
+  const points = storyVariant
     ? [
-        `बिजली की बढ़ती दरों से सुरक्षा — अगले 25 साल स्थिर ऊर्जा लागत`,
-        `PM सूर्य घर अनुदान के बाद शुद्ध निवेश ₹${(summary.netCost / 100000).toFixed(1)}L`,
-        `${summary.paybackYears.toFixed(1)} वर्ष में ROI — उसके बाद शुद्ध लाभ`,
-        `DISCOM ग्रिड से 24×7 बैकअप के साथ नेट-मीटरिंग`,
+        interpolate(storyVariant.roi_hook),
+        interpolate(storyVariant.closing),
+        ...(isHi
+          ? [
+              `PM सूर्य घर अनुदान के बाद शुद्ध निवेश ₹${(summary.netCost / 100000).toFixed(1)}L`,
+              `DISCOM ग्रिड से 24×7 बैकअप के साथ नेट-मीटरिंग`,
+            ]
+          : [
+              `Net investment ₹${(summary.netCost / 100000).toFixed(1)}L after PM Surya Ghar subsidy`,
+              `Net-metering with DISCOM grid backup for uninterrupted operations`,
+            ]),
       ]
-    : [
-        `Protection from rising electricity tariffs — stable energy costs for 25 years`,
-        `Net investment ₹${(summary.netCost / 100000).toFixed(1)}L after PM Surya Ghar subsidy`,
-        `${summary.paybackYears.toFixed(1)}-year payback — pure profit every year after that`,
-        `Net-metering with DISCOM grid backup for uninterrupted operations`,
-      ];
+    : (isHi
+      ? [
+          `बिजली की बढ़ती दरों से सुरक्षा — अगले 25 साल स्थिर ऊर्जा लागत`,
+          `PM सूर्य घर अनुदान के बाद शुद्ध निवेश ₹${(summary.netCost / 100000).toFixed(1)}L`,
+          `${summary.paybackYears.toFixed(1)} वर्ष में ROI — उसके बाद शुद्ध लाभ`,
+          `DISCOM ग्रिड से 24×7 बैकअप के साथ नेट-मीटरिंग`,
+        ]
+      : [
+          `Protection from rising electricity tariffs — stable energy costs for 25 years`,
+          `Net investment ₹${(summary.netCost / 100000).toFixed(1)}L after PM Surya Ghar subsidy`,
+          `${summary.paybackYears.toFixed(1)}-year payback — pure profit every year after that`,
+          `Net-metering with DISCOM grid backup for uninterrupted operations`,
+        ]);
 
   const tiles = [
     {
@@ -178,6 +215,17 @@ export function BlockExecutiveSummary({ summary, lang, darkMode, installer, hono
           </p>
         </BlockPanel>
       </div>
+
+      {/* P10 — Story mode placeholder paragraph (shown when no story mode is selected) */}
+      {!storyVariant && (
+        <div className={`mt-4 rounded-xl border border-dashed px-4 py-3 text-center text-[12px] ${
+          dark ? "border-white/10 text-slate-500" : "border-slate-200 text-slate-400"
+        }`}>
+          {isHi
+            ? "Story Mode: अपने प्रेज़ेंटेशन की कथा शैली चुनने के लिए प्रेज़ेट सेटिंग्स में Story Mode चुनें।"
+            : "Story Mode: Select a narrative style in preset settings to tailor this section for your audience."}
+        </div>
+      )}
     </ProposalJourneySection>
   );
 }

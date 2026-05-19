@@ -14,6 +14,7 @@
 import { motion } from "framer-motion";
 import { Building2, ChevronRight, Home, RefreshCw, Zap } from "lucide-react";
 import type { ProposalPresetId } from "@/components/proposals/os/preset-picker";
+import { PresenceStack } from "@/components/workspace/presence-stack";
 
 type Props = {
   presetId: ProposalPresetId | null;
@@ -100,15 +101,19 @@ export function ProposalOSHeader({ presetId, onChangePreset, customerName }: Pro
         </div>
       </div>
 
-      {/* Right: change preset button — self-start so it never stretches full-width on mobile */}
-      <button
-        type="button"
-        onClick={onChangePreset}
-        className="self-start inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-      >
-        <RefreshCw className="h-3 w-3" />
-        Change preset
-      </button>
+      {/* Right: presence stack + change preset button */}
+      <div className="flex self-start items-center gap-3">
+        {/* Wave 4 P9 — who else is in the builder */}
+        <PresenceStack proposalId="builder" />
+        <button
+          type="button"
+          onClick={onChangePreset}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Change preset
+        </button>
+      </div>
     </motion.div>
   );
 }

@@ -167,8 +167,8 @@ function PipelineCard({ row, active, lang = "en", onClick, delay = 0 }: DealCard
   const confidence = closingConfidence(row);
   const age = dealAgeInDays(row.generated_at);
   const intel = hubIntelForStatus(st, lang);
-  const manageHref = `/proposals/${row.id}`;
-
+  const manageHref = `/workspace/${row.id}`;
+  
   return (
     <motion.article
       initial={{ opacity: 0, y: 8 }}
@@ -328,8 +328,8 @@ function GridCard({ row, active, lang = "en", onClick, delay = 0 }: DealCardProp
   const isCommercial = isCommercialPreset(row.preset_id);
   const health = dealHealthScore(row);
   const age = dealAgeInDays(row.generated_at);
-  const manageHref = `/proposals/${row.id}`;
-
+  const manageHref = `/workspace/${row.id}`;
+  
   return (
     <motion.article
       initial={{ opacity: 0, scale: 0.97 }}
@@ -399,8 +399,8 @@ function CompactCard({ row, active, lang = "en", onClick, delay = 0 }: DealCardP
   const velocity = dealVelocity(row);
   const velVis = velocityVisual(velocity);
   const age = dealAgeInDays(row.generated_at);
-  const manageHref = `/proposals/${row.id}`;
-
+  const manageHref = `/workspace/${row.id}`;
+  
   return (
     <motion.article
       initial={{ opacity: 0, x: -6 }}

@@ -39,6 +39,8 @@ import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { Building2, Download, FileUp, Globe, MessageCircle, Send, Sparkles, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { parsePrefillFromSearchParams } from "@/lib/quick-actions";
 import { ProposalPresetPicker, type ProposalPresetId } from "@/components/proposals/os/preset-picker";
 import { ProposalOSHeader } from "@/components/proposals/os/proposal-os-header";
 import { BuilderStageBar } from "@/components/proposals/os/builder-stage-bar";
@@ -243,9 +245,22 @@ export default function ProposalPage() {
   const [hydratedFromServer, setHydratedFromServer] = useState(false);
   const [learnedBillProfiles, setLearnedBillProfiles] = useState<Record<string, LearnedBillProfile>>({});
 
+  // ── URL prefill (Wave 2 P5) ─────────────────────────────────────────────────
+  // Read ?preset=…&orgType=…&kw=…&lang=…&story=… on first render only.
+  // useSearchParams() is safe here — the page is already a client component.
+  const searchParams = useSearchParams();
+  const urlPrefill = useMemo(
+    () => parsePrefillFromSearchParams(searchParams),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [] // intentionally run once; URL params are consumed on mount
+  );
+
   // ── Proposal OS UI state ────────────────────────────────────────────────────
-  const [osPresetId, setOsPresetId] = useState<ProposalPresetId | null>(null);
-  const [showPresetPicker, setShowPresetPicker] = useState(true);
+  const [osPresetId, setOsPresetId] = useState<ProposalPresetId | null>(
+    urlPrefill.preset ?? null
+  );
+  // When a preset is pre-selected via URL, skip the preset picker overlay.
+  const [showPresetPicker, setShowPresetPicker] = useState(!urlPrefill.preset);
   const [showBlockPlaylist, setShowBlockPlaylist] = useState(false);
 
   const lastCalcPersistSignatureRef = useRef("");

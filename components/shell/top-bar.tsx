@@ -19,13 +19,14 @@
  *   - Desktop: rendered in NavRail bottom; hidden here via `lg:hidden`
  */
 
-import { Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ShellBreadcrumb } from "@/components/shell/breadcrumb";
 import { WorkspacePill } from "@/components/shell/workspace-pill";
+import { InboxBell } from "@/components/shell/inbox-bell";
 import { useShell } from "@/lib/shell-context";
 
 // ─── Search trigger variants ──────────────────────────────────────────────────
@@ -112,6 +113,9 @@ export function TopBar() {
       {/* ── Search ────────────────────────────────────────────────────── */}
       <SearchPill onClick={openCommandPalette} />
       <SearchIconBtn onClick={openCommandPalette} />
+
+      {/* ── Inbox bell (Wave 4 P9) ─────────────────────────────────────── */}
+      <InboxBell />
 
       {/* ── Theme + Language toggles (mobile only — on desktop in rail) ─ */}
       <div className="flex shrink-0 items-center gap-2 lg:hidden">

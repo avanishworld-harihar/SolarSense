@@ -62,6 +62,16 @@ function buildCrumbs(
     return crumbs;
   }
 
+  // Workspace deal route
+  if (pathname.startsWith("/workspace")) {
+    const proposalHub: Crumb = { label: t("nav_proposals"), href: "/proposals", active: false };
+    return [
+      home,
+      proposalHub,
+      { label: activeWorkspaceLabel ?? "Workspace", href: pathname, active: true },
+    ];
+  }
+
   // Proposals (hub + builder + detail)
   if (pathname.startsWith("/proposals") || pathname.startsWith("/proposal")) {
     const proposalHub: Crumb = { label: t("nav_proposals"), href: "/proposals", active: pathname === "/proposals" };

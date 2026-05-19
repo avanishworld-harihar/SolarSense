@@ -27,12 +27,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MotionConfig } from "framer-motion";
-import { Download, Languages, MessageCircle, Moon, Sun } from "lucide-react";
+import { Download, Languages, MessageCircle, Moon, Sun, Presentation } from "lucide-react";
 
 import type { ProposalDocument } from "@/lib/proposal-document-ir";
 import type { ProposalBlockId } from "@/lib/proposal-block-registry";
 import type { BlockRenderContext } from "@/lib/proposal-block-context";
-import type { ProposalPresetId } from "@/lib/proposal-preset-engine";
+import { resolveStoryVariant, type ProposalPresetId } from "@/lib/proposal-preset-engine";
 import { getEnabledProposalBlocksInOrder } from "@/lib/proposal-layout-merge";
 import {
   WEB_RENDERER_REGISTRY,
@@ -75,6 +75,8 @@ import { BlockExecutiveSummary } from "@/components/proposal/blocks/block-execut
 import { BlockSystemRequirements } from "@/components/proposal/blocks/block-system-requirements";
 import { BlockFinancialIntelligence } from "@/components/proposal/blocks/block-financial-intelligence";
 import { BlockEngineeringRationale } from "@/components/proposal/blocks/block-engineering-rationale";
+// Wave 3 P7
+import { BrandComparisonCard } from "@/components/proposals/blocks/brand-comparison";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +89,7 @@ export type ProposalWebRendererProps = {
 
 // ─── Block render dispatch ────────────────────────────────────────────────────
 
-function renderBlockByKey(
+export function renderBlockByKey(
   renderKey: BlockRenderKey,
   ctx: BlockRenderContext
 ): React.ReactNode {
@@ -126,6 +128,7 @@ function renderBlockByKey(
           darkMode={darkMode}
           installer={ctx.installer}
           honoredDisplay={honoredDisplay}
+          storyVariant={ctx.storyVariant}
         />
       );
 
@@ -246,6 +249,15 @@ function renderBlockByKey(
           summary={summary}
           lang={lang}
           D={D}
+          darkMode={darkMode}
+        />
+      );
+
+    case "brand_comparison":
+      return (
+        <BrandComparisonCard
+          summary={summary}
+          lang={lang}
           darkMode={darkMode}
         />
       );
@@ -412,10 +424,19 @@ function ProposalWebRendererInner({
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
+  // Wave 3 P6: resolve story variant from pptInput fields (additive, null-safe)
+  const rawInput = (doc.raw_input as import("@/lib/proposal-ppt").PremiumProposalPptInput) ?? ({} as import("@/lib/proposal-ppt").PremiumProposalPptInput);
+  const storyVariant = resolveStoryVariant(
+    presetId,
+    rawInput.storySegment ?? null,
+    rawInput.storyMode ?? null,
+    lang
+  );
+
   // Build render context
   const ctx: BlockRenderContext = {
     summary,
-    pptInput: (doc.raw_input as import("@/lib/proposal-ppt").PremiumProposalPptInput) ?? ({} as import("@/lib/proposal-ppt").PremiumProposalPptInput),
+    pptInput: rawInput,
     lang,
     monthLbls,
     D,
@@ -425,7 +446,7 @@ function ProposalWebRendererInner({
     presetId,
     installer,
     installerLogoUrl: displayInstallerLogoUrl || undefined,
-    siteImages: (doc.raw_input as { siteImages?: string[] })?.siteImages,
+    siteImages: rawInput.siteImages,
     billAuditBacked,
     showSurveyWorkflowSection,
     selectedAmcYears,
@@ -433,6 +454,7 @@ function ProposalWebRendererInner({
     onShare: shareWhatsApp,
     onDownload: downloadPpt,
     downloading,
+    storyVariant,
   };
 
   const eligibilityCtx = { billAuditBacked, presetId, showSurveySection: showSurveyWorkflowSection };
@@ -520,6 +542,17 @@ function ProposalWebRendererInner({
             <Download className="h-3.5 w-3.5" />
             {lang === "en" ? "Print / PDF" : "प्रिंट / PDF"}
           </button>
+          <a
+            href={`/proposal/${ctx.proposalId}/present`}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors ${
+              darkMode
+                ? "border-violet-500/40 bg-violet-900/30 text-violet-300 hover:bg-violet-900/50"
+                : "border-violet-300 bg-violet-50 text-violet-700 hover:bg-violet-100"
+            }`}
+          >
+            <Presentation className="h-3.5 w-3.5" />
+            {lang === "en" ? "Present" : "प्रेज़ेंट"}
+          </a>
         </div>
 
         {/* Block loop — the core rendering engine */}

@@ -10,7 +10,7 @@
 import type { ProposalDeckSummary } from "@/lib/proposal-ppt";
 import type { PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import type { ProposalDict, ProposalLang } from "@/lib/proposal-i18n";
-import type { ProposalPresetId } from "@/lib/proposal-preset-engine";
+import type { ProposalPresetId, StoryVariant } from "@/lib/proposal-preset-engine";
 
 export type BlockRenderContext = {
   // ── Core proposal data ──────────────────────────────────────────────────
@@ -52,6 +52,13 @@ export type BlockRenderContext = {
   onShare: () => void;
   onDownload: () => void;
   downloading: boolean;
+
+  // ── Wave 3 P6: Story mode variant ──────────────────────────────────────
+  /**
+   * Resolved narrative copy for commercial proposals with a story mode selected.
+   * Null when no story mode is configured (use built-in block copy instead).
+   */
+  storyVariant?: StoryVariant | null;
 };
 
 // ─── Eligibility context (subset used by the registry) ───────────────────────

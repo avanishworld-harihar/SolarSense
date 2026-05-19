@@ -58,6 +58,9 @@ function detectFromPathname(pathname: string): PillData | null {
   if (pathname === "/proposal") {
     return { label: "Proposal Builder", icon: FileText, href: "/proposal", type: "proposal" };
   }
+  if (/^\/workspace\/[^/]+/.test(pathname)) {
+    return { label: "Workspace", icon: FileText, href: "/proposals", type: "proposal" };
+  }
   if (/^\/proposals\/[^/]+/.test(pathname)) {
     return { label: "Proposal", icon: FileText, href: "/proposals", type: "proposal" };
   }

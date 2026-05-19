@@ -48,7 +48,9 @@ export type BlockRenderKey =
   | "survey_workflow"
   | "financial_intelligence"
   | "engineering_rationale"
-  | "payback_analysis";
+  | "payback_analysis"
+  /** Wave 3 P7 — brand comparison card */
+  | "brand_comparison";
 
 export type WebBlockMeta = {
   /** Value for `data-page` attribute on the `.proposal-page` wrapper div. */
@@ -213,6 +215,18 @@ export const WEB_RENDERER_REGISTRY: Partial<Record<ProposalBlockId, WebBlockMeta
     bridgeKey: "afterImpact",
     eligibility: ALWAYS_ELIGIBLE,
     renderKey: "environment",
+  },
+
+  /**
+   * Wave 3 P7 — Brand comparison card.
+   * Side-by-side comparison of panel + inverter brands with key specs.
+   * Commercial preset only; optional block — off by default.
+   * No bridge key — self-contained context block.
+   */
+  brand_comparison_card: {
+    pageDataAttr: "brand-comparison",
+    eligibility: commercialOnly,
+    renderKey: "brand_comparison",
   },
 };
 

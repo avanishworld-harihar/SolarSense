@@ -38,7 +38,7 @@ import { cn } from "@/lib/utils";
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/proposals") {
-    return pathname.startsWith("/proposals") || pathname.startsWith("/proposal");
+    return pathname.startsWith("/proposals") || pathname.startsWith("/proposal") || pathname.startsWith("/workspace");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

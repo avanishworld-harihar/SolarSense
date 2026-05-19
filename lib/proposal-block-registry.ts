@@ -31,6 +31,8 @@ export const PROPOSAL_BLOCK_IDS = [
   "project_gallery",
   "customer_documents_required",
   "amc_maintenance",
+  /** Wave 3 P7 — side-by-side panel/inverter brand comparison. Commercial preset optional block. */
+  "brand_comparison_card",
 ] as const;
 
 export type ProposalBlockId = (typeof PROPOSAL_BLOCK_IDS)[number];
@@ -217,6 +219,20 @@ export const PROPOSAL_BLOCK_REGISTRY: Record<ProposalBlockId, ProposalBlockMeta>
     defaultEnabled: true,
     preset_affinity: "all",
   },
+
+  /**
+   * Wave 3 P7 — Brand comparison card.
+   * Side-by-side comparison of panel + inverter brands with key specs.
+   * Local-only data from lib/brand-metadata.ts — no marketplace coupling.
+   * Commercial preset optional block; disabled by default.
+   */
+  brand_comparison_card: {
+    id: "brand_comparison_card",
+    labelKey: "proposal_block_brand_comparison",
+    group: "technical",
+    defaultEnabled: false,
+    preset_affinity: ["commercial_executive"],
+  },
 };
 
 /** Default narrative order used when no preset is active. Maintains backward compatibility. */
@@ -237,4 +253,5 @@ export const DEFAULT_PROPOSAL_BLOCK_ORDER: ProposalBlockId[] = [
   "project_gallery",
   "customer_documents_required",
   "amc_maintenance",
+  "brand_comparison_card",
 ];

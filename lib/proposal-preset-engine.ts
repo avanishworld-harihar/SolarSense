@@ -18,6 +18,7 @@
 import type { ProposalBlockId } from "@/lib/proposal-block-registry";
 import { DEFAULT_PROPOSAL_BLOCK_ORDER, PROPOSAL_BLOCK_REGISTRY } from "@/lib/proposal-block-registry";
 import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
+import { getStoryCopy, type StoryMode, type StorySegment, type StoryCopy, type StoryLang } from "@/lib/proposal-story-copy";
 
 // ─── Preset identifiers ──────────────────────────────────────────────────────
 
@@ -121,7 +122,7 @@ export const PROPOSAL_PRESET_REGISTRY: Record<ProposalPresetId, ProposalPreset> 
       "project_gallery",
       "amc_maintenance",
     ],
-    optional_blocks: ["customer_documents_required"],
+    optional_blocks: ["customer_documents_required", "brand_comparison_card"],
   },
 };
 
@@ -183,4 +184,55 @@ export function presetRequiresBill(presetId: ProposalPresetId): boolean {
 export function presetSupportsBill(presetId: ProposalPresetId): boolean {
   const req = PROPOSAL_PRESET_REGISTRY[presetId].bill_requirement;
   return req === "required" || req === "optional";
+}
+
+// ─── Wave 3 P6: Story mode variant resolution ─────────────────────────────
+//
+// Resolves the narrative copy for a commercial proposal given:
+//   - segment: the customer's org type (hotel, hospital, factory, …)
+//   - mode: the story narrative chosen by the installer
+//   - lang: the proposal language (hi or en)
+//
+// Returns null when:
+//   - presetId is not commercial_executive (story modes are commercial-only)
+//   - segment or mode is null/undefined (no story mode selected)
+//   - the combination has no copy defined
+//
+// Callers should fall back to their own built-in copy when this returns null.
+
+export type StoryVariant = StoryCopy & {
+  segment: StorySegment;
+  mode: StoryMode;
+  lang: StoryLang;
+};
+
+/**
+ * Returns the resolved story copy for a commercial proposal,
+ * or null if no story mode is configured.
+ */
+export function resolveStoryVariant(
+  presetId: ProposalPresetId | string,
+  segment: StorySegment | string | null | undefined,
+  mode: StoryMode | string | null | undefined,
+  lang: StoryLang | string
+): StoryVariant | null {
+  if (presetId !== "commercial_executive") return null;
+  if (!segment || !mode) return null;
+
+  const VALID_SEGMENTS: StorySegment[] = ["hotel", "hospital", "factory", "warehouse", "dairy", "school"];
+  const VALID_MODES: StoryMode[] = ["executive_pitch", "cfo_brief", "operations_brief", "sustainability_story"];
+
+  if (!VALID_SEGMENTS.includes(segment as StorySegment)) return null;
+  if (!VALID_MODES.includes(mode as StoryMode)) return null;
+
+  const storyLang: StoryLang = lang === "hi" ? "hi" : "en";
+  const copy = getStoryCopy(segment as StorySegment, mode as StoryMode, storyLang);
+  if (!copy) return null;
+
+  return {
+    ...copy,
+    segment: segment as StorySegment,
+    mode: mode as StoryMode,
+    lang: storyLang,
+  };
 }

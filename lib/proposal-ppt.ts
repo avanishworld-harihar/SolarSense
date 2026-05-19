@@ -153,6 +153,20 @@ export type PremiumProposalPptInput = {
    * Omitted = defaults applied by `getProposalLayout()` when needed.
    */
   proposalLayout?: ProposalTemplateV1;
+
+  /**
+   * Wave 3 P6 — commercial story mode.
+   * When set, the block renderer swaps section headlines/copy to match the selected
+   * narrative mode (executive_pitch, cfo_brief, operations_brief, sustainability_story).
+   * Only used by the commercial_executive preset. Block IDs are unchanged.
+   */
+  storyMode?: import("@/lib/proposal-story-copy").StoryMode | null;
+
+  /**
+   * Wave 3 P6 — commercial customer segment.
+   * Drives which StoryCopy variant to load for the above storyMode.
+   */
+  storySegment?: import("@/lib/proposal-story-copy").StorySegment | null;
 };
 
 export type ProposalDeckSummary = {

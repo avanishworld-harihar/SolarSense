@@ -3,20 +3,18 @@
 /**
  * CommandPalette — SOL.52 universal search + navigation (Cmd+K / Ctrl+K).
  *
- * Built with no external dialog library — pure Framer Motion overlay +
- * portal into document.body.
+ * Wave 2 P5 update:
+ *   - Now powered by QUICK_ACTIONS from lib/quick-actions.ts
+ *   - Added "Commercial Segments" category with org-type deep links
+ *   - Builder URL prefill (preset + orgType + story) wired into item hrefs
+ *   - Icons mapped from iconName string → Lucide component via ICON_MAP
  *
  * Features:
  *   - Keyboard: Arrow keys navigate, Enter selects, Escape closes
  *   - Fuzzy search across all nav items + quick actions
- *   - Grouped by category (Quick Actions, Navigation)
+ *   - Grouped by category (Quick Actions, Commercial Segments, Navigation)
  *   - Dark mode aware
  *   - Accessible (role=dialog, aria-modal, focus-trap via autoFocus on input)
- *
- * Future phases (E7/E9) can add:
- *   - Recent proposals section (read from Supabase)
- *   - Customer search (debounced API)
- *   - Preset launch shortcuts
  */
 
 import {
@@ -30,113 +28,60 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Building2,
+  Factory,
   FileText,
   FolderOpen,
+  Hospital,
+  Hotel,
   LayoutDashboard,
   LayoutGrid,
+  Milk,
   Plus,
+  School,
   Search,
   Settings,
   Users,
+  Warehouse,
   X,
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useShell } from "@/lib/shell-context";
+import {
+  filterQuickActions,
+  QUICK_ACTION_CATEGORIES,
+  type QuickAction,
+  type QuickActionCategory,
+} from "@/lib/quick-actions";
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Icon map ──────────────────────────────────────────────────────────────
 
-type CommandItem = {
-  id: string;
-  label: string;
-  description?: string;
-  href: string;
-  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
-  category: "Quick Actions" | "Navigation";
-  shortcut?: string;
+type IconComponent = ComponentType<{ className?: string; strokeWidth?: number }>;
+
+const ICON_MAP: Record<string, IconComponent> = {
+  plus: Plus,
+  building2: Building2,
+  hotel: Hotel,
+  hospital: Hospital,
+  factory: Factory,
+  warehouse: Warehouse,
+  milk: Milk,
+  school: School,
+  "layout-grid": LayoutGrid,
+  users: Users,
+  "folder-open": FolderOpen,
+  "layout-dashboard": LayoutDashboard,
+  "file-text": FileText,
+  settings: Settings,
+  zap: Zap,
 };
 
-const ALL_ITEMS: CommandItem[] = [
-  // Quick actions
-  {
-    id: "new-proposal",
-    label: "New Proposal",
-    description: "Open the solar proposal builder",
-    href: "/proposal",
-    icon: Plus,
-    category: "Quick Actions",
-    shortcut: "N",
-  },
-  {
-    id: "proposals-hub",
-    label: "Proposals Hub",
-    description: "View all proposals and pipeline",
-    href: "/proposals",
-    icon: LayoutGrid,
-    category: "Quick Actions",
-  },
-  {
-    id: "settings",
-    label: "Settings & Branding",
-    description: "Configure installer name, logo, and preferences",
-    href: "/more",
-    icon: Settings,
-    category: "Quick Actions",
-  },
-  // Navigation
-  {
-    id: "nav-dashboard",
-    label: "Dashboard",
-    description: "Solar business overview and key metrics",
-    href: "/",
-    icon: LayoutDashboard,
-    category: "Navigation",
-  },
-  {
-    id: "nav-customers",
-    label: "Customers",
-    description: "Manage leads and customer profiles",
-    href: "/customers",
-    icon: Users,
-    category: "Navigation",
-  },
-  {
-    id: "nav-projects",
-    label: "Projects",
-    description: "Track solar installation projects",
-    href: "/projects",
-    icon: FolderOpen,
-    category: "Navigation",
-  },
-  {
-    id: "nav-proposals",
-    label: "Proposals",
-    description: "Proposal pipeline and documents",
-    href: "/proposals",
-    icon: FileText,
-    category: "Navigation",
-  },
-];
-
-const CATEGORIES: CommandItem["category"][] = ["Quick Actions", "Navigation"];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fuzzyMatch(query: string, text: string): boolean {
-  if (!query.trim()) return true;
-  const q = query.toLowerCase();
-  return text.toLowerCase().includes(q);
+function getIcon(name: string): IconComponent {
+  return ICON_MAP[name] ?? Zap;
 }
 
-function filterItems(query: string): CommandItem[] {
-  return ALL_ITEMS.filter(
-    (item) =>
-      fuzzyMatch(query, item.label) ||
-      fuzzyMatch(query, item.description ?? "")
-  );
-}
-
-// ─── Inner (rendered in portal) ───────────────────────────────────────────────
+// ─── Inner (rendered in portal) ───────────────────────────────────────────
 
 function PaletteInner() {
   const { commandPaletteOpen, closeCommandPalette } = useShell();
@@ -146,10 +91,10 @@ function PaletteInner() {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const filtered = filterItems(query);
+  const filtered = filterQuickActions(query);
 
   const handleSelect = useCallback(
-    (item: CommandItem) => {
+    (item: QuickAction) => {
       router.push(item.href);
       closeCommandPalette();
       setQuery("");
@@ -163,18 +108,15 @@ function PaletteInner() {
     if (commandPaletteOpen) {
       setQuery("");
       setSelectedIndex(0);
-      // Small delay ensures the animation starts before focus
       const t = setTimeout(() => inputRef.current?.focus(), 60);
       return () => clearTimeout(t);
     }
   }, [commandPaletteOpen]);
 
-  // Reset selection when query changes
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
 
-  // Keyboard navigation
   useEffect(() => {
     if (!commandPaletteOpen) return;
 
@@ -265,7 +207,7 @@ function PaletteInner() {
             </div>
 
             {/* Results */}
-            <div className="max-h-[min(60vh,28rem)] overflow-y-auto p-2" role="listbox">
+            <div className="max-h-[min(65vh,32rem)] overflow-y-auto p-2" role="listbox">
               {filtered.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-10 text-center">
                   <Zap className="h-5 w-5 text-slate-300 dark:text-slate-600" aria-hidden />
@@ -275,11 +217,10 @@ function PaletteInner() {
                   </p>
                 </div>
               ) : (
-                CATEGORIES.map((cat) => {
+                QUICK_ACTION_CATEGORIES.map((cat: QuickActionCategory) => {
                   const items = filtered.filter((i) => i.category === cat);
                   if (!items.length) return null;
 
-                  // Global index offset for this category
                   const offset = filtered.indexOf(items[0]);
 
                   return (
@@ -290,7 +231,7 @@ function PaletteInner() {
                       {items.map((item, localIdx) => {
                         const gIdx = offset + localIdx;
                         const selected = gIdx === selectedIndex;
-                        const Icon = item.icon;
+                        const Icon = getIcon(item.iconName);
 
                         return (
                           <button
@@ -325,18 +266,28 @@ function PaletteInner() {
                                 {item.label}
                               </span>
                               {item.description && (
-                                <span className={cn(
-                                  "block text-[11px] leading-tight",
-                                  selected
-                                    ? "text-teal-600/80 dark:text-teal-300/70"
-                                    : "text-slate-400 dark:text-slate-500"
-                                )}>
+                                <span
+                                  className={cn(
+                                    "block text-[11px] leading-tight",
+                                    selected
+                                      ? "text-teal-600/80 dark:text-teal-300/70"
+                                      : "text-slate-400 dark:text-slate-500"
+                                  )}
+                                >
                                   {item.description}
                                 </span>
                               )}
                             </span>
 
-                            {/* Enter key badge on selected */}
+                            {/* Shortcut badge */}
+                            {item.shortcut && !selected && (
+                              <kbd
+                                aria-hidden
+                                className="shrink-0 rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-400 dark:border-white/10 dark:bg-white/5 dark:text-slate-500"
+                              >
+                                {item.shortcut}
+                              </kbd>
+                            )}
                             {selected && (
                               <kbd
                                 aria-hidden
@@ -383,11 +334,10 @@ function PaletteInner() {
   );
 }
 
-// ─── Exported component (portal guard) ───────────────────────────────────────
+// ─── Exported component (portal guard) ───────────────────────────────────
 
 /**
  * Mount at the root of the shell. Renders into document.body via portal.
- * The <Suspense>/<use client> boundary is already at the layout level.
  */
 export function CommandPalette() {
   const [mounted, setMounted] = useState(false);

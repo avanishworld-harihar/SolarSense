@@ -9,8 +9,9 @@
     "dev:turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint && node scripts/check-marketplace-guard.cjs",
     "typecheck": "tsc --noEmit",
+    "guard:marketplace": "node scripts/check-marketplace-guard.cjs",
     "ppt:investment": "node scripts/generate-investment-ppt.cjs",
     "ppt:premium": "node scripts/generate-premium-proposal-ppt.cjs"
   },
