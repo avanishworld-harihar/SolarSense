@@ -163,6 +163,84 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
         )}
       </div>
 
+      {/* ── Quick toggles row — always visible ───────────────────────────── */}
+      <div className="flex flex-wrap gap-2 border-b border-sky-100 px-4 pb-3.5 pt-0">
+        {/* DCR toggle */}
+        <button
+          type="button"
+          onClick={() =>
+            update({
+              dcrComparison: {
+                ...config.dcrComparison,
+                enabled: !dcrEnabled,
+                brandId: entry?.brandId,
+                watt: entry?.watt,
+              },
+            })
+          }
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all",
+            dcrEnabled
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border-slate-200 bg-white text-slate-500"
+          )}
+        >
+          <Scale className="h-3 w-3" />
+          DCR vs Non-DCR
+          <div className={cn("ml-0.5 h-2 w-2 rounded-full", dcrEnabled ? "bg-emerald-500" : "bg-slate-300")} />
+        </button>
+
+        {/* Capacity scenarios toggle */}
+        <button
+          type="button"
+          onClick={() =>
+            update({
+              capacityScenarios: {
+                ...config.capacityScenarios,
+                enabled: !scenariosEnabled,
+                scenarios,
+                recommendedId,
+              },
+            })
+          }
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all",
+            scenariosEnabled
+              ? "border-sky-300 bg-sky-50 text-sky-700"
+              : "border-slate-200 bg-white text-slate-500"
+          )}
+        >
+          <TrendingUp className="h-3 w-3" />
+          Scenarios
+          <div className={cn("ml-0.5 h-2 w-2 rounded-full", scenariosEnabled ? "bg-sky-500" : "bg-slate-300")} />
+        </button>
+
+        {/* Financing toggle */}
+        <button
+          type="button"
+          onClick={() =>
+            update({
+              financing: {
+                ...config.financing,
+                enabled: !financingEnabled,
+                interestRatePct: config.financing?.interestRatePct ?? DEFAULT_COMMERCIAL_RATE_PCT,
+                tenuresYears: config.financing?.tenuresYears ?? [...DEFAULT_COMMERCIAL_TENURES],
+              },
+            })
+          }
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all",
+            financingEnabled
+              ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+              : "border-slate-200 bg-white text-slate-500"
+          )}
+        >
+          <CreditCard className="h-3 w-3" />
+          EMI / Financing
+          <div className={cn("ml-0.5 h-2 w-2 rounded-full", financingEnabled ? "bg-indigo-500" : "bg-slate-300")} />
+        </button>
+      </div>
+
       {/* Sections */}
       <div className="space-y-1 px-2 pb-2">
         {/* ── Panel & Pricing ─────────────────────────────────────────── */}
@@ -330,6 +408,36 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
               <div className="flex h-[38px] items-center rounded-xl border border-slate-100 bg-slate-50 px-3 text-sm font-semibold text-slate-600">
                 {isCustom ? "Custom" : (entry?.technology ?? "—")}
               </div>
+            </div>
+          </div>
+
+          {/* Inverter phase selector */}
+          <div className="mb-3">
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Inverter Phase
+            </label>
+            <div className="flex gap-2">
+              {(["single", "three"] as const).map((phase) => {
+                const active = (config.inverterPhase ?? "three") === phase;
+                return (
+                  <button
+                    key={phase}
+                    type="button"
+                    onClick={() => update({ inverterPhase: phase })}
+                    className={cn(
+                      "flex-1 rounded-xl border py-2 text-[11px] font-bold transition-all",
+                      active
+                        ? "border-sky-400 bg-sky-600 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"
+                    )}
+                  >
+                    {phase === "single" ? "Single Phase" : "Three Phase"}
+                    <span className="mt-0.5 block text-[9px] font-normal opacity-75">
+                      {phase === "single" ? "Up to 10kW" : "10kW+"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

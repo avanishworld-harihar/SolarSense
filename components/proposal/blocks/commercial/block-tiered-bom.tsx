@@ -12,12 +12,18 @@
  *
  * Columns: Item | Specification | Make / Standard | Qty | Unit | Warranty
  * Footer: total project value with cost breakup by category
+ *
+ * Phase B enhancement:
+ *   - DCR vs NON-DCR panel pricing shown when dcrComparison is enabled
+ *   - Inverter phase (single / three phase) shown in inverter row
  */
 
 import { motion } from "framer-motion";
-import { ListChecks } from "lucide-react";
+import { ListChecks, Scale, ArrowRightLeft } from "lucide-react";
 import type { CommercialCtx } from "@/components/proposal/commercial-proposal-view";
 import { CommercialSectionHeader, GlassPanel, SectionReveal } from "./commercial-shared";
+import type { CommercialProposalConfig } from "@/lib/commercial-proposal-config";
+import { PANEL_CATALOG } from "@/lib/commercial-panel-catalog";
 
 const fmtL = (v: number) => {
   if (v >= 10_000_000) return `₹${(v / 10_000_000).toFixed(2)} Cr`;
@@ -44,9 +50,18 @@ type BomCategory = {
   costShare: number; // approximate % of total cost
 };
 
-function buildBom(systemKw: number, panels: number, panelBrand: string, inverterBrand: string): BomCategory[] {
+function buildBom(
+  systemKw: number,
+  panels: number,
+  panelBrand: string,
+  inverterBrand: string,
+  inverterPhase: "single" | "three" = "three",
+  panelWatt = 540,
+): BomCategory[] {
   const strings = Math.ceil(panels / 14);
-  const inverterCount = Math.max(1, Math.ceil(systemKw / 50)); // 1 inverter up to 50kW
+  const inverterCount = Math.max(1, Math.ceil(systemKw / 50));
+  const phaseLabel = inverterPhase === "single" ? "Single-phase" : "Three-phase";
+  const panelSpec = `${panelWatt} Wp Mono PERC Half-cut, η ≥ ${(panelWatt / 2590 * 100).toFixed(1)}%`;
 
   return [
     {
@@ -58,15 +73,15 @@ function buildBom(systemKw: number, panels: number, panelBrand: string, inverter
       rows: [
         {
           item: "Solar PV Modules",
-          spec: `540 Wp Mono PERC Half-cut, η ≥ 20.9%`,
+          spec: panelSpec,
           make: panelBrand || "Tier-1 ALMM-listed",
           qty: `${panels}`,
           unit: "nos",
           warranty: "25 yr linear",
         },
         {
-          item: "String Inverter",
-          spec: `${systemKw} kW on-grid, MPPT, IP65, LCD`,
+          item: `String Inverter (${phaseLabel})`,
+          spec: `${systemKw} kW on-grid, ${phaseLabel}, MPPT, IP65, LCD`,
           make: inverterBrand || "IEC 62109",
           qty: `${inverterCount}`,
           unit: "nos",
@@ -244,14 +259,39 @@ const catColorClasses: Record<string, { header: string; dot: string }> = {
 type Props = { ctx: CommercialCtx };
 
 export function BlockTieredBOM({ ctx }: Props) {
-  const { summary, lang } = ctx;
+  const { summary, lang, pptInput } = ctx;
   const isHi = lang === "hi";
+  const cc: CommercialProposalConfig | null | undefined = pptInput.commercialConfig;
+
+  // Resolve active panel config from commercialConfig
+  const activeCatalogEntry = cc?.panel?.catalogId
+    ? PANEL_CATALOG.find((p) => p.id === cc.panel!.catalogId) ?? null
+    : null;
+  const panelWatt = cc?.panel?.watt ?? activeCatalogEntry?.watt ?? 540;
+  const inverterPhase = (cc as { inverterPhase?: "single" | "three" } | null | undefined)
+    ?.inverterPhase ?? "three";
+
+  // DCR comparison data
+  const dcrEnabled = cc?.dcrComparison?.enabled !== false;
+  const dcrEntry = PANEL_CATALOG.find(
+    (p) => p.panelType === "DCR" && (p.brandId === (cc?.panel?.brandId ?? "waaree"))
+  );
+  const nonDcrEntry = PANEL_CATALOG.find(
+    (p) => p.panelType === "NON_DCR" && (p.brandId === (cc?.panel?.brandId ?? "waaree"))
+  );
+  const dcrRate = cc?.panel?.ratePerWpInr ?? dcrEntry?.ratePerWpInr ?? 42;
+  const nonDcrRate = nonDcrEntry?.ratePerWpInr ?? dcrRate - 4;
+  const dcrDelta = dcrRate - nonDcrRate;
+  const dcrCost = dcrRate * panelWatt * summary.panels;
+  const nonDcrCost = nonDcrRate * panelWatt * summary.panels;
 
   const categories = buildBom(
     summary.systemKw,
     summary.panels,
     summary.brands.panel,
-    summary.brands.inverter
+    summary.brands.inverter,
+    inverterPhase,
+    panelWatt,
   );
 
   return (
@@ -307,6 +347,77 @@ export function BlockTieredBOM({ ctx }: Props) {
         </p>
         </GlassPanel>
       </SectionReveal>
+
+      {/* ── DCR vs NON-DCR panel pricing comparison ────────────────────────── */}
+      {dcrEnabled && (
+        <SectionReveal>
+          <div className="mt-6 rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50/80 to-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <Scale className="h-4 w-4 text-sky-600" />
+              <p className="text-sm font-bold text-slate-800">
+                {isHi ? "DCR बनाम Non-DCR पैनल मूल्य तुलना" : "DCR vs Non-DCR Panel Pricing"}
+              </p>
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                {summary.panels} modules · {panelWatt}W
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* DCR card */}
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3.5">
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600">
+                  DCR Panel
+                </p>
+                <p className="text-[10px] text-slate-500">ALMM listed · Subsidy eligible</p>
+                <p className="mt-2 text-xl font-extrabold text-slate-900">
+                  ₹{dcrRate.toFixed(1)}<span className="text-xs font-semibold text-slate-500">/Wp</span>
+                </p>
+                <p className="text-[11px] font-semibold text-emerald-700">
+                  ₹{(dcrCost / 100000).toFixed(2)} L total
+                </p>
+                <div className="mt-1.5 rounded-lg bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                  PM Surya Ghar subsidy applicable
+                </div>
+              </div>
+
+              {/* NON-DCR card */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Non-DCR Panel
+                </p>
+                <p className="text-[10px] text-slate-400">Import / non-ALMM</p>
+                <p className="mt-2 text-xl font-extrabold text-slate-900">
+                  ₹{nonDcrRate.toFixed(1)}<span className="text-xs font-semibold text-slate-500">/Wp</span>
+                </p>
+                <p className="text-[11px] font-semibold text-slate-600">
+                  ₹{(nonDcrCost / 100000).toFixed(2)} L total
+                </p>
+                <div className="mt-1.5 rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500">
+                  No subsidy · Lower upfront cost
+                </div>
+              </div>
+            </div>
+
+            {/* Delta row */}
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="h-3.5 w-3.5 text-amber-600" />
+                <p className="text-xs font-bold text-amber-800">
+                  {isHi ? "DCR प्रीमियम" : "DCR Premium"}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-extrabold text-amber-700">
+                  +₹{dcrDelta.toFixed(1)}/Wp
+                </p>
+                <p className="text-[10px] text-amber-600">
+                  +₹{((dcrCost - nonDcrCost) / 1000).toFixed(0)}k total · offset by subsidy benefit
+                </p>
+              </div>
+            </div>
+          </div>
+        </SectionReveal>
+      )}
 
       {/* BOM tables by category */}
       <div className="mt-6 space-y-4">

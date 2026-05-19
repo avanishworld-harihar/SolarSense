@@ -59,6 +59,8 @@ export const commercialProposalConfigSchema = z.object({
   storyMode: z
     .enum(["executive_pitch", "cfo_brief", "operations_brief", "sustainability_story"])
     .optional(),
+  /** Inverter phase for BOM specification */
+  inverterPhase: z.enum(["single", "three"]).optional(),
 });
 
 export type CommercialProposalConfig = z.infer<typeof commercialProposalConfigSchema>;

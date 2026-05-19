@@ -1773,15 +1773,20 @@ export default function ProposalPage() {
         {/* END: bill upload area */}
       </div>
 
-      <div className="ss-card p-4 sm:p-5">
-        <BillAnalysisCharts
-          monthlyUnits={monthlyUnits}
-          result={result}
-          tariffContext={effectiveTariffContext}
-          parsedBill={latestBill || previousBill}
-        />
-      </div>
+      {/* Bill analysis charts — hidden in commercial requirement mode */}
+      {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
+        <div className="ss-card p-4 sm:p-5">
+          <BillAnalysisCharts
+            monthlyUnits={monthlyUnits}
+            result={result}
+            tariffContext={effectiveTariffContext}
+            parsedBill={latestBill || previousBill}
+          />
+        </div>
+      )}
 
+      {/* Connection & manual fields — hidden in commercial requirement mode (handled by CommercialInputModeSelector) */}
+      {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
       <div className="ss-card space-y-3 p-4 sm:space-y-4 sm:p-5">
         <div>
           <h3 className="text-xs font-bold uppercase tracking-wide text-brand-700 sm:text-sm">{t("proposal_manualHeading")}</h3>
@@ -1885,8 +1890,11 @@ export default function ProposalPage() {
           />
         </div>
       </div>
+      )}
+      {/* END: connection & manual fields */}
 
-      {(latestBill || previousBill || manual.officialBillName) && (
+      {/* Bill details summary — hidden in commercial requirement mode */}
+      {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (latestBill || previousBill || manual.officialBillName) && (
         <div className="ss-card space-y-2 p-4 sm:p-5">
           <h3 className="text-xs font-bold uppercase tracking-wide text-brand-700 sm:text-sm">{t("proposal_billDetails")}</h3>
           <div className="grid gap-1 text-xs font-semibold text-slate-800 sm:text-sm">
@@ -1914,13 +1922,16 @@ export default function ProposalPage() {
         </div>
       )}
 
-      <div className="ss-card p-4 sm:p-5">
-        <h2 className="text-base font-extrabold text-brand-900 sm:text-lg">{t("proposal_recommended")}</h2>
-        <p className="mt-2 break-words text-2xl font-extrabold tabular-nums text-solar-600 sm:text-3xl lg:text-4xl">
-          ₹{effectiveResult.annualSavings.toLocaleString("en-IN")}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">{t("proposal_annualSavingsLine")}</p>
-      </div>
+      {/* Recommended solar card — hidden in commercial requirement mode */}
+      {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
+        <div className="ss-card p-4 sm:p-5">
+          <h2 className="text-base font-extrabold text-brand-900 sm:text-lg">{t("proposal_recommended")}</h2>
+          <p className="mt-2 break-words text-2xl font-extrabold tabular-nums text-solar-600 sm:text-3xl lg:text-4xl">
+            ₹{effectiveResult.annualSavings.toLocaleString("en-IN")}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">{t("proposal_annualSavingsLine")}</p>
+        </div>
+      )}
 
       <div id="step-3-anchor" className={`ss-card space-y-4 p-4 sm:p-5 ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         {osPresetId === "commercial_executive" && commercialConfig ? (

@@ -43,6 +43,7 @@ import { BlockPremiumClosing } from "./blocks/commercial/block-premium-closing";
 import { BlockDcrComparison } from "./blocks/commercial/block-dcr-comparison";
 import { BlockCapacityScenarios } from "./blocks/commercial/block-capacity-scenarios";
 import { BlockCommercialFinancing } from "./blocks/commercial/block-commercial-financing";
+import { HotelEnergyStory } from "./blocks/hotel/hotel-energy-story";
 
 // ─── Shared context ───────────────────────────────────────────────────────────
 
@@ -470,6 +471,19 @@ export default function CommercialProposalView({
             />
           </section>
         ) : null}
+
+        {/* ── Hotel Energy Story — only for hotel org type ──────────────── */}
+        {pptInput.commercialConfig?.orgType === "hotel" && (
+          <section id="comm-hotel-story" className="bg-slate-950">
+            <HotelEnergyStory
+              systemKw={summary.systemKw}
+              annualSavingsInr={summary.annualSaving}
+              netCostInr={summary.netCost}
+              paybackYears={summary.paybackYears}
+              annualGenerationKwh={summary.systemKw * 1450}
+            />
+          </section>
+        )}
 
         {/* ── Content sections — alternating white/light backgrounds ───── */}
         <div>
