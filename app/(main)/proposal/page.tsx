@@ -49,6 +49,7 @@ import { BlockPlaylistEditor } from "@/components/proposals/os/block-playlist-ed
 import { CommercialBuilderPanel } from "@/components/commercial/commercial-builder-panel";
 import { ProposalReviewSheet } from "@/components/commercial/proposal-review-sheet";
 import { CommercialCategorySelector } from "@/components/commercial/commercial-category-selector";
+import { CommercialInputModeSelector } from "@/components/commercial/commercial-input-mode";
 import {
   applyCommercialFlagsToLayout,
   defaultCommercialConfig,
@@ -276,6 +277,11 @@ export default function ProposalPage() {
   const [showReviewSheet, setShowReviewSheet] = useState(false);
   const [commercialConfig, setCommercialConfig] = useState<CommercialProposalConfig | null>(null);
   const [proposalLayout, setProposalLayout] = useState<ProposalTemplateV1 | null>(null);
+  // Commercial input mode — "bill" uses existing upload flow; "requirement" shows simple form
+  const [commercialInputMode, setCommercialInputMode] = useState<"bill" | "requirement">("bill");
+  // Requirement-mode form fields (written to manual state on change)
+  const [requirementMonthlyKwh, setRequirementMonthlyKwh] = useState("");
+  const [requirementNotes, setRequirementNotes] = useState("");
 
   const lastCalcPersistSignatureRef = useRef("");
   const uploadQueueRef = useRef<UploadTask[]>([]);
@@ -1626,17 +1632,48 @@ export default function ProposalPage() {
           {t("proposal_step2BillUploadsSub")} {billingRule.averagingHint}
         </p>
 
-        {/* Commercial mode — bill upload is optional */}
+        {/* Commercial mode — bill-based vs requirement-based selector (PHASE A) */}
         {osPresetId === "commercial_executive" && (
-          <div className="mt-2 flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5">
-            <Building2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-600" />
-            <div>
-              <p className="text-[11px] font-bold text-sky-800 sm:text-xs">Commercial mode — bill upload is optional</p>
-              <p className="mt-0.5 text-[10px] text-sky-700">Skip uploads and use requirement-based sizing. Enter monthly kWh below, or proceed directly to Step 3.</p>
-            </div>
-          </div>
+          <CommercialInputModeSelector
+            mode={commercialInputMode}
+            onModeChange={(m) => {
+              setCommercialInputMode(m);
+              // Reset requirement fields when switching back to bill mode
+              if (m === "bill") {
+                setRequirementMonthlyKwh("");
+                setRequirementNotes("");
+              }
+            }}
+            contactName={manual.leadContactName}
+            orgName={manual.officialBillName}
+            phone={manual.leadPhone}
+            city={manual.city}
+            monthlyKwh={requirementMonthlyKwh}
+            notes={requirementNotes}
+            onContactName={(v) => setManual((p) => ({ ...p, leadContactName: v }))}
+            onOrgName={(v) => setManual((p) => ({ ...p, officialBillName: v }))}
+            onPhone={(v) => setManual((p) => ({ ...p, leadPhone: v }))}
+            onCity={(v) => setManual((p) => ({ ...p, city: v }))}
+            onMonthlyKwh={(v) => {
+              setRequirementMonthlyKwh(v);
+              // Seed monthly kWh into the January unit (simple proxy for sizing engine)
+              const kwhPerMonth = parseFloat(v);
+              if (!isNaN(kwhPerMonth) && kwhPerMonth > 0) {
+                const flat = Math.round(kwhPerMonth);
+                const patch: Record<string, number> = {};
+                (["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"] as const).forEach((m) => {
+                  patch[m] = flat;
+                });
+                setMonthlyUnits((prev) => ({ ...prev, ...patch }));
+              }
+            }}
+            onNotes={setRequirementNotes}
+          />
         )}
 
+        {/* Bill upload area — hidden when commercial requirement mode is selected */}
+        {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
+        <>
         {!leadSelected ? (
           <p className="mt-2 rounded-lg border border-amber-200/90 bg-amber-50/90 px-2.5 py-2 text-[11px] font-semibold leading-snug text-amber-950 sm:text-xs">
             {t("proposal_billPersistLeadHint")}
@@ -1731,6 +1768,9 @@ export default function ProposalPage() {
         <p className="mt-1.5 text-[11px] font-medium leading-snug text-slate-500 sm:text-xs">
           {t("proposal_annualUnitsLine", { annual: annualUnits.toLocaleString("en-IN"), filled: filledMonths })}
         </p>
+        </>
+        )}
+        {/* END: bill upload area */}
       </div>
 
       <div className="ss-card p-4 sm:p-5">
@@ -1905,18 +1945,28 @@ export default function ProposalPage() {
             )}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Editable custom input */}
+            {/* Editable custom input — text mode prevents browser mangling of digits */}
             <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
               <input
-                type="number"
-                min="0.5"
-                max="500"
-                step="0.5"
-                className="w-16 bg-transparent text-base font-extrabold text-brand-700 outline-none"
-                value={overrideSolarKw || result.solarKw}
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
+                className="w-20 bg-transparent text-base font-extrabold text-brand-700 outline-none"
+                value={overrideSolarKw !== "" ? overrideSolarKw : String(result.solarKw)}
                 onChange={(e) => {
-                  setOverrideSolarKw(e.target.value);
-                  setOverridePanels("");
+                  const raw = e.target.value;
+                  if (raw === "" || /^[0-9]*\.?[0-9]*$/.test(raw)) {
+                    setOverrideSolarKw(raw);
+                    setOverridePanels("");
+                  }
+                }}
+                onBlur={(e) => {
+                  const num = parseFloat(e.target.value);
+                  if (!isNaN(num) && num > 0) {
+                    setOverrideSolarKw(String(num));
+                  } else {
+                    setOverrideSolarKw("");
+                  }
                 }}
               />
               <span className="text-sm font-bold text-brand-700">kW</span>
@@ -1982,62 +2032,25 @@ export default function ProposalPage() {
             {t("proposal_payback")}: <span className="font-extrabold text-brand-700">{effectiveResult.paybackDisplay}</span>
           </p>
         </div>
-        {/* Proposal language + EMI (logo, AMC, bank, site photos → More > Company Profile) */}
-        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between text-left"
-            onClick={() => setShowProposalSettings((s) => !s)}
-          >
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-700">
-              Proposal Builder Settings
-            </span>
-            <span className="text-xs text-slate-500">
-              {showProposalSettings ? "▲ Hide" : "▼ Customize"}
-            </span>
-          </button>
-          {showProposalSettings ? (
-            <div className="mt-3 space-y-3">
-              <p className="text-[11px] leading-snug text-slate-600">
-                Company logo, AMC plan, bank details, payment QR, and past-installation photos are saved under{" "}
-                <span className="font-semibold text-slate-800">More → My Company Profile</span> and load automatically into
-                every proposal you generate here.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Language</label>
-                  <div className="mt-1 inline-flex rounded-full border border-slate-300 bg-white p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setProposalLang("en")}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${proposalLang === "en" ? "bg-slate-900 text-white" : "text-slate-600"}`}
-                    >
-                      English
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProposalLang("hi")}
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${proposalLang === "hi" ? "bg-slate-900 text-white" : "text-slate-600"}`}
-                    >
-                      हिन्दी
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">EMI Interest Rate (% p.a.)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={20}
-                    step={0.5}
-                    value={financeRatePct}
-                    onChange={(e) => setFinanceRatePct(Number(e.target.value) || 0)}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-          ) : null}
+        {/* Proposal language — inline toggle */}
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Language</span>
+          <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-0.5">
+            <button
+              type="button"
+              onClick={() => setProposalLang("en")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${proposalLang === "en" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setProposalLang("hi")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${proposalLang === "hi" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              हिंदी
+            </button>
+          </div>
         </div>
 
         <div id="step-4-anchor" className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">

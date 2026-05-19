@@ -321,18 +321,21 @@ export function ProposalReviewSheet({
               })}
             </div>
 
-            {/* Footer */}
-            <div className="flex-shrink-0 border-t border-slate-100 p-4 dark:border-white/8">
+            {/* Footer — pb accounts for iOS/Android nav bar */}
+            <div
+              className="flex-shrink-0 border-t border-slate-100 px-4 pt-3 dark:border-white/8"
+              style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+            >
               <button
                 type="button"
                 onClick={() => {
                   onConfirm?.();
                   onClose();
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 py-3 text-sm font-bold text-white shadow-md transition hover:from-sky-500 hover:to-indigo-500"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 py-3.5 text-sm font-bold text-white shadow-md transition hover:from-sky-500 hover:to-indigo-500 active:scale-[0.98]"
               >
                 <Eye className="h-4 w-4" />
-                Confirm · {enabledCount} sections
+                Confirm · {enabledCount} sections active
               </button>
             </div>
           </motion.div>

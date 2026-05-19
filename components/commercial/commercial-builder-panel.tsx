@@ -33,6 +33,9 @@ import {
 // ─── Watt presets ─────────────────────────────────────────────────────────────
 const WATT_PRESETS = [540, 550, 575, 590, 615] as const;
 
+// Custom-panel sentinel id
+const CUSTOM_CATALOG_ID = "__custom__";
+
 // ─── Financing presets ────────────────────────────────────────────────────────
 const FINANCING_PRESETS = [
   { label: "NBFC", rate: 11.5, tenures: [3, 5, 7] },
@@ -47,12 +50,44 @@ type Props = {
   className?: string;
 };
 
+// ─── Custom wattage state helper ─────────────────────────────────────────────
+function useCustomPanel() {
+  const [customBrand, setCustomBrand] = useState("");
+  const [customWatt, setCustomWatt] = useState<string>("");
+  return { customBrand, setCustomBrand, customWatt, setCustomWatt };
+}
+
 export function CommercialBuilderPanel({ systemKw, config, onChange, className }: Props) {
   const [openSection, setOpenSection] = useState<string>("panel");
+  const { customBrand, setCustomBrand, customWatt, setCustomWatt } = useCustomPanel();
 
   const catalogId = config.panel?.catalogId ?? "waaree-540-dcr";
-  const entry = getPanelCatalogEntry(catalogId);
+  const isCustom = catalogId === CUSTOM_CATALOG_ID;
+  const entry = isCustom ? null : getPanelCatalogEntry(catalogId);
   const orgSpec = config.orgType ? getOrgType(config.orgType) : null;
+
+  // For custom panels derive watt from config or local state
+  const activeWatt = isCustom
+    ? (parseInt(customWatt) || config.panel?.watt || 0)
+    : entry?.watt;
+
+  function applyCustomPanel(brand: string, watt: number, rate?: number) {
+    const b = brand.trim() || "Custom";
+    update({
+      panel: {
+        catalogId: CUSTOM_CATALOG_ID,
+        brandId: b.toLowerCase().replace(/\s+/g, "_"),
+        watt: watt || undefined,
+        panelType: "NON_DCR",
+        ratePerWpInr: rate ?? config.panel?.ratePerWpInr,
+      },
+      dcrComparison: {
+        enabled: config.dcrComparison?.enabled !== false,
+        brandId: b.toLowerCase().replace(/\s+/g, "_"),
+        watt: watt || undefined,
+      },
+    });
+  }
 
   function update(partial: Partial<CommercialProposalConfig>) {
     onChange({ ...config, ...partial });
@@ -77,6 +112,11 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
   }
 
   function selectWatt(watt: number) {
+    if (isCustom) {
+      setCustomWatt(String(watt));
+      applyCustomPanel(customBrand, watt, config.panel?.ratePerWpInr);
+      return;
+    }
     // Find the nearest catalog entry with that wattage (prefer NON_DCR for flexibility)
     const match =
       PANEL_CATALOG.find((p) => p.watt === watt && p.panelType === entry?.panelType) ??
@@ -95,7 +135,11 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
   const sectionCount = [dcrEnabled, scenariosEnabled, financingEnabled].filter(Boolean).length;
 
   // Summary pills for collapsed header
-  const panels = entry ? `${entry.watt}W ${entry.brandLabel} ${entry.panelType}` : "Not set";
+  const panels = isCustom
+    ? `${activeWatt || "?"}W ${customBrand || "Custom"} NON-DCR`
+    : entry
+    ? `${entry.watt}W ${entry.brandLabel} ${entry.panelType}`
+    : "Not set";
 
   return (
     <div className={cn("space-y-2 rounded-2xl border border-sky-200 bg-white shadow-sm", className)}>
@@ -137,7 +181,7 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
             </label>
             <div className="flex flex-wrap gap-1.5">
               {WATT_PRESETS.map((w) => {
-                const active = entry?.watt === w;
+                const active = !isCustom && entry?.watt === w;
                 return (
                   <button
                     key={w}
@@ -154,7 +198,51 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                   </button>
                 );
               })}
+              {/* Custom wattage chip */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isCustom) {
+                    setCatalogId(CUSTOM_CATALOG_ID);
+                    update({
+                      panel: {
+                        catalogId: CUSTOM_CATALOG_ID,
+                        panelType: "NON_DCR",
+                        ratePerWpInr: config.panel?.ratePerWpInr ?? entry?.ratePerWpInr,
+                      },
+                    });
+                  }
+                }}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-[11px] font-bold transition-all",
+                  isCustom
+                    ? "border-violet-400 bg-violet-600 text-white shadow-sm"
+                    : "border-dashed border-slate-300 bg-white text-slate-500 hover:border-violet-300 hover:bg-violet-50"
+                )}
+              >
+                Custom
+              </button>
             </div>
+
+            {/* Custom wattage input row */}
+            {isCustom && (
+              <div className="mt-2 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50/60 px-3 py-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="e.g. 600"
+                  value={customWatt}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCustomWatt(v);
+                    const w = parseInt(v);
+                    if (w > 0) applyCustomPanel(customBrand, w, config.panel?.ratePerWpInr);
+                  }}
+                  className="w-20 rounded-lg border border-violet-200 bg-white px-2 py-1 text-center text-sm font-bold text-slate-800 focus:outline-none"
+                />
+                <span className="text-[11px] font-semibold text-slate-500">W</span>
+              </div>
+            )}
           </div>
 
           {/* Brand + full panel picker */}
@@ -164,7 +252,21 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
             </label>
             <select
               value={catalogId}
-              onChange={(e) => setCatalogId(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === CUSTOM_CATALOG_ID) {
+                  setCatalogId(CUSTOM_CATALOG_ID);
+                  update({
+                    panel: {
+                      catalogId: CUSTOM_CATALOG_ID,
+                      panelType: "NON_DCR",
+                      ratePerWpInr: config.panel?.ratePerWpInr ?? entry?.ratePerWpInr,
+                    },
+                  });
+                } else {
+                  setCatalogId(val);
+                }
+              }}
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-sky-400 focus:outline-none"
             >
               {PANEL_CATALOG.map((p) => (
@@ -172,7 +274,23 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                   {formatPanelLabel(p)} — ₹{p.ratePerWpInr}/Wp
                 </option>
               ))}
+              <option value={CUSTOM_CATALOG_ID}>➕ Add custom brand / panel</option>
             </select>
+
+            {/* Custom brand name input */}
+            {isCustom && (
+              <input
+                type="text"
+                placeholder="Brand name (e.g. Trina Solar)"
+                value={customBrand}
+                onChange={(e) => {
+                  setCustomBrand(e.target.value);
+                  const w = parseInt(customWatt) || config.panel?.watt || 0;
+                  applyCustomPanel(e.target.value, w, config.panel?.ratePerWpInr);
+                }}
+                className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none"
+              />
+            )}
           </div>
 
           {/* Rate override */}
@@ -182,22 +300,26 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                 Rate ₹/Wp
               </label>
               <input
-                type="number"
-                min={0}
-                step={0.5}
+                type="text"
+                inputMode="decimal"
                 value={config.panel?.ratePerWpInr ?? entry?.ratePerWpInr ?? ""}
-                onChange={(e) =>
-                  update({
-                    panel: {
-                      catalogId,
-                      brandId: entry?.brandId,
-                      watt: entry?.watt,
-                      panelType: entry?.panelType,
-                      ratePerWpInr: parseFloat(e.target.value) || undefined,
-                    },
-                  })
-                }
-                placeholder={String(entry?.ratePerWpInr ?? "")}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value) || undefined;
+                  if (isCustom) {
+                    applyCustomPanel(customBrand, parseInt(customWatt) || config.panel?.watt || 0, v);
+                  } else {
+                    update({
+                      panel: {
+                        catalogId,
+                        brandId: entry?.brandId,
+                        watt: entry?.watt,
+                        panelType: entry?.panelType,
+                        ratePerWpInr: v,
+                      },
+                    });
+                  }
+                }}
+                placeholder={String(entry?.ratePerWpInr ?? "e.g. 42")}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"
               />
             </div>
@@ -206,7 +328,7 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                 Technology
               </label>
               <div className="flex h-[38px] items-center rounded-xl border border-slate-100 bg-slate-50 px-3 text-sm font-semibold text-slate-600">
-                {entry?.technology ?? "—"}
+                {isCustom ? "Custom" : (entry?.technology ?? "—")}
               </div>
             </div>
           </div>
