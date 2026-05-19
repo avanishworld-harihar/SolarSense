@@ -21,6 +21,7 @@ import { INDIAN_STATES_AND_UTS } from "@/lib/indian-states-uts";
 import { INSTALLER_REGION_EVENT, readInstallerRegion } from "@/lib/installer-region-storage";
 import { formatInstallerContactLine, readProposalBrandingSettings } from "@/lib/proposal-branding-settings";
 import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
+import { NumericTextInput } from "@/components/ui/numeric-text-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast-center";
 import {
@@ -631,6 +632,12 @@ export default function ProposalPage() {
       profit25yr
     };
   }, [overrideSolarKw, overridePanels, result]);
+
+  const autoPanelCount = useMemo(() => {
+    const kwRaw = parseFloat(overrideSolarKw);
+    const solarKw = kwRaw > 0 ? kwRaw : result.solarKw;
+    return Math.ceil((solarKw * 1000) / 540);
+  }, [overrideSolarKw, result.solarKw]);
 
   const filledMonths = useMemo(() => countFilledMonths(monthlyUnits), [monthlyUnits]);
   const annualUnits = useMemo(
@@ -1939,27 +1946,22 @@ export default function ProposalPage() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Editable custom input â€” text mode prevents browser mangling of digits */}
             <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
-              <input
-                type="text"
-                inputMode="decimal"
-                pattern="[0-9]*\.?[0-9]*"
+              <NumericTextInput
+                value={
+                  overrideSolarKw !== ""
+                    ? (() => {
+                        const n = parseFloat(overrideSolarKw);
+                        return Number.isFinite(n) ? n : undefined;
+                      })()
+                    : undefined
+                }
+                fallback={result.solarKw}
+                onValueChange={(v) => {
+                  setOverrideSolarKw(v !== undefined ? String(v) : "");
+                  setOverridePanels("");
+                }}
                 className="w-20 bg-transparent text-base font-extrabold text-brand-700 outline-none"
-                value={overrideSolarKw !== "" ? overrideSolarKw : String(result.solarKw)}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "" || /^[0-9]*\.?[0-9]*$/.test(raw)) {
-                    setOverrideSolarKw(raw);
-                    setOverridePanels("");
-                  }
-                }}
-                onBlur={(e) => {
-                  const num = parseFloat(e.target.value);
-                  if (!isNaN(num) && num > 0) {
-                    setOverrideSolarKw(String(num));
-                  } else {
-                    setOverrideSolarKw("");
-                  }
-                }}
+                aria-label={t("proposal_solarSizeLabel")}
               />
               <span className="text-sm font-bold text-brand-700">kW</span>
             </div>
@@ -1989,18 +1991,24 @@ export default function ProposalPage() {
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
             {t("proposal_panelsLabel")}
-            <span className="ml-2 font-normal normal-case text-slate-400">(Auto: {Math.ceil((effectiveResult.solarKw * 1000) / 540)} panels @ 540W)</span>
+            <span className="ml-2 font-normal normal-case text-slate-400">(Auto: {autoPanelCount} panels @ 540W)</span>
           </p>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
-              <input
-                type="number"
-                min="1"
-                max="500"
-                step="1"
+              <NumericTextInput
+                integer
+                value={
+                  overridePanels !== ""
+                    ? (() => {
+                        const n = parseInt(overridePanels, 10);
+                        return Number.isFinite(n) ? n : undefined;
+                      })()
+                    : undefined
+                }
+                fallback={autoPanelCount}
+                onValueChange={(v) => setOverridePanels(v !== undefined ? String(v) : "")}
                 className="w-16 bg-transparent text-base font-extrabold text-brand-700 outline-none"
-                value={overridePanels || Math.ceil((effectiveResult.solarKw * 1000) / 540)}
-                onChange={(e) => setOverridePanels(e.target.value)}
+                aria-label={t("proposal_panelsLabel")}
               />
               <span className="text-sm font-bold text-brand-700">panels</span>
             </div>

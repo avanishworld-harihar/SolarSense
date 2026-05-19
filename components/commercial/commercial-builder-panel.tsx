@@ -6,13 +6,15 @@
  * Replaces the old accordion-only panel with a cleaner, more visual design.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PANEL_CATALOG,
+  PANEL_TECHNOLOGY_OPTIONS,
   formatPanelLabel,
   getPanelCatalogEntry,
 } from "@/lib/commercial-panel-catalog";
+import { NumericTextInput } from "@/components/ui/numeric-text-input";
 import { buildDefaultScenarios } from "@/lib/commercial-capacity-scenarios";
 import type { CommercialProposalConfig } from "@/lib/commercial-proposal-config";
 import { DEFAULT_COMMERCIAL_RATE_PCT, DEFAULT_COMMERCIAL_TENURES } from "@/lib/commercial-financing";
@@ -71,15 +73,21 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
     ? (parseInt(customWatt) || config.panel?.watt || 0)
     : entry?.watt;
 
-  function applyCustomPanel(brand: string, watt: number, rate?: number) {
+  function applyCustomPanel(
+    brand: string,
+    watt: number | undefined,
+    rate?: number,
+    technology?: string
+  ) {
     const b = brand.trim() || "Custom";
     update({
       panel: {
         catalogId: CUSTOM_CATALOG_ID,
         brandId: b.toLowerCase().replace(/\s+/g, "_"),
-        watt: watt || undefined,
+        watt: watt && watt > 0 ? watt : undefined,
         panelType: "NON_DCR",
         ratePerWpInr: rate ?? config.panel?.ratePerWpInr,
+        technology: technology ?? config.panel?.technology ?? "Mono PERC",
       },
       dcrComparison: {
         enabled: config.dcrComparison?.enabled !== false,
@@ -93,6 +101,14 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
     onChange({ ...config, ...partial });
   }
 
+  useEffect(() => {
+    if (!isCustom) return;
+    if (config.panel?.watt) setCustomWatt(String(config.panel.watt));
+  }, [isCustom, config.panel?.watt]);
+
+  const panelTechnology =
+    config.panel?.technology ?? entry?.technology ?? "Mono PERC";
+
   function setCatalogId(id: string) {
     const e = getPanelCatalogEntry(id);
     update({
@@ -102,6 +118,7 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
         watt: e?.watt,
         panelType: e?.panelType,
         ratePerWpInr: config.panel?.ratePerWpInr ?? e?.ratePerWpInr,
+        technology: e?.technology ?? config.panel?.technology,
       },
       dcrComparison: {
         enabled: config.dcrComparison?.enabled !== false,
@@ -114,7 +131,7 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
   function selectWatt(watt: number) {
     if (isCustom) {
       setCustomWatt(String(watt));
-      applyCustomPanel(customBrand, watt, config.panel?.ratePerWpInr);
+      applyCustomPanel(customBrand, watt, config.panel?.ratePerWpInr, panelTechnology);
       return;
     }
     // Find the nearest catalog entry with that wattage (prefer NON_DCR for flexibility)
@@ -287,6 +304,7 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                         catalogId: CUSTOM_CATALOG_ID,
                         panelType: "NON_DCR",
                         ratePerWpInr: config.panel?.ratePerWpInr ?? entry?.ratePerWpInr,
+                        technology: config.panel?.technology ?? entry?.technology ?? "Mono PERC",
                       },
                     });
                   }
@@ -305,18 +323,16 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
             {/* Custom wattage input row */}
             {isCustom && (
               <div className="mt-2 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50/60 px-3 py-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="e.g. 600"
-                  value={customWatt}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setCustomWatt(v);
-                    const w = parseInt(v);
-                    if (w > 0) applyCustomPanel(customBrand, w, config.panel?.ratePerWpInr);
+                <NumericTextInput
+                  integer
+                  value={config.panel?.watt}
+                  placeholder="600"
+                  onValueChange={(w) => {
+                    if (w !== undefined) setCustomWatt(String(w));
+                    applyCustomPanel(customBrand, w, config.panel?.ratePerWpInr, panelTechnology);
                   }}
-                  className="w-20 rounded-lg border border-violet-200 bg-white px-2 py-1 text-center text-sm font-bold text-slate-800 focus:outline-none"
+                  className="w-20 rounded-lg border border-violet-200 bg-white px-2 py-1 text-center text-sm font-bold text-slate-800 focus:border-violet-400 focus:outline-none"
+                  aria-label="Custom module wattage"
                 />
                 <span className="text-[11px] font-semibold text-slate-500">W</span>
               </div>
@@ -339,6 +355,7 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                       catalogId: CUSTOM_CATALOG_ID,
                       panelType: "NON_DCR",
                       ratePerWpInr: config.panel?.ratePerWpInr ?? entry?.ratePerWpInr,
+                      technology: config.panel?.technology ?? entry?.technology ?? "Mono PERC",
                     },
                   });
                 } else {
@@ -363,8 +380,12 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                 value={customBrand}
                 onChange={(e) => {
                   setCustomBrand(e.target.value);
-                  const w = parseInt(customWatt) || config.panel?.watt || 0;
-                  applyCustomPanel(e.target.value, w, config.panel?.ratePerWpInr);
+                  applyCustomPanel(
+                    e.target.value,
+                    config.panel?.watt,
+                    config.panel?.ratePerWpInr,
+                    panelTechnology
+                  );
                 }}
                 className="mt-1.5 w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-violet-400 focus:outline-none"
               />
@@ -377,14 +398,13 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
               <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Rate ₹/Wp
               </label>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={config.panel?.ratePerWpInr ?? entry?.ratePerWpInr ?? ""}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value) || undefined;
+              <NumericTextInput
+                value={config.panel?.ratePerWpInr}
+                fallback={entry?.ratePerWpInr}
+                placeholder="e.g. 42"
+                onValueChange={(v) => {
                   if (isCustom) {
-                    applyCustomPanel(customBrand, parseInt(customWatt) || config.panel?.watt || 0, v);
+                    applyCustomPanel(customBrand, config.panel?.watt, v, panelTechnology);
                   } else {
                     update({
                       panel: {
@@ -393,21 +413,49 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                         watt: entry?.watt,
                         panelType: entry?.panelType,
                         ratePerWpInr: v,
+                        technology: panelTechnology,
                       },
                     });
                   }
                 }}
-                placeholder={String(entry?.ratePerWpInr ?? "e.g. 42")}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"
+                aria-label="Rate per watt peak"
               />
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Technology
               </label>
-              <div className="flex h-[38px] items-center rounded-xl border border-slate-100 bg-slate-50 px-3 text-sm font-semibold text-slate-600">
-                {isCustom ? "Custom" : (entry?.technology ?? "—")}
-              </div>
+              <select
+                value={panelTechnology}
+                onChange={(e) => {
+                  const tech = e.target.value;
+                  if (isCustom) {
+                    applyCustomPanel(customBrand, config.panel?.watt, config.panel?.ratePerWpInr, tech);
+                  } else {
+                    update({
+                      panel: {
+                        catalogId,
+                        brandId: entry?.brandId,
+                        watt: entry?.watt,
+                        panelType: entry?.panelType,
+                        ratePerWpInr: config.panel?.ratePerWpInr ?? entry?.ratePerWpInr,
+                        technology: tech,
+                      },
+                    });
+                  }
+                }}
+                className="h-[38px] w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 focus:border-sky-400 focus:outline-none"
+              >
+                {PANEL_TECHNOLOGY_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+                {!PANEL_TECHNOLOGY_OPTIONS.includes(
+                  panelTechnology as (typeof PANEL_TECHNOLOGY_OPTIONS)[number]
+                ) && <option value={panelTechnology}>{panelTechnology}</option>}
+              </select>
             </div>
           </div>
 
@@ -525,14 +573,11 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                   )}
                 >
                   <p className="mb-1 text-[10px] font-medium text-slate-500">{s.label}</p>
-                  <input
-                    type="number"
-                    min={1}
+                  <NumericTextInput
                     value={s.systemKw}
-                    onChange={(e) => {
-                      const kw = parseFloat(e.target.value) || s.systemKw;
+                    onValueChange={(kw) => {
                       const updated = scenarios.map((x) =>
-                        x.id === s.id ? { ...x, systemKw: kw } : x
+                        x.id === s.id ? { ...x, systemKw: kw ?? s.systemKw } : x
                       );
                       update({
                         capacityScenarios: {
@@ -543,6 +588,7 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
                       });
                     }}
                     className="w-full rounded-lg border border-transparent bg-transparent text-center text-sm font-bold text-slate-800 focus:border-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-200"
+                    aria-label={`${s.label} capacity kW`}
                   />
                   <span className="text-[10px] text-slate-400">kW</span>
                   <button
@@ -656,43 +702,41 @@ export function CommercialBuilderPanel({ systemKw, config, onChange, className }
               <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Interest % p.a.
               </label>
-              <input
-                type="number"
-                min={0}
-                max={25}
-                step={0.25}
-                value={config.financing?.interestRatePct ?? DEFAULT_COMMERCIAL_RATE_PCT}
-                onChange={(e) =>
+              <NumericTextInput
+                value={config.financing?.interestRatePct}
+                fallback={DEFAULT_COMMERCIAL_RATE_PCT}
+                onValueChange={(v) =>
                   update({
                     financing: {
                       ...config.financing,
                       enabled: true,
-                      interestRatePct: parseFloat(e.target.value) || 0,
+                      interestRatePct: v ?? 0,
                     },
                   })
                 }
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"
+                aria-label="Interest rate percent"
               />
             </div>
             <div>
               <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Down Payment (₹)
               </label>
-              <input
-                type="number"
-                min={0}
-                step={10000}
-                value={config.financing?.downPaymentInr ?? 0}
-                onChange={(e) =>
+              <NumericTextInput
+                integer
+                value={config.financing?.downPaymentInr}
+                fallback={0}
+                onValueChange={(v) =>
                   update({
                     financing: {
                       ...config.financing,
                       enabled: true,
-                      downPaymentInr: parseFloat(e.target.value) || 0,
+                      downPaymentInr: v ?? 0,
                     },
                   })
                 }
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"
+                aria-label="Down payment in rupees"
               />
             </div>
           </div>

@@ -7,6 +7,20 @@
 
 export type PanelType = "DCR" | "NON_DCR";
 
+/** Common module technologies (India commercial rooftop, 2024–2026). */
+export const PANEL_TECHNOLOGY_OPTIONS = [
+  "Mono PERC",
+  "Multi PERC",
+  "Half-cut Mono PERC",
+  "TOPCon (N-Type)",
+  "HJT",
+  "IBC",
+  "Bifacial Mono PERC",
+  "PERC",
+] as const;
+
+export type PanelTechnology = (typeof PANEL_TECHNOLOGY_OPTIONS)[number];
+
 export type PanelCatalogEntry = {
   /** Stable id e.g. waaree-540-dcr */
   id: string;

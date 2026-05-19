@@ -18,6 +18,8 @@ export const commercialPanelConfigSchema = z.object({
   panelType: panelTypeSchema.optional(),
   /** Installer override ₹/Wp */
   ratePerWpInr: z.number().min(0).max(500).optional(),
+  /** Cell technology — Mono PERC, TOPCon, etc. */
+  technology: z.string().max(80).optional(),
 });
 
 export const dcrComparisonConfigSchema = z.object({
