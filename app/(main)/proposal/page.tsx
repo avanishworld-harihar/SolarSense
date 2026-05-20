@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import dynamic from "next/dynamic";
 import { useLanguage } from "@/lib/language-context";
@@ -55,12 +55,23 @@ import { CommercialNarrativePanel } from "@/components/commercial/commercial-nar
 import { ProposalReviewSheet } from "@/components/commercial/proposal-review-sheet";
 import { CommercialCategorySelector } from "@/components/commercial/commercial-category-selector";
 import { CommercialInputModeSelector } from "@/components/commercial/commercial-input-mode";
+import { ResidentialInputModeSelector } from "@/components/residential/residential-input-mode";
+import {
+  ResidentialProposalModePicker,
+  type ResidentialInputMode,
+} from "@/components/residential/residential-proposal-mode-picker";
+import { ResidentialRequirementBuilder } from "@/components/residential/residential-requirement-builder";
 import {
   applyCommercialFlagsToLayout,
   defaultCommercialConfig,
   withOrgStory,
   type CommercialProposalConfig,
 } from "@/lib/commercial-proposal-config";
+import {
+  applyResidentialFlagsToLayout,
+  defaultResidentialConfig,
+  type ResidentialProposalConfig,
+} from "@/lib/residential-proposal-config";
 import { getPresetDefaultLayout } from "@/lib/proposal-preset-engine";
 import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
 import useSWR, { useSWRConfig } from "swr";
@@ -299,6 +310,13 @@ function ProposalPageContent() {
   const [proposalLayout, setProposalLayout] = useState<ProposalTemplateV1 | null>(null);
   // Commercial input mode â€” "bill" uses existing upload flow; "requirement" shows simple form
   const [commercialInputMode, setCommercialInputMode] = useState<"bill" | "requirement">("bill");
+  const [residentialInputMode, setResidentialInputMode] = useState<ResidentialInputMode>(
+    urlPrefill.inputMode === "requirement" ? "requirement" : "bill"
+  );
+  const [showResidentialModePicker, setShowResidentialModePicker] = useState(
+    urlPrefill.preset === "residential_smart" && !urlPrefill.inputMode
+  );
+  const [residentialConfig, setResidentialConfig] = useState<ResidentialProposalConfig | null>(null);
   // Requirement-mode form fields (written to manual state on change)
   const [requirementMonthlyKwh, setRequirementMonthlyKwh] = useState("");
   const [requirementNotes, setRequirementNotes] = useState("");
@@ -682,6 +700,9 @@ function ProposalPageContent() {
   // â”€â”€ Builder stage progress tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const isCommercialRequirement =
     osPresetId === "commercial_executive" && commercialInputMode === "requirement";
+  const isResidentialRequirement =
+    osPresetId === "residential_smart" && residentialInputMode === "requirement";
+  const hideBillUploadSteps = isCommercialRequirement || isResidentialRequirement;
 
   const commercialFlowHasClient = Boolean(
     manual.leadContactName?.trim() || manual.officialBillName?.trim() || selectedLeadId
@@ -1272,12 +1293,22 @@ function ProposalPageContent() {
       companyProfile: {
         gstNumber: branding.companyGstNumber.trim() || undefined
       },
-      proposalLayout:
-        osPresetId === "commercial_executive" && proposalLayout
-          ? applyCommercialFlagsToLayout(proposalLayout, commercialConfig ?? {})
-          : proposalLayout ?? undefined,
+      proposalLayout: (() => {
+        if (!proposalLayout) return undefined;
+        if (isResidentialRequirement && residentialConfig) {
+          return applyResidentialFlagsToLayout(proposalLayout, residentialConfig);
+        }
+        if (osPresetId === "commercial_executive") {
+          return applyCommercialFlagsToLayout(proposalLayout, commercialConfig ?? {});
+        }
+        return proposalLayout;
+      })(),
       commercialConfig:
         osPresetId === "commercial_executive" ? commercialConfig ?? undefined : undefined,
+      residentialConfig:
+        isResidentialRequirement && residentialConfig
+          ? { ...residentialConfig, inputMode: "requirement" as const }
+          : undefined,
       storyMode: urlPrefill.story ?? commercialConfig?.storyMode,
       storySegment: commercialConfig?.orgType ?? urlPrefill.orgType,
     };
@@ -1291,6 +1322,19 @@ function ProposalPageContent() {
     );
     setProposalLayout((prev) => prev ?? getPresetDefaultLayout("commercial_executive"));
   }, [osPresetId, effectiveResult?.solarKw, urlPrefill.kw, urlPrefill.orgType, urlPrefill.story]);
+
+  useEffect(() => {
+    if (osPresetId !== "residential_smart" || !isResidentialRequirement) return;
+    const kw = effectiveResult?.solarKw ?? urlPrefill.kw ?? 5;
+    setResidentialConfig((prev) => prev ?? defaultResidentialConfig(kw));
+    setProposalLayout((prev) => prev ?? getPresetDefaultLayout("residential_smart"));
+  }, [osPresetId, isResidentialRequirement, effectiveResult?.solarKw, urlPrefill.kw]);
+
+  useEffect(() => {
+    if (!isResidentialRequirement || !residentialConfig) return;
+    setOverrideSolarKw(String(residentialConfig.solar.plantCapacityKw));
+    setOverridePanels("");
+  }, [isResidentialRequirement, residentialConfig?.solar.plantCapacityKw]);
 
   async function downloadPremiumPpt() {
     setIsPptDownloading(true);
@@ -1430,7 +1474,7 @@ function ProposalPageContent() {
         pmSuryaGharSubsidyInr: effectiveResult.centralSubsidy,
         netCostInr: effectiveResult.netCost,
         panels: effectiveResult.panels,
-        dataSource: billBacked ? "bill" : "requirement",
+        dataSource: isResidentialRequirement ? "requirement" : billBacked ? "bill" : "requirement",
         presetId: osPresetId ?? "residential_smart",
         ...buildProposalExtrasPayload(),
       }),
@@ -1556,10 +1600,36 @@ function ProposalPageContent() {
       {showPresetPicker && (
         <ProposalPresetPicker
           currentPresetId={osPresetId}
-          onSelect={(id) => { setOsPresetId(id); setShowPresetPicker(false); }}
-          onSkip={() => { setOsPresetId("residential_smart"); setShowPresetPicker(false); }}
+          onSelect={(id) => {
+            setOsPresetId(id);
+            setShowPresetPicker(false);
+            if (id === "residential_smart" && !urlPrefill.inputMode) {
+              setShowResidentialModePicker(true);
+            }
+          }}
+          onSkip={() => {
+            setOsPresetId("residential_smart");
+            setResidentialInputMode("bill");
+            setShowPresetPicker(false);
+          }}
         />
       )}
+
+      {showResidentialModePicker && osPresetId === "residential_smart" ? (
+        <ResidentialProposalModePicker
+          open
+          currentMode={residentialInputMode}
+          onSelect={(mode) => {
+            setResidentialInputMode(mode);
+            setShowResidentialModePicker(false);
+          }}
+          onBack={() => {
+            setShowResidentialModePicker(false);
+            setShowPresetPicker(true);
+            setOsPresetId(null);
+          }}
+        />
+      ) : null}
 
       {/* Block playlist drawer */}
       {showBlockPlaylist && (
@@ -1569,11 +1639,11 @@ function ProposalPageContent() {
         />
       )}
 
-      {osPresetId === "commercial_executive" && proposalLayout ? (
+      {(osPresetId === "commercial_executive" || isResidentialRequirement) && proposalLayout ? (
         <ProposalReviewSheet
           open={showReviewSheet}
           onClose={() => setShowReviewSheet(false)}
-          presetId="commercial_executive"
+          presetId={osPresetId === "commercial_executive" ? "commercial_executive" : "residential_smart"}
           layout={proposalLayout}
           onLayoutChange={setProposalLayout}
         />
@@ -1701,6 +1771,32 @@ function ProposalPageContent() {
           </p>
         ) : null}
 
+        {osPresetId === "residential_smart" ? (
+          <ResidentialInputModeSelector
+            mode={residentialInputMode}
+            onModeChange={(m) => {
+              setResidentialInputMode(m);
+              if (m === "bill") {
+                setResidentialConfig(null);
+              }
+            }}
+          />
+        ) : null}
+
+        {isResidentialRequirement && residentialConfig ? (
+          <ResidentialRequirementBuilder
+            config={residentialConfig}
+            onChange={(next) => {
+              setResidentialConfig(next);
+              if (proposalLayout) {
+                setProposalLayout(applyResidentialFlagsToLayout(proposalLayout, next));
+              }
+            }}
+            netCostInr={effectiveResult.netCost}
+            annualSavingInr={effectiveResult.annualSavings}
+          />
+        ) : null}
+
         {osPresetId === "commercial_executive" ? (
           <CommercialInputModeSelector
             mode={commercialInputMode}
@@ -1743,7 +1839,7 @@ function ProposalPageContent() {
         ) : null}
       </div>
 
-      {leadSelected && manual.leadContactName && !isCommercialRequirement ? (
+      {leadSelected && manual.leadContactName && !hideBillUploadSteps ? (
         <ProposalQuickPreview
           customerName={manual.leadContactName}
           city={activeLead?.city ?? manual.city}
@@ -1758,7 +1854,7 @@ function ProposalPageContent() {
         />
       ) : null}
 
-      {!isCommercialRequirement ? (
+      {!hideBillUploadSteps ? (
       <div id="step-2-anchor" className={`ss-step-card ${osPresetId === "commercial_executive" ? "ring-1 ring-sky-200/60" : ""}`}>
         <span className="ss-step-chip">Step 2</span>
         <h2 className="flex flex-col gap-1 text-base font-bold text-brand-900 sm:flex-row sm:items-center sm:gap-2 sm:text-lg">
@@ -2056,6 +2152,31 @@ function ProposalPageContent() {
             )}
           </div>
         ) : null}
+        {isResidentialRequirement ? (
+          <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-3 py-2.5 text-xs text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-100">
+            <p className="font-semibold">Ready to generate your homeowner proposal</p>
+            <p className="mt-1 opacity-90">
+              Review sections, then tap Generate. Fine-tune pricing in Proposals → BOM after saving.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReviewSheet(true)}
+                className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-[11px] font-bold text-emerald-800"
+              >
+                Review proposal sections
+              </button>
+              {draftProposalId ? (
+                <a
+                  href={`/proposals/${draftProposalId}#bom`}
+                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 px-3 py-1.5 text-[11px] font-bold text-white"
+                >
+                  Open Proposals — BOM
+                </a>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         {osPresetId === "commercial_executive" && commercialConfig && !isCommercialRequirement ? (
           <>
             <CommercialNarrativePanel
@@ -2096,7 +2217,7 @@ function ProposalPageContent() {
           </>
         ) : null}
 
-        {!isCommercialRequirement ? (
+        {!hideBillUploadSteps ? (
         <>
         {/* Solar System Size â€” editable */}
         <div>

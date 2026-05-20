@@ -170,6 +170,9 @@ export type PremiumProposalPptInput = {
 
   /** C&I commercial intelligence — panel catalog, scenarios, financing, DCR compare */
   commercialConfig?: import("@/lib/commercial-proposal-config").CommercialProposalConfig | null;
+
+  /** Homeowner requirement-based residential — guided kW, EMI, subsidy, panel track */
+  residentialConfig?: import("@/lib/residential-proposal-config").ResidentialProposalConfig | null;
 };
 
 export type ProposalDeckSummary = {

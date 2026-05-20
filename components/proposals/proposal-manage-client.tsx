@@ -6,6 +6,7 @@ import { ProposalDetailSection } from "@/components/proposals/proposal-detail-se
 import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
 import { ProposalModulesStrip } from "@/components/proposals/proposal-modules-strip";
 import { CommercialBomWorkspace } from "@/components/commercial/bom/commercial-bom-workspace";
+import { ResidentialBomWorkspace } from "@/components/residential/bom/residential-bom-workspace";
 import { ProposalReviewSheet } from "@/components/commercial/proposal-review-sheet";
 import type { ProposalPresetId } from "@/components/proposals/os/preset-picker";
 import {
@@ -104,6 +105,9 @@ export function ProposalManageClient({
   const mergedInput = useMemo(() => mergeProposalPricingIntoPptInput(pptInput, pricing), [pptInput, pricing]);
   const summary = useMemo(() => summarizeProposalDeck(mergedInput), [mergedInput]);
   const proposalLayout = useMemo(() => getProposalLayout(pptInput), [pptInput]);
+  const isResidentialRequirement =
+    presetId === "residential_smart" &&
+    (pptInput.residentialConfig?.inputMode === "requirement" || pptInput.dataSource === "requirement");
 
   const savingMonthly = useMemo(() => {
     const a = Math.max(0, annualSavingInr || summary.annualSaving || 0);
@@ -364,11 +368,23 @@ export function ProposalManageClient({
         subtitle={
           presetId === "commercial_executive"
             ? "Requirement-based commercial BOM — plant kW, DCR / Non-DCR brands, scenarios, EMI, and reusable pricing."
-            : t("proposals_section_bomSub")
+            : isResidentialRequirement
+              ? "Guided home solar — kW, panels, EMI, subsidy & friendly homeowner story."
+              : t("proposals_section_bomSub")
         }
       >
         {presetId === "commercial_executive" && pricing ? (
           <CommercialBomWorkspace
+            proposalId={proposalId}
+            initialPricing={pricing}
+            pptInput={pptInput}
+            labels={configuratorLabels}
+            onPricingSaved={onPricingSaved}
+            onPptInputChange={setPptInput}
+            onOpenReview={() => setReviewOpen(true)}
+          />
+        ) : isResidentialRequirement && pricing ? (
+          <ResidentialBomWorkspace
             proposalId={proposalId}
             initialPricing={pricing}
             pptInput={pptInput}
@@ -404,12 +420,12 @@ export function ProposalManageClient({
         </p>
       </ProposalDetailSection>
 
-      {presetId === "commercial_executive" ? (
+      {presetId === "commercial_executive" || isResidentialRequirement ? (
         <ProposalReviewSheet
           open={reviewOpen}
           onClose={() => setReviewOpen(false)}
           proposalId={proposalId}
-          presetId={presetId as ProposalPresetId}
+          presetId={(presetId === "commercial_executive" ? "commercial_executive" : "residential_smart") as ProposalPresetId}
           layout={proposalLayout}
           onLayoutChange={(nextLayout) => setPptInput((prev) => ({ ...prev, proposalLayout: nextLayout }))}
         />

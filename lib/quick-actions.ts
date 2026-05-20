@@ -27,6 +27,8 @@ import type { StoryMode } from "@/lib/proposal-story-copy";
 export type BuilderPrefill = {
   /** Which preset to auto-select (skips preset picker) */
   preset?: ProposalPresetId;
+  /** Residential bill vs requirement path */
+  inputMode?: "bill" | "requirement";
   /** Commercial org type (pre-selects segment in future UI) */
   orgType?: OrgType;
   /** System size in kW to prefill */
@@ -46,6 +48,7 @@ export type BuilderPrefill = {
 export function buildProposalUrl(prefill: BuilderPrefill): string {
   const params = new URLSearchParams();
   if (prefill.preset) params.set("preset", prefill.preset);
+  if (prefill.inputMode) params.set("inputMode", prefill.inputMode);
   if (prefill.orgType) params.set("orgType", prefill.orgType);
   if (prefill.kw != null && Number.isFinite(prefill.kw)) params.set("kw", String(prefill.kw));
   if (prefill.lang) params.set("lang", prefill.lang);
@@ -66,6 +69,11 @@ export function parsePrefillFromSearchParams(params: URLSearchParams): BuilderPr
   const preset = params.get("preset");
   if (preset === "residential_smart" || preset === "commercial_executive") {
     prefill.preset = preset;
+  }
+
+  const inputMode = params.get("inputMode");
+  if (inputMode === "bill" || inputMode === "requirement") {
+    prefill.inputMode = inputMode;
   }
 
   const orgType = params.get("orgType");

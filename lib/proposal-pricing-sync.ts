@@ -11,6 +11,17 @@ import {
   parseCommercialConfig,
   type CommercialProposalConfig,
 } from "@/lib/commercial-proposal-config";
+import {
+  applyResidentialFlagsToLayout,
+  defaultResidentialConfig,
+  parseResidentialConfig,
+  type ResidentialProposalConfig,
+} from "@/lib/residential-proposal-config";
+import {
+  ensureResidentialSolarInConfig,
+  solarFromResidentialPanelLine,
+  syncResidentialSolarToLineItems,
+} from "@/lib/residential-solar-engine";
 import type { PremiumProposalPptInput } from "@/lib/proposal-ppt";
 import { summarizeProposalDeck } from "@/lib/proposal-ppt";
 import { mergeProposalPricingIntoPptInput } from "@/lib/proposal-pricing-merge";
@@ -87,6 +98,28 @@ export async function persistProposalDeckAfterPricingChange(proposalId: string):
     };
   }
 
+  if (presetId === "residential_smart" && pricing?.line_items?.length) {
+    let lines = normalizeLineItems(pricing.line_items as unknown[]);
+    let resCfg =
+      parseResidentialConfig(ppt.residentialConfig) ?? defaultResidentialConfig(pricing.system_kw);
+    resCfg = ensureResidentialSolarInConfig(resCfg, pricing.system_kw);
+    const panelLine = lines.find((l) => l.kind === "panels" && l.panel_track);
+    if (panelLine) {
+      const fromLine = solarFromResidentialPanelLine(panelLine, pricing.system_kw);
+      if (fromLine) resCfg = { ...resCfg, solar: fromLine };
+    }
+    lines = syncResidentialSolarToLineItems(resCfg.solar, lines);
+    const baseLayout = normalizeProposalTemplateV1(
+      ppt.proposalLayout ?? { version: 1, blocks: [] }
+    );
+    ppt = {
+      ...ppt,
+      residentialConfig: resCfg,
+      proposalLayout: applyResidentialFlagsToLayout(baseLayout, resCfg),
+      dataSource: resCfg.inputMode === "requirement" ? "requirement" : ppt.dataSource,
+    };
+  }
+
   return persistMergedProposalDeck(proposalId, ppt);
 }
 
@@ -122,6 +155,33 @@ export async function persistCommercialConfigChange(
       ...proposal.ppt_input,
       commercialConfig,
       proposalLayout: syncedLayout,
+    },
+    pricing
+  );
+  return persistMergedProposalDeck(proposalId, mergedPpt);
+}
+
+/** Persists `residentialConfig` (+ optional layout sync) into `ppt_input`. */
+export async function persistResidentialConfigChange(
+  proposalId: string,
+  residentialConfig: ResidentialProposalConfig,
+  proposalLayout?: ProposalTemplateV1
+): Promise<boolean> {
+  const proposal = await getProposalById(proposalId);
+  if (!proposal) return false;
+  const pricing = await getProposalPricingByProposalId(proposalId);
+  const baseLayout =
+    proposalLayout ??
+    proposal.ppt_input.proposalLayout ??
+    normalizeProposalTemplateV1({ version: 1, blocks: [] });
+  const syncedLayout = applyResidentialFlagsToLayout(baseLayout, residentialConfig);
+  const mergedPpt = mergeProposalPricingIntoPptInput(
+    {
+      ...proposal.ppt_input,
+      residentialConfig,
+      proposalLayout: syncedLayout,
+      dataSource:
+        residentialConfig.inputMode === "requirement" ? "requirement" : proposal.ppt_input.dataSource,
     },
     pricing
   );
