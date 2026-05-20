@@ -39,7 +39,7 @@ import { ProposalQuickPreview } from "@/components/proposal/proposal-quick-previ
 import { WorkspacePage, WorkspacePageHero } from "@/components/workspace";
 import { cn } from "@/lib/utils";
 import { Building2, Download, ExternalLink, FileUp, Globe, MessageCircle, Send, Sparkles, Zap } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { parsePrefillFromSearchParams } from "@/lib/quick-actions";
 import { ProposalPresetPicker, type ProposalPresetId } from "@/components/proposals/os/preset-picker";
@@ -193,6 +193,26 @@ type SessionSnap = {
   overridePanels: string;
 };
 
+const EMPTY_MANUAL: ManualProposalCustomer = {
+  leadContactName: "",
+  leadPhone: "",
+  billPhone: "",
+  officialBillName: "",
+  city: "",
+  discom: "",
+  state: "",
+  consumerId: "",
+  meterNumber: "",
+  connectionDate: "",
+  phase: "",
+  connectionType: "",
+  sanctionedLoad: "",
+  billingAddress: "",
+  tariffCategory: "",
+  purposeOfSupply: "",
+  contractDemandKva: "",
+};
+
 function loadSession(): SessionSnap | null {
   try {
     const raw = sessionStorage.getItem(SESSION_STATE_KEY);
@@ -217,28 +237,19 @@ function isReloadNavigation(): boolean {
   return nav?.type === "reload";
 }
 
-export default function ProposalPage() {
+function ProposalPageContent() {
   const { t } = useLanguage();
   const toast = useToast();
   const { mutate: mutateGlobal } = useSWRConfig();
 
-  const bootFromReload = useMemo(() => isReloadNavigation(), []);
-  const sessionSnap = useMemo(() => {
-    if (bootFromReload) {
-      try {
-        sessionStorage.removeItem(SESSION_STATE_KEY);
-      } catch {
-        /* ignore */
-      }
-      return null;
-    }
-    return loadSession();
-  }, [bootFromReload]);
+  /** Set in mount effect — never read sessionStorage during useState (SSR/hydration safe). */
+  const hadSessionOnMountRef = useRef(false);
+  const skipServerRestoreRef = useRef(false);
 
-  const [monthlyUnits, setMonthlyUnits] = useState<MonthlyUnits>(() => sessionSnap?.monthlyUnits ?? emptyMonthlyUnits());
-  const [latestBill, setLatestBill] = useState<ParsedBillShape | null>(sessionSnap?.latestBill ?? null);
-  const [additionalBills, setAdditionalBills] = useState<(ParsedBillShape | null)[]>(sessionSnap?.additionalBills ?? []);
-  const [auditedMonthTotals, setAuditedMonthTotals] = useState<Partial<Record<keyof MonthlyUnits, number>>>(sessionSnap?.auditedMonthTotals ?? {});
+  const [monthlyUnits, setMonthlyUnits] = useState<MonthlyUnits>(() => emptyMonthlyUnits());
+  const [latestBill, setLatestBill] = useState<ParsedBillShape | null>(null);
+  const [additionalBills, setAdditionalBills] = useState<(ParsedBillShape | null)[]>([]);
+  const [auditedMonthTotals, setAuditedMonthTotals] = useState<Partial<Record<keyof MonthlyUnits, number>>>({});
   const [billAnalysis, setBillAnalysis] = useState("");
   const [billAnalysisTone, setBillAnalysisTone] = useState<"neutral" | "success" | "warning" | "error">("neutral");
   const [scanTimingBadge, setScanTimingBadge] = useState("");
@@ -256,8 +267,8 @@ export default function ProposalPage() {
   /** Set when a walk-in lead was auto-created during the last generate (for CRM deep-link). */
   const [lastAutoLeadId, setLastAutoLeadId] = useState<string | null>(null);
   const [showProposalSettings, setShowProposalSettings] = useState(false);
-  const [overrideSolarKw, setOverrideSolarKw] = useState(sessionSnap?.overrideSolarKw ?? "");
-  const [overridePanels, setOverridePanels] = useState(sessionSnap?.overridePanels ?? "");
+  const [overrideSolarKw, setOverrideSolarKw] = useState("");
+  const [overridePanels, setOverridePanels] = useState("");
   const [installerState, setInstallerState] = useState("");
   const [installerDiscom, setInstallerDiscom] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState("");
@@ -295,30 +306,34 @@ export default function ProposalPage() {
   const lastCalcPersistSignatureRef = useRef("");
   const uploadQueueRef = useRef<UploadTask[]>([]);
   const uploadWorkerRunningRef = useRef(false);
-  const [manual, setManual] = useState<ManualProposalCustomer>(sessionSnap?.manual ?? {
-    leadContactName: "",
-    leadPhone: "",
-    billPhone: "",
-    officialBillName: "",
-    city: "",
-    discom: "",
-    state: "",
-    consumerId: "",
-    meterNumber: "",
-    connectionDate: "",
-    phase: "",
-    connectionType: "",
-    sanctionedLoad: "",
-    billingAddress: "",
-    tariffCategory: "",
-    purposeOfSupply: "",
-    contractDemandKva: ""
-  });
+  const [manual, setManual] = useState<ManualProposalCustomer>(EMPTY_MANUAL);
   const step1Label = stripStepPrefix(t("proposal_step1SelectLead"));
   const step2Label = stripStepPrefix(t("proposal_step2BillUploads"));
   const monthlyUnitsTitle = stripManualSuffix(t("proposal_monthlyUnitsTitle"));
 
   useEffect(() => {
+    if (isReloadNavigation()) {
+      try {
+        sessionStorage.removeItem(SESSION_STATE_KEY);
+      } catch {
+        /* ignore */
+      }
+      skipServerRestoreRef.current = true;
+      setHydratedFromServer(true);
+    } else {
+      const snap = loadSession();
+      if (snap) {
+        hadSessionOnMountRef.current = true;
+        setManual(snap.manual);
+        setMonthlyUnits(snap.monthlyUnits);
+        setLatestBill(snap.latestBill);
+        setAdditionalBills(snap.additionalBills);
+        setAuditedMonthTotals(snap.auditedMonthTotals);
+        setOverrideSolarKw(snap.overrideSolarKw);
+        setOverridePanels(snap.overridePanels);
+      }
+    }
+
     const { state, discom } = readInstallerRegion();
     if (state) setInstallerState(state);
     if (discom) setInstallerDiscom(discom);
@@ -730,10 +745,7 @@ export default function ProposalPage() {
   }, [requiredSecondaryCount]);
 
   useEffect(() => {
-    if (bootFromReload) {
-      setHydratedFromServer(true);
-      return;
-    }
+    if (skipServerRestoreRef.current) return;
     if (!restoreRes || hydratedFromServer) return;
     const calc = restoreRes.latestCalculation;
     const bill = restoreRes.latestBillUpload;
@@ -745,7 +757,7 @@ export default function ProposalPage() {
 
     // If sessionStorage already had a snapshot, session data takes priority â€”
     // skip server overwrite to prevent stale server data clobbering fresher local state.
-    if (sessionSnap) {
+    if (hadSessionOnMountRef.current) {
       setHydratedFromServer(true);
       return;
     }
@@ -791,7 +803,7 @@ export default function ProposalPage() {
       setBillAnalysis(t("proposal_billAutofillDone"));
     }
     setHydratedFromServer(true);
-  }, [restoreRes, hydratedFromServer, billAnalysis, t, sessionSnap, bootFromReload]);
+  }, [restoreRes, hydratedFromServer, billAnalysis, t]);
 
   useEffect(() => {
     if (!clientRef) return;
@@ -2310,6 +2322,20 @@ export default function ProposalPage() {
         </div>{/* end OS layout flex */}
       </WorkspacePage>
     </>
+  );
+}
+
+export default function ProposalPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center px-4">
+          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading proposal builder…</p>
+        </div>
+      }
+    >
+      <ProposalPageContent />
+    </Suspense>
   );
 }
 
