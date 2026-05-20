@@ -19,8 +19,11 @@ import {
   Wrench,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { normalizeProposalTemplateV1 } from "@/lib/proposal-template-schema";
+import { useToast } from "@/components/ui/toast-center";
 import type { ProposalTemplateV1 } from "@/lib/proposal-template-schema";
 import { PROPOSAL_BLOCK_REGISTRY, type ProposalBlockId, type ProposalBlockGroup } from "@/lib/proposal-block-registry";
 import type { ProposalPresetId } from "@/lib/proposal-preset-engine";
@@ -115,24 +118,64 @@ type Props = {
 export function ProposalReviewSheet({
   open,
   onClose,
+  proposalId,
   layout,
   onLayoutChange,
   onConfirm,
 }: Props) {
+  const toast = useToast();
+  const [blocks, setBlocks] = useState(layout.blocks);
   const [openGroups, setOpenGroups] = useState<Set<ProposalBlockGroup>>(
     new Set(["intro", "technical", "commercial"])
   );
+  const [saving, setSaving] = useState(false);
 
-  const enabledCount = layout.blocks.filter((b) => b.enabled).length;
-  const totalCount = layout.blocks.length;
+  useEffect(() => {
+    setBlocks(layout.blocks.map((b) => ({ ...b })));
+  }, [layout]);
+
+  const enabledCount = blocks.filter((b) => b.enabled).length;
+  const totalCount = blocks.length;
+
+  function emit(nextBlocks: typeof blocks) {
+    setBlocks(nextBlocks);
+    onLayoutChange({ ...layout, blocks: nextBlocks });
+  }
 
   function toggleBlock(id: ProposalBlockId) {
-    onLayoutChange({
-      ...layout,
-      blocks: layout.blocks.map((b) =>
-        b.id === id ? { ...b, enabled: !b.enabled } : b
-      ),
-    });
+    emit(blocks.map((b) => (b.id === id ? { ...b, enabled: !b.enabled } : b)));
+  }
+
+  function moveBlock(id: ProposalBlockId, dir: -1 | 1) {
+    const idx = blocks.findIndex((b) => b.id === id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= blocks.length) return;
+    const next = [...blocks];
+    [next[idx], next[j]] = [next[j]!, next[idx]!];
+    emit(next);
+  }
+
+  async function persistLayout() {
+    if (!proposalId) return;
+    setSaving(true);
+    try {
+      const proposalLayout = normalizeProposalTemplateV1({ version: 1, blocks });
+      const res = await fetch(`/api/proposals/${proposalId}/layout`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proposalLayout }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error || "save_failed");
+    } catch (e) {
+      toast.push({
+        tone: "error",
+        title: "Could not save section order",
+        description: e instanceof Error ? e.message : "",
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   function toggleGroup(group: ProposalBlockGroup) {
@@ -146,8 +189,8 @@ export function ProposalReviewSheet({
 
   // Group blocks preserving layout order
   const grouped = (() => {
-    const map = new Map<ProposalBlockGroup, typeof layout.blocks>();
-    for (const b of layout.blocks) {
+    const map = new Map<ProposalBlockGroup, typeof blocks>();
+    for (const b of blocks) {
       const meta = PROPOSAL_BLOCK_REGISTRY[b.id];
       if (!meta) continue;
       const g = meta.group;
@@ -189,7 +232,7 @@ export function ProposalReviewSheet({
                 <div>
                   <p className="text-sm font-bold text-slate-900 dark:text-white">Review Proposal</p>
                   <p className="text-[11px] text-slate-500">
-                    {enabledCount} of {totalCount} sections active · tap to toggle
+                    {enabledCount} of {totalCount} sections · toggle & reorder
                   </p>
                 </div>
               </div>
@@ -277,8 +320,28 @@ export function ProposalReviewSheet({
                               return (
                                 <div
                                   key={b.id}
-                                  className="flex items-center gap-3 px-3 py-2.5"
+                                  className="flex items-center gap-2 px-3 py-2.5"
                                 >
+                                  <div className="flex flex-col gap-0.5">
+                                    <button
+                                      type="button"
+                                      className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-white/10"
+                                      disabled={blocks.findIndex((x) => x.id === b.id) === 0}
+                                      onClick={() => moveBlock(b.id, -1)}
+                                      aria-label="Move section up"
+                                    >
+                                      <ChevronUp className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-white/10"
+                                      disabled={blocks.findIndex((x) => x.id === b.id) === blocks.length - 1}
+                                      onClick={() => moveBlock(b.id, 1)}
+                                      aria-label="Move section down"
+                                    >
+                                      <ChevronDown className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
                                   <div className="min-w-0 flex-1">
                                     <p
                                       className={cn(
@@ -328,14 +391,18 @@ export function ProposalReviewSheet({
             >
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => {
-                  onConfirm?.();
-                  onClose();
+                  void (async () => {
+                    await persistLayout();
+                    onConfirm?.();
+                    onClose();
+                  })();
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 py-3.5 text-sm font-bold text-white shadow-md transition hover:from-sky-500 hover:to-indigo-500 active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 py-3.5 text-sm font-bold text-white shadow-md transition hover:from-sky-500 hover:to-indigo-500 active:scale-[0.98] disabled:opacity-70"
               >
                 <Eye className="h-4 w-4" />
-                Confirm · {enabledCount} sections active
+                {saving ? "Saving…" : `Confirm · ${enabledCount} sections active`}
               </button>
             </div>
           </motion.div>

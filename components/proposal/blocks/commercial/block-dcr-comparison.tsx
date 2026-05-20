@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Scale } from "lucide-react";
 import type { BlockRenderContext } from "@/lib/proposal-block-context";
 import { buildDcrComparison } from "@/lib/commercial-panel-catalog";
+import { buildDcrCompareFromSolar } from "@/lib/commercial-solar-engine";
 import { BlockPanel, BlockSectionTitle } from "@/components/proposal/blocks/proposal-block-utils";
 import { ProposalJourneySection } from "@/components/proposal/proposal-journey";
 
@@ -17,6 +18,10 @@ export function BlockDcrComparison({ summary, lang, darkMode, commercialConfig }
   const cfg = commercialConfig?.dcrComparison;
   if (cfg?.enabled === false) return null;
 
+  const solarCmp = commercialConfig?.solarPanels
+    ? buildDcrCompareFromSolar(commercialConfig.solarPanels)
+    : null;
+
   const brandId = cfg?.brandId ?? commercialConfig?.panel?.brandId ?? "waaree";
   const watt = cfg?.watt ?? commercialConfig?.panel?.watt ?? 540;
   const reg = commercialConfig?.panelRegistry;
@@ -24,8 +29,32 @@ export function BlockDcrComparison({ summary, lang, darkMode, commercialConfig }
   const nonId = reg?.selectedNonDcrCatalogId;
   const dcrRate = dcrId ? reg?.overrides?.[dcrId]?.ratePerWpInr : commercialConfig?.panel?.ratePerWpInr;
   const nonRate = nonId ? reg?.overrides?.[nonId]?.ratePerWpInr : undefined;
-  const cmp = buildDcrComparison(summary.systemKw, brandId, watt, dcrRate, nonRate);
+  const catalogCmp = buildDcrComparison(summary.systemKw, brandId, watt, dcrRate, nonRate);
+
+  const cmp = solarCmp
+    ? {
+        dcr: {
+          entry: { brandLabel: solarCmp.dcr.row.brand },
+          hardwareInr: solarCmp.dcr.hardwareInr,
+          ratePerWpInr: solarCmp.dcr.ratePerWpInr,
+          moduleCount: solarCmp.dcr.moduleCount,
+        },
+        nonDcr: {
+          entry: { brandLabel: solarCmp.nonDcr.row.brand },
+          hardwareInr: solarCmp.nonDcr.hardwareInr,
+          ratePerWpInr: solarCmp.nonDcr.ratePerWpInr,
+          moduleCount: solarCmp.nonDcr.moduleCount,
+        },
+        deltaInr: solarCmp.deltaInr,
+        deltaPct: solarCmp.deltaPct,
+        subsidyNote: catalogCmp?.subsidyNote ?? "",
+      }
+    : catalogCmp;
+
   if (!cmp) return null;
+
+  const brandLabel =
+    solarCmp?.dcr.row.brand ?? cmp.dcr.entry.brandLabel;
 
   return (
     <ProposalJourneySection id="dcr-comparison">
@@ -34,8 +63,8 @@ export function BlockDcrComparison({ summary, lang, darkMode, commercialConfig }
         title={isHi ? "DCR बनाम Non-DCR — लागत प्रभाव" : "DCR vs Non-DCR — Cost Impact"}
         subtitle={
           isHi
-            ? `${cmp.dcr.entry.brandLabel} ${watt}W — सब्सिडी और ALMM प्रभाव सहित`
-            : `${cmp.dcr.entry.brandLabel} ${watt}W modules — subsidy & ALMM impact included`
+            ? `${brandLabel} ${watt}W — सब्सिडी और ALMM प्रभाव सहित`
+            : `${brandLabel} ${watt}W modules — subsidy & ALMM impact included`
         }
         dark={dark}
         lang={lang}

@@ -1,7 +1,10 @@
+import { ensureCommercialPanelLines } from "@/lib/commercial-bom-panels";
 import {
-  ensureCommercialPanelLines,
-  syncCommercialConfigFromPanelLines,
-} from "@/lib/commercial-bom-panels";
+  ensureSolarPanelsInConfig,
+  solarPanelsFromLineItems,
+  syncLegacyPanelFieldsFromSolar,
+  syncSolarPanelsToLineItems,
+} from "@/lib/commercial-solar-engine";
 import {
   applyCommercialFlagsToLayout,
   defaultCommercialConfig,
@@ -59,13 +62,21 @@ export async function persistProposalDeckAfterPricingChange(proposalId: string):
   const presetId = proposal.preset_id ?? "residential_smart";
 
   if (presetId === "commercial_executive" && pricing?.line_items?.length) {
-    const lines = ensureCommercialPanelLines(
-      normalizeLineItems(pricing.line_items as unknown[]),
-      pricing.system_kw
-    );
-    const baseCfg =
+    let lines = normalizeLineItems(pricing.line_items as unknown[]);
+    let baseCfg =
       parseCommercialConfig(ppt.commercialConfig) ?? defaultCommercialConfig(pricing.system_kw);
-    const syncedCfg = syncCommercialConfigFromPanelLines(baseCfg, lines, pricing.system_kw);
+    baseCfg = ensureSolarPanelsInConfig(baseCfg, pricing.system_kw);
+
+    if (!baseCfg.solarPanels) {
+      const fromLines = solarPanelsFromLineItems(lines, pricing.system_kw);
+      if (fromLines) baseCfg = { ...baseCfg, solarPanels: fromLines };
+    }
+    if (baseCfg.solarPanels) {
+      lines = syncSolarPanelsToLineItems(baseCfg.solarPanels, lines);
+    } else {
+      lines = ensureCommercialPanelLines(lines, pricing.system_kw);
+    }
+    const syncedCfg = syncLegacyPanelFieldsFromSolar(baseCfg);
     const baseLayout = normalizeProposalTemplateV1(
       ppt.proposalLayout ?? { version: 1, blocks: [] }
     );

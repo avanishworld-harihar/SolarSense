@@ -4,6 +4,12 @@
 
 import { z } from "zod";
 import { buildDefaultScenarios } from "@/lib/commercial-capacity-scenarios";
+import { defaultSolarPanels, defaultExecutionTimeline } from "@/lib/commercial-solar-schema";
+import {
+  brandComparisonConfigSchema,
+  commercialSolarPanelsSchema,
+  executionTimelineConfigSchema,
+} from "@/lib/commercial-solar-schema";
 import type { ProposalBlockId } from "@/lib/proposal-block-registry";
 import type { OrgType } from "@/lib/org-type-defaults";
 import type { StoryMode } from "@/lib/proposal-story-copy";
@@ -88,6 +94,10 @@ export const commercialProposalConfigSchema = z.object({
   /** Free-form executive notes woven into commercial deck */
   presentationNotes: z.string().max(600).optional(),
   panelRegistry: panelRegistrySchema.optional(),
+  /** Requirement-based multi-brand DCR / Non-DCR panel configuration */
+  solarPanels: commercialSolarPanelsSchema.optional(),
+  brandComparison: brandComparisonConfigSchema.optional(),
+  executionTimeline: executionTimelineConfigSchema.optional(),
 });
 
 export type CommercialProposalConfig = z.infer<typeof commercialProposalConfigSchema>;
@@ -105,6 +115,9 @@ export function defaultCommercialConfig(
 ): CommercialProposalConfig {
   const scenarios = buildDefaultScenarios(systemKw);
   return {
+    solarPanels: defaultSolarPanels(systemKw),
+    brandComparison: { enabled: true, priorityBrandIds: ["adani", "waaree", "longi"], tier: "balanced" },
+    executionTimeline: defaultExecutionTimeline(),
     panel: { catalogId: "waaree-540-non-dcr", brandId: "waaree", watt: 540, panelType: "NON_DCR" },
     panelRegistry: {
       selectedDcrCatalogId: "waaree-540-dcr",

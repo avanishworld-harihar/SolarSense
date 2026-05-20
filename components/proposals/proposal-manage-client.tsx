@@ -5,7 +5,13 @@ import { ProposalDetailActionsSheet } from "@/components/proposals/proposal-deta
 import { ProposalDetailSection } from "@/components/proposals/proposal-detail-section";
 import { ProposalHubHeader } from "@/components/proposals/proposal-hub-header";
 import { ProposalModulesStrip } from "@/components/proposals/proposal-modules-strip";
-import { ProposalPricingConfigurator, type ProposalPricingConfiguratorLabels } from "@/components/proposals/proposal-pricing-configurator";
+import { CommercialBomWorkspace } from "@/components/commercial/bom/commercial-bom-workspace";
+import { ProposalReviewSheet } from "@/components/commercial/proposal-review-sheet";
+import type { ProposalPresetId } from "@/components/proposals/os/preset-picker";
+import {
+  ProposalPricingConfigurator,
+  type ProposalPricingConfiguratorLabels,
+} from "@/components/proposals/proposal-pricing-configurator";
 import { WorkflowLifecycleStrip } from "@/components/workflow-lifecycle-strip";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast-center";
@@ -59,6 +65,7 @@ export function ProposalManageClient({
   const [pricing, setPricing] = useState<ProposalPricingRow | null>(initialPricing);
   const [proposalStatus, setProposalStatus] = useState<ProposalStatus>(initialStatus);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     setProposalStatus(initialStatus);
@@ -356,18 +363,29 @@ export function ProposalManageClient({
         title={t("proposals_section_bom")}
         subtitle={
           presetId === "commercial_executive"
-            ? "Solar panels: configure DCR and Non-DCR modules (brand, watt, qty, technology, rate) for web proposal comparison."
+            ? "Requirement-based commercial BOM — plant kW, DCR / Non-DCR brands, scenarios, EMI, and reusable pricing."
             : t("proposals_section_bomSub")
         }
       >
-        <ProposalPricingConfigurator
-          proposalId={proposalId}
-          initial={pricing}
-          labels={configuratorLabels}
-          onSaved={onPricingSaved}
-          chrome="workspace"
-          commercialBom={presetId === "commercial_executive"}
-        />
+        {presetId === "commercial_executive" && pricing ? (
+          <CommercialBomWorkspace
+            proposalId={proposalId}
+            initialPricing={pricing}
+            pptInput={pptInput}
+            labels={configuratorLabels}
+            onPricingSaved={onPricingSaved}
+            onPptInputChange={setPptInput}
+            onOpenReview={() => setReviewOpen(true)}
+          />
+        ) : pricing ? (
+          <ProposalPricingConfigurator
+            proposalId={proposalId}
+            initial={pricing}
+            labels={configuratorLabels}
+            onSaved={onPricingSaved}
+            chrome="workspace"
+          />
+        ) : null}
       </ProposalDetailSection>
 
       <ProposalDetailSection id="sections" variant="workspace" title={t("proposals_section_modules")} subtitle={t("proposals_section_modulesSub")}>
@@ -385,6 +403,18 @@ export function ProposalManageClient({
           {t("proposals_notesPlaceholder")}
         </p>
       </ProposalDetailSection>
+
+      {presetId === "commercial_executive" ? (
+        <ProposalReviewSheet
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          proposalId={proposalId}
+          presetId={presetId as ProposalPresetId}
+          layout={proposalLayout}
+          onLayoutChange={(nextLayout) => setPptInput((prev) => ({ ...prev, proposalLayout: nextLayout }))}
+        />
+      ) : null}
     </div>
   );
 }
+
