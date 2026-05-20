@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { FloatingLabelInput } from "@/components/ui/floating-label-input";
+import { FloatingLabelNumericInput } from "@/components/ui/floating-label-input";
 import { DgHybridConfigPanel } from "@/components/commercial/dg-hybrid-config-panel";
 import { CommercialExecutionTimeline } from "@/components/commercial/bom/commercial-execution-timeline";
 import { computeDgHybridAnalysis } from "@/lib/dg-hybrid-engine";
@@ -102,40 +102,40 @@ export function CommercialControlCenter({ config, summary, onChange, onOpenRevie
         <div className="rounded-xl border border-slate-200/80 bg-white/90 p-3 dark:border-white/10 dark:bg-[#0f1419]">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">EMI settings</p>
           <div className="grid gap-2 sm:grid-cols-3">
-            <FloatingLabelInput
+            <FloatingLabelNumericInput
               label="Interest %"
-              inputMode="decimal"
-              value={String(fin.interestRatePct ?? 9.5)}
-              onChange={(e) =>
+              value={fin.interestRatePct ?? 9.5}
+              fallback={9.5}
+              onValueChange={(n) =>
                 onChange({
                   ...config,
-                  financing: { ...fin, interestRatePct: parseFloat(e.target.value) || 0 },
+                  financing: { ...fin, interestRatePct: n ?? fin.interestRatePct ?? 9.5 },
                 })
               }
               className="h-10 rounded-lg text-sm font-semibold"
             />
-            <FloatingLabelInput
+            <FloatingLabelNumericInput
               label="Down payment (₹)"
-              inputMode="decimal"
-              value={String(fin.downPaymentInr ?? 0)}
-              onChange={(e) =>
+              value={fin.downPaymentInr ?? 0}
+              onValueChange={(n) =>
                 onChange({
                   ...config,
-                  financing: { ...fin, downPaymentInr: parseFloat(e.target.value.replace(/,/g, "")) || 0 },
+                  financing: { ...fin, downPaymentInr: n ?? fin.downPaymentInr ?? 0 },
                 })
               }
               className="h-10 rounded-lg text-sm font-semibold"
             />
-            <FloatingLabelInput
+            <FloatingLabelNumericInput
               label="Tenure (years)"
-              inputMode="numeric"
-              value={String(fin.selectedTenureYears ?? 7)}
-              onChange={(e) =>
+              integer
+              value={fin.selectedTenureYears ?? 7}
+              fallback={7}
+              onValueChange={(n) =>
                 onChange({
                   ...config,
                   financing: {
                     ...fin,
-                    selectedTenureYears: parseInt(e.target.value, 10) || 7,
+                    selectedTenureYears: n ?? fin.selectedTenureYears ?? 7,
                     tenuresYears: fin.tenuresYears ?? [5, 7, 10],
                   },
                 })

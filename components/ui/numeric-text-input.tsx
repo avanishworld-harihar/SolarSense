@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FocusEvent } from "react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,6 +14,10 @@ type Props = {
   className?: string;
   placeholder?: string;
   disabled?: boolean;
+  id?: string;
+  list?: string;
+  onFocus?: (e: FocusEvent<HTMLInputElement>) => void;
+  onBlur?: (e: FocusEvent<HTMLInputElement>) => void;
   "aria-label"?: string;
 };
 
@@ -32,6 +36,10 @@ export function NumericTextInput({
   className,
   placeholder,
   disabled,
+  id,
+  list,
+  onFocus,
+  onBlur,
   "aria-label": ariaLabel,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -46,10 +54,12 @@ export function NumericTextInput({
 
   return (
     <input
+      id={id}
       type="text"
       inputMode={integer ? "numeric" : "decimal"}
       disabled={disabled}
       aria-label={ariaLabel}
+      list={list}
       placeholder={placeholderText}
       value={display}
       onChange={(e) => {
@@ -58,15 +68,17 @@ export function NumericTextInput({
         if (raw !== "" && !re.test(raw)) return;
         setDraft(raw);
       }}
-      onBlur={() => {
+      onFocus={onFocus}
+      onBlur={(e) => {
         const raw = draft ?? display;
         setDraft(null);
         if (raw === "" || raw === ".") {
           onValueChange(undefined);
-          return;
+        } else {
+          const n = integer ? parseInt(raw, 10) : parseFloat(raw);
+          onValueChange(Number.isFinite(n) ? n : undefined);
         }
-        const n = integer ? parseInt(raw, 10) : parseFloat(raw);
-        onValueChange(Number.isFinite(n) ? n : undefined);
+        onBlur?.(e);
       }}
       className={cn(className)}
     />

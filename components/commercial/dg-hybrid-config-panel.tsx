@@ -1,6 +1,6 @@
 "use client";
 
-import { FloatingLabelInput } from "@/components/ui/floating-label-input";
+import { FloatingLabelNumericInput } from "@/components/ui/floating-label-input";
 import { NumericTextInput } from "@/components/ui/numeric-text-input";
 import type { CommercialProposalConfig, DgAssumptions } from "@/lib/commercial-proposal-config";
 import { computeDgHybridAnalysis, defaultDgForSystem } from "@/lib/dg-hybrid-engine";
@@ -95,30 +95,25 @@ export function DgHybridConfigPanel({ config, systemKw, onChange }: Props) {
             className="h-10 w-full rounded-lg border border-slate-200 px-2 text-sm font-semibold dark:border-white/10"
           />
         </Field>
-        <FloatingLabelInput
+        <FloatingLabelNumericInput
           label="Monthly fuel cost (₹)"
-          inputMode="decimal"
-          value={String(dg.monthlyFuelCostInr ?? "")}
-          onChange={(e) =>
-            patch({ monthlyFuelCostInr: parseFloat(e.target.value.replace(/,/g, "")) || 0 })
-          }
+          value={dg.monthlyFuelCostInr}
+          onValueChange={(n) => patch({ monthlyFuelCostInr: n ?? dg.monthlyFuelCostInr ?? 0 })}
           className="h-10 rounded-lg text-sm font-semibold sm:col-span-2"
+          containerClassName="sm:col-span-2"
         />
-        <FloatingLabelInput
+        <FloatingLabelNumericInput
           label="Diesel ₹ / litre"
-          inputMode="decimal"
-          value={String(dg.dieselPricePerLitre ?? 95)}
-          onChange={(e) =>
-            patch({ dieselPricePerLitre: parseFloat(e.target.value) || 95 })
-          }
+          value={dg.dieselPricePerLitre ?? 95}
+          fallback={95}
+          onValueChange={(n) => patch({ dieselPricePerLitre: n ?? dg.dieselPricePerLitre ?? 95 })}
           className="h-10 rounded-lg text-sm font-semibold"
         />
-        <FloatingLabelInput
+        <FloatingLabelNumericInput
           label="Operating cost (₹ / hr)"
-          inputMode="decimal"
-          value={String(dg.operatingCostPerHourInr ?? "")}
-          onChange={(e) =>
-            patch({ operatingCostPerHourInr: parseFloat(e.target.value.replace(/,/g, "")) || 0 })
+          value={dg.operatingCostPerHourInr}
+          onValueChange={(n) =>
+            patch({ operatingCostPerHourInr: n ?? dg.operatingCostPerHourInr ?? 0 })
           }
           className="h-10 rounded-lg text-sm font-semibold"
         />

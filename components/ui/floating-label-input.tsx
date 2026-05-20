@@ -1,5 +1,6 @@
 "use client";
 
+import { NumericTextInput } from "@/components/ui/numeric-text-input";
 import { cn } from "@/lib/utils";
 import { useId, useMemo, useState, type InputHTMLAttributes, type SelectHTMLAttributes } from "react";
 
@@ -104,6 +105,67 @@ export function FloatingLabelInput({
           className
         )}
         {...props}
+      />
+    </div>
+  );
+}
+
+type FloatingNumericProps = {
+  label: string;
+  id?: string;
+  required?: boolean;
+  className?: string;
+  containerClassName?: string;
+  labelBackgroundClassName?: string;
+  value?: number;
+  fallback?: number;
+  onValueChange: (next: number | undefined) => void;
+  integer?: boolean;
+  list?: string;
+};
+
+/** Floating label + draft-friendly numeric input (commits on blur). */
+export function FloatingLabelNumericInput({
+  label,
+  id,
+  className,
+  containerClassName,
+  labelBackgroundClassName,
+  required,
+  value,
+  fallback,
+  onValueChange,
+  integer,
+  list,
+}: FloatingNumericProps) {
+  const generatedId = useId();
+  const fieldId = id ?? `fld-${generatedId}`;
+  const [focused, setFocused] = useState(false);
+  const hasValue = value !== undefined && value !== null && Number.isFinite(value);
+  const floated = focused || hasValue;
+
+  return (
+    <div className={cn("relative w-full overflow-visible", containerClassName)}>
+      <FloatingLabel
+        htmlFor={fieldId}
+        label={`${label}${required ? " *" : ""}`}
+        active={floated}
+        labelBackgroundClassName={labelBackgroundClassName}
+      />
+      <NumericTextInput
+        id={fieldId}
+        list={list}
+        integer={integer}
+        value={value}
+        fallback={fallback}
+        onValueChange={onValueChange}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        className={cn(
+          "ss-input w-full pt-4",
+          "focus:border-teal-500 focus:ring-teal-200/70 dark:focus:border-teal-400 dark:focus:ring-teal-400/30",
+          className
+        )}
       />
     </div>
   );

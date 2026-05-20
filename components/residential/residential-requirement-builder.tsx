@@ -4,6 +4,7 @@
  * Guided requirement-based residential builder — compact, homeowner-friendly.
  */
 
+import { NumericTextInput } from "@/components/ui/numeric-text-input";
 import { cn } from "@/lib/utils";
 import {
   estimateResidentialEmiInr,
@@ -145,16 +146,14 @@ export function ResidentialRequirementBuilder({ config, onChange, netCostInr, an
             onChange={(e) => patchSolar({ plantCapacityKw: parseFloat(e.target.value), moduleCountOverride: undefined })}
             className="flex-1 accent-emerald-600"
           />
-          <input
-            type="number"
-            min={0.5}
-            max={50}
-            step={0.5}
+          <NumericTextInput
             value={solar.plantCapacityKw}
-            onChange={(e) =>
-              patchSolar({ plantCapacityKw: Math.max(0.5, parseFloat(e.target.value) || 1), moduleCountOverride: undefined })
-            }
+            onValueChange={(n) => {
+              const kw = n != null && n > 0 ? Math.max(0.5, Math.min(50, n)) : solar.plantCapacityKw;
+              patchSolar({ plantCapacityKw: kw, moduleCountOverride: undefined });
+            }}
             className="w-20 rounded-xl border border-slate-200 bg-white px-2 py-2 text-center text-sm font-bold tabular-nums dark:border-white/15 dark:bg-white/5"
+            aria-label="System size kW"
           />
         </div>
         <p className="text-[11px] text-slate-500">
@@ -196,6 +195,23 @@ export function ResidentialRequirementBuilder({ config, onChange, netCostInr, an
               {w}W
             </Chip>
           ))}
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="text-[10px] font-semibold text-slate-500">Custom</span>
+          <NumericTextInput
+            integer
+            value={solar.watt}
+            fallback={540}
+            onValueChange={(n) =>
+              patchSolar({
+                watt: n != null && n >= 100 ? n : solar.watt,
+                moduleCountOverride: undefined,
+              })
+            }
+            className="h-9 w-24 rounded-lg border border-slate-200 px-2 text-center text-sm font-bold tabular-nums dark:border-white/15 dark:bg-white/5"
+            aria-label="Custom panel wattage"
+          />
+          <span className="text-[10px] text-slate-500">Wp</span>
         </div>
       </section>
 
@@ -246,16 +262,19 @@ export function ResidentialRequirementBuilder({ config, onChange, netCostInr, an
           <AnimatePresence>
             {config.battery?.required ? (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} className="mt-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={30}
-                  placeholder="kWh capacity"
+                <NumericTextInput
                   value={config.battery?.capacityKwh ?? 5}
-                  onChange={(e) =>
-                    patch({ battery: { required: true, capacityKwh: parseFloat(e.target.value) || 5 } })
+                  fallback={5}
+                  onValueChange={(n) =>
+                    patch({
+                      battery: {
+                        required: true,
+                        capacityKwh: n != null && n > 0 ? Math.min(30, n) : config.battery?.capacityKwh ?? 5,
+                      },
+                    })
                   }
                   className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm dark:border-white/15 dark:bg-white/5"
+                  aria-label="Battery capacity kWh"
                 />
               </motion.div>
             ) : null}
@@ -296,14 +315,14 @@ export function ResidentialRequirementBuilder({ config, onChange, netCostInr, an
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <div>
               <p className="text-[10px] font-bold uppercase text-amber-800/80">Interest %</p>
-              <input
-                type="number"
-                step={0.1}
+              <NumericTextInput
                 value={fin.interestRatePct ?? 10.5}
-                onChange={(e) =>
-                  patch({ financing: { ...fin, interestRatePct: parseFloat(e.target.value) || 10.5 } })
+                fallback={10.5}
+                onValueChange={(n) =>
+                  patch({ financing: { ...fin, interestRatePct: n ?? fin.interestRatePct ?? 10.5 } })
                 }
                 className="mt-1 w-full rounded-lg border border-amber-200 bg-white px-2 py-1.5 text-sm font-semibold dark:border-white/15 dark:bg-white/5"
+                aria-label="Interest rate percent"
               />
             </div>
             <div>

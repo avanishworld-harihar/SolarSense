@@ -1,7 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
+import {
+  FloatingLabelInput,
+  FloatingLabelNumericInput,
+  FloatingLabelSelect,
+} from "@/components/ui/floating-label-input";
 import { NumericTextInput } from "@/components/ui/numeric-text-input";
 import { PANEL_TECHNOLOGY_OPTIONS } from "@/lib/commercial-panel-catalog";
 import { COMMERCIAL_PANEL_WATT_PRESETS } from "@/lib/commercial-bom-panels";
@@ -18,7 +22,7 @@ import {
 } from "@/lib/commercial-solar-schema";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Leaf, Plus, Star, Sun, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 const inr = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
 
@@ -28,16 +32,6 @@ type Props = {
 };
 
 export function CommercialSolarPanelSection({ solar, onChange }: Props) {
-  const [plantKw, setPlantKw] = useState(String(solar.plantCapacityKw));
-
-  function patchPlantKw(raw: string) {
-    setPlantKw(raw);
-    const n = parseFloat(raw.replace(/,/g, ""));
-    if (Number.isFinite(n) && n > 0) {
-      onChange({ ...solar, plantCapacityKw: Math.round(n * 100) / 100 });
-    }
-  }
-
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm dark:border-white/10 dark:from-[#0c1017] dark:to-[#0a0e14] sm:flex-row sm:items-end sm:justify-between">
@@ -50,11 +44,14 @@ export function CommercialSolarPanelSection({ solar, onChange }: Props) {
           </p>
         </div>
         <div className="w-full max-w-[9rem] sm:shrink-0">
-          <FloatingLabelInput
+          <FloatingLabelNumericInput
             label="Plant capacity (kW)"
-            inputMode="decimal"
-            value={plantKw}
-            onChange={(e) => patchPlantKw(e.target.value)}
+            value={solar.plantCapacityKw}
+            onValueChange={(n) => {
+              if (n != null && n > 0) {
+                onChange({ ...solar, plantCapacityKw: Math.round(n * 100) / 100 });
+              }
+            }}
             className="h-11 rounded-xl font-semibold tabular-nums"
           />
         </div>
@@ -263,15 +260,12 @@ function BrandRowCard({
           onChange={(e) => onPatch({ brand: e.target.value })}
           className="h-10 rounded-lg text-sm font-semibold"
         />
-        <FloatingLabelInput
+        <FloatingLabelNumericInput
           label="Watt (Wp)"
+          integer
           list={`w-${row.id}`}
-          inputMode="numeric"
-          value={String(row.watt)}
-          onChange={(e) => {
-            const w = Math.round(Number(e.target.value) || 0);
-            onPatch({ watt: w > 0 ? w : row.watt });
-          }}
+          value={row.watt}
+          onValueChange={(n) => onPatch({ watt: n != null && n > 0 ? n : row.watt })}
           className="h-10 rounded-lg text-sm font-semibold tabular-nums"
         />
         <datalist id={`w-${row.id}`}>
@@ -292,11 +286,12 @@ function BrandRowCard({
             </option>
           ))}
         </FloatingLabelSelect>
-        <FloatingLabelInput
+        <FloatingLabelNumericInput
           label="Rate (₹/Wp)"
-          inputMode="decimal"
-          value={String(row.ratePerWpInr)}
-          onChange={(e) => onPatch({ ratePerWpInr: parseFloat(e.target.value.replace(/,/g, "")) || 0 })}
+          value={row.ratePerWpInr}
+          onValueChange={(n) =>
+            onPatch({ ratePerWpInr: n != null && n >= 0 ? n : row.ratePerWpInr })
+          }
           className="h-10 rounded-lg text-sm font-semibold tabular-nums"
         />
       </div>

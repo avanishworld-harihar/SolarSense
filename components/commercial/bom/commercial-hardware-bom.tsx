@@ -1,7 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
+import {
+  FloatingLabelInput,
+  FloatingLabelNumericInput,
+  FloatingLabelSelect,
+} from "@/components/ui/floating-label-input";
 import { isTrackedCommercialPanelLine } from "@/lib/commercial-bom-panels";
 import { PRICING_LINE_KINDS, type PricingLineKind } from "@/lib/pricing-line-kinds";
 import { defaultCatalogCategoryForLineKind } from "@/lib/epc-component-catalog";
@@ -143,18 +147,20 @@ export function CommercialHardwareBom({ lines, onChange, labels }: Props) {
                   onChange={(e) => updateLine(L.id, { brand: e.target.value })}
                   className="h-9 text-[11px]"
                 />
-                <FloatingLabelInput
+                <FloatingLabelNumericInput
                   label="Qty"
-                  inputMode="decimal"
-                  value={String(L.quantity)}
-                  onChange={(e) => updateLine(L.id, { quantity: parseFloat(e.target.value) || 0 })}
+                  value={L.quantity}
+                  onValueChange={(n) =>
+                    updateLine(L.id, { quantity: n != null && n >= 0 ? n : L.quantity })
+                  }
                   className="h-9 text-[11px] font-bold tabular-nums"
                 />
-                <FloatingLabelInput
+                <FloatingLabelNumericInput
                   label="Rate ₹"
-                  inputMode="decimal"
-                  value={String(L.unit_rate_inr)}
-                  onChange={(e) => updateLine(L.id, { unit_rate_inr: parseFloat(e.target.value) || 0 })}
+                  value={L.unit_rate_inr}
+                  onValueChange={(n) =>
+                    updateLine(L.id, { unit_rate_inr: n != null && n >= 0 ? n : L.unit_rate_inr })
+                  }
                   className="h-9 text-[11px] font-bold tabular-nums"
                 />
                 <div className="flex h-9 items-center justify-end sm:col-span-2 lg:col-span-1">

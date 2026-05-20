@@ -1,6 +1,6 @@
 "use client";
 
-import { FloatingLabelInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
+import { FloatingLabelNumericInput, FloatingLabelSelect } from "@/components/ui/floating-label-input";
 import { PANEL_TECHNOLOGY_OPTIONS } from "@/lib/commercial-panel-catalog";
 import { COMMERCIAL_PANEL_WATT_PRESETS, isTrackedCommercialPanelLine } from "@/lib/commercial-bom-panels";
 import type { PricingLineItem } from "@/lib/proposal-pricing-lines";
@@ -45,15 +45,12 @@ function WattField({
 }) {
   return (
     <>
-      <FloatingLabelInput
+      <FloatingLabelNumericInput
         label={label}
+        integer
         list={`watt-presets-${line.id}`}
-        inputMode="numeric"
-        value={line.watt != null ? String(line.watt) : ""}
-        onChange={(e) => {
-          const w = Math.round(Number(e.target.value.replace(/,/g, "")) || 0);
-          onPatch({ watt: w > 0 ? w : undefined });
-        }}
+        value={line.watt}
+        onValueChange={(n) => onPatch({ watt: n != null && n > 0 ? n : undefined })}
         className={className}
       />
       <datalist id={`watt-presets-${line.id}`}>
