@@ -2,8 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { FloatingLabelInput } from "@/components/ui/floating-label-input";
-import { NumericTextInput } from "@/components/ui/numeric-text-input";
+import { DgHybridConfigPanel } from "@/components/commercial/dg-hybrid-config-panel";
 import { CommercialExecutionTimeline } from "@/components/commercial/bom/commercial-execution-timeline";
+import { computeDgHybridAnalysis } from "@/lib/dg-hybrid-engine";
 import { WorkspaceCapacityScenariosModule } from "@/components/workspace/commercial/workspace-capacity-scenarios-module";
 import { defaultExecutionTimeline } from "@/lib/commercial-solar-schema";
 import { buildDcrCompareFromSolar } from "@/lib/commercial-solar-engine";
@@ -33,6 +34,7 @@ type Props = {
 export function CommercialControlCenter({ config, summary, onChange, onOpenReview }: Props) {
   const fin = config.financing ?? { enabled: true };
   const dg = config.dgAssumptions ?? { enabled: false };
+  const dgAnalysis = computeDgHybridAnalysis(dg, config.solarPanels?.plantCapacityKw ?? summary.systemKw);
   const dcrCmp = config.solarPanels ? buildDcrCompareFromSolar(config.solarPanels) : null;
   const emiTable = buildCommercialEmiTable(summary.netCost, fin);
   const selectedEmi = selectedCommercialEmi(summary.netCost, fin);
@@ -83,8 +85,12 @@ export function CommercialControlCenter({ config, summary, onChange, onOpenRevie
         />
         <ToggleCard
           icon={Fuel}
-          title="DG assumptions"
-          subtitle="Diesel backup narrative in deck"
+          title="Include DG Hybrid Analysis"
+          subtitle={
+            dg.enabled
+              ? `Save ${inr(dgAnalysis.monthlyFuelSavingsInr)}/mo · −${dgAnalysis.runtimeReductionPct}% runtime`
+              : "Solar + DG architecture, savings & scenarios"
+          }
           checked={dg.enabled === true}
           onChange={(on) =>
             onChange({ ...config, dgAssumptions: { ...dg, enabled: on } })
@@ -163,27 +169,11 @@ export function CommercialControlCenter({ config, summary, onChange, onOpenRevie
       ) : null}
 
       {dg.enabled ? (
-        <div className="rounded-xl border border-slate-200/80 bg-white/90 p-3 dark:border-white/10 dark:bg-[#0f1419]">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">DG assumptions</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <NumericTextInput
-              value={dg.hoursPerDay}
-              onValueChange={(n) =>
-                onChange({ ...config, dgAssumptions: { ...dg, hoursPerDay: n ?? 0 } })
-              }
-              placeholder="Hours / day"
-              className="h-10 rounded-lg border border-slate-200 px-2 text-sm font-semibold dark:border-white/10"
-            />
-            <NumericTextInput
-              value={dg.monthlyFuelCostInr}
-              onValueChange={(n) =>
-                onChange({ ...config, dgAssumptions: { ...dg, monthlyFuelCostInr: n ?? 0 } })
-              }
-              placeholder="Monthly fuel ₹"
-              className="h-10 rounded-lg border border-slate-200 px-2 text-sm font-semibold dark:border-white/10"
-            />
-          </div>
-        </div>
+        <DgHybridConfigPanel
+          config={config}
+          systemKw={config.solarPanels?.plantCapacityKw ?? summary.systemKw}
+          onChange={onChange}
+        />
       ) : null}
 
       <CommercialExecutionTimeline

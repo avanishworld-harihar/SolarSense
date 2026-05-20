@@ -56,12 +56,28 @@ export const commercialFinancingConfigSchema = z.object({
   lenderLabel: z.string().max(120).optional(),
 });
 
-/** DG / diesel backup assumptions for executive storytelling (hotel, factory, etc.) */
+export const dgFuelTypeSchema = z.enum(["diesel", "natural_gas", "dual_fuel"]);
+
+/** DG Hybrid — diesel backup + solar offset intelligence for C&I proposals */
 export const dgAssumptionsSchema = z.object({
+  /** Master toggle: Include DG Hybrid Analysis */
   enabled: z.boolean().default(false),
+  /** @deprecated use runtimeHoursPerDay — kept for legacy rows */
   hoursPerDay: z.number().min(0).max(24).optional(),
+  runtimeHoursPerDay: z.number().min(0).max(24).optional(),
   monthlyFuelCostInr: z.number().min(0).optional(),
+  capacityKva: z.number().min(0).max(50_000).optional(),
+  fuelType: dgFuelTypeSchema.optional(),
+  operatingCostPerHourInr: z.number().min(0).optional(),
+  fuelConsumptionLph: z.number().min(0).max(10_000).optional(),
+  peakLoadKw: z.number().min(0).max(50_000).optional(),
+  criticalLoadKw: z.number().min(0).max(50_000).optional(),
+  dieselPricePerLitre: z.number().min(0).max(500).optional(),
+  showArchitectureDiagram: z.boolean().optional(),
+  showOperationScenarios: z.boolean().optional(),
 });
+
+export type DgAssumptions = z.infer<typeof dgAssumptionsSchema>;
 
 /** Per-catalog overrides in the pricing intelligence registry */
 export const panelRegistryOverrideSchema = z.object({
@@ -162,6 +178,7 @@ export function applyCommercialFlagsToLayout(
     dcr_comparison_card: config.dcrComparison?.enabled !== false,
     capacity_scenarios_card: config.capacityScenarios?.enabled !== false,
     commercial_financing_card: config.financing?.enabled === true,
+    dg_hybrid_analysis_card: config.dgAssumptions?.enabled === true,
   };
 
   return {

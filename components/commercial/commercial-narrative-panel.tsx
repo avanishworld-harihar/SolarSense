@@ -2,14 +2,13 @@
 
 /**
  * Proposal builder — executive narrative & presentation orchestration only.
- * Pricing, scenarios, and financing live in Open Workspace tabs.
+ * Pricing, scenarios, DG hybrid, and financing live in Proposals → BOM workspace.
  */
 
 import {
   BookOpen,
   Building2,
   Eye,
-  Fuel,
   LayoutGrid,
   Scale,
   Sparkles,
@@ -20,7 +19,6 @@ import {
 import type { CommercialProposalConfig } from "@/lib/commercial-proposal-config";
 import { getOrgType } from "@/lib/org-type-defaults";
 import type { StoryMode } from "@/lib/proposal-story-copy";
-import { NumericTextInput } from "@/components/ui/numeric-text-input";
 import { cn } from "@/lib/utils";
 
 const STORY_MODES: { id: StoryMode; label: string; hint: string }[] = [
@@ -60,7 +58,6 @@ export function CommercialNarrativePanel({
 }: Props) {
   const orgSpec = config.orgType ? getOrgType(config.orgType) : null;
   const storyMode = config.storyMode ?? "executive_pitch";
-  const dg = config.dgAssumptions;
   const dcrOn = config.dcrComparison?.enabled !== false;
   const scenariosOn = config.capacityScenarios?.enabled !== false;
   const financingOn = config.financing?.enabled === true;
@@ -120,58 +117,20 @@ export function CommercialNarrativePanel({
         </div>
       </div>
 
-      <div className="mx-4 rounded-xl border border-amber-100 bg-amber-50/50 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Fuel className="h-4 w-4 text-amber-600" />
-            <div>
-              <p className="text-xs font-bold text-slate-900">DG / diesel backup context</p>
-              <p className="text-[10px] text-slate-500">Hotel, factory and critical-load profiles</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={dg?.enabled === true}
-            onClick={() =>
-              update({
-                dgAssumptions: {
-                  ...dg,
-                  enabled: !dg?.enabled,
-                  hoursPerDay: dg?.hoursPerDay ?? 4,
-                },
-              })
-            }
-            className="focus:outline-none"
+      <div className="mx-4 rounded-xl border border-rose-100/80 bg-rose-50/40 px-3 py-2.5">
+        <p className="text-xs font-bold text-slate-900">Solar + DG Hybrid</p>
+        <p className="mt-1 text-[10px] leading-snug text-slate-600">
+          Configure and toggle DG analysis only in Proposals → BOM → Control center (
+          <strong>Include DG Hybrid Analysis</strong>). One section in the proposal — replaces the legacy hotel-only DG story.
+        </p>
+        {workspaceHref ? (
+          <a
+            href={`${workspaceHref}#bom`}
+            className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 underline"
           >
-            <Toggle checked={dg?.enabled === true} />
-          </button>
-        </div>
-        {dg?.enabled ? (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">DG hours / day</label>
-              <NumericTextInput
-                value={dg.hoursPerDay}
-                fallback={4}
-                onValueChange={(v) => update({ dgAssumptions: { ...dg, enabled: true, hoursPerDay: v } })}
-                className="w-full rounded-lg border border-amber-200 bg-white px-2 py-1.5 text-sm"
-                aria-label="DG hours per day"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] font-semibold uppercase text-slate-500">Monthly fuel (INR)</label>
-              <NumericTextInput
-                integer
-                value={dg.monthlyFuelCostInr}
-                onValueChange={(v) =>
-                  update({ dgAssumptions: { ...dg, enabled: true, monthlyFuelCostInr: v } })
-                }
-                className="w-full rounded-lg border border-amber-200 bg-white px-2 py-1.5 text-sm"
-                aria-label="Monthly diesel fuel cost"
-              />
-            </div>
-          </div>
+            Open BOM workspace
+            <ExternalLink className="h-3 w-3" />
+          </a>
         ) : null}
       </div>
 
@@ -274,7 +233,7 @@ export function CommercialNarrativePanel({
       </div>
 
       <p className="px-4 pb-3 text-[10px] text-slate-400">
-        Panel registry, capacity scenarios and financing are configured in Open Workspace after save.
+        Panel registry, capacity scenarios, DG hybrid, and financing are configured in Proposals → BOM after save.
       </p>
     </div>
   );

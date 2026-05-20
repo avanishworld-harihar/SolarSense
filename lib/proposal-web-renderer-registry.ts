@@ -53,7 +53,8 @@ export type BlockRenderKey =
   | "brand_comparison"
   | "dcr_comparison"
   | "capacity_scenarios"
-  | "commercial_financing";
+  | "commercial_financing"
+  | "dg_hybrid";
 
 export type WebBlockMeta = {
   /** Value for `data-page` attribute on the `.proposal-page` wrapper div. */
@@ -251,6 +252,13 @@ export const WEB_RENDERER_REGISTRY: Partial<Record<ProposalBlockId, WebBlockMeta
     bridgeKey: "afterPay",
     eligibility: commercialOnly,
     renderKey: "commercial_financing",
+  },
+
+  dg_hybrid_analysis_card: {
+    pageDataAttr: "dg-hybrid",
+    bridgeKey: "afterRequirement",
+    eligibility: commercialOnly,
+    renderKey: "dg_hybrid",
   },
 };
 

@@ -89,6 +89,7 @@ const BLOCK_DISPLAY_LABELS: Partial<Record<ProposalBlockId, string>> = {
   dcr_comparison_card: "DCR vs Non-DCR",
   capacity_scenarios_card: "Capacity Scenarios",
   commercial_financing_card: "Financing / EMI",
+  dg_hybrid_analysis_card: "DG Hybrid Analysis",
 };
 
 const BLOCK_HINTS: Partial<Record<ProposalBlockId, string>> = {
@@ -97,6 +98,7 @@ const BLOCK_HINTS: Partial<Record<ProposalBlockId, string>> = {
   dcr_comparison_card: "Side-by-side subsidy cost table",
   capacity_scenarios_card: "50/60/70 kW comparison cards",
   commercial_financing_card: "EMI table with tenures",
+  dg_hybrid_analysis_card: "Architecture diagram, savings KPIs, operation scenarios",
   brand_comparison_card: "Panel & inverter brand specs",
   payback_analysis: "NPV / IRR cashflow table",
 };

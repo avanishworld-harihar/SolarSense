@@ -80,6 +80,7 @@ import { BrandComparisonCard } from "@/components/proposals/blocks/brand-compari
 import { BlockDcrComparison } from "@/components/proposal/blocks/commercial/block-dcr-comparison";
 import { BlockCapacityScenarios } from "@/components/proposal/blocks/commercial/block-capacity-scenarios";
 import { BlockCommercialFinancing } from "@/components/proposal/blocks/commercial/block-commercial-financing";
+import { BlockDgHybrid } from "@/components/proposal/blocks/commercial/block-dg-hybrid";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -288,6 +289,16 @@ export function renderBlockByKey(
     case "commercial_financing":
       return (
         <BlockCommercialFinancing
+          summary={summary}
+          lang={lang}
+          darkMode={darkMode}
+          commercialConfig={ctx.commercialConfig}
+        />
+      );
+
+    case "dg_hybrid":
+      return (
+        <BlockDgHybrid
           summary={summary}
           lang={lang}
           darkMode={darkMode}

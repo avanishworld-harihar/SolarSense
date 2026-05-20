@@ -130,6 +130,7 @@ export const PROPOSAL_PRESET_REGISTRY: Record<ProposalPresetId, ProposalPreset> 
       "customer_documents_required",
       "brand_comparison_card",
       "commercial_financing_card",
+      "dg_hybrid_analysis_card",
       "roi_savings",
     ],
   },

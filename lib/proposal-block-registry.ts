@@ -39,6 +39,8 @@ export const PROPOSAL_BLOCK_IDS = [
   "capacity_scenarios_card",
   /** C&I — EMI / financing scenarios */
   "commercial_financing_card",
+  /** C&I — Solar + DG hybrid architecture, savings, operation scenarios */
+  "dg_hybrid_analysis_card",
 ] as const;
 
 export type ProposalBlockId = (typeof PROPOSAL_BLOCK_IDS)[number];
@@ -263,6 +265,14 @@ export const PROPOSAL_BLOCK_REGISTRY: Record<ProposalBlockId, ProposalBlockMeta>
     defaultEnabled: false,
     preset_affinity: ["commercial_executive"],
   },
+
+  dg_hybrid_analysis_card: {
+    id: "dg_hybrid_analysis_card",
+    labelKey: "proposal_block_dg_hybrid",
+    group: "technical",
+    defaultEnabled: false,
+    preset_affinity: ["commercial_executive"],
+  },
 };
 
 /** Default narrative order used when no preset is active. Maintains backward compatibility. */
@@ -287,4 +297,5 @@ export const DEFAULT_PROPOSAL_BLOCK_ORDER: ProposalBlockId[] = [
   "dcr_comparison_card",
   "capacity_scenarios_card",
   "commercial_financing_card",
+  "dg_hybrid_analysis_card",
 ];
