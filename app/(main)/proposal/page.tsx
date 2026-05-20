@@ -127,8 +127,8 @@ function billInrFromParsed(v: number | string | null | undefined): number | unde
  */
 function truncateConnectionType(raw: string): string {
   if (!raw) return "";
-  // Remove " - " and anything after it (AI often appends " - Low Tension / Commercialâ€¦")
-  const cleaned = raw.replace(/\s*[-â€“]\s+(low tension|high tension|commercial|domestic|industrial|lt|ht).*/i, "").trim();
+  // Remove " - " and anything after it (AI often appends " - Low Tension / Commercial…")
+  const cleaned = raw.replace(/\s*[-–]\s+(low tension|high tension|commercial|domestic|industrial|lt|ht).*/i, "").trim();
   return cleaned.slice(0, 40).trim();
 }
 
@@ -149,7 +149,7 @@ function parseManualContractKva(s: string): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
-/** MP smart billing â€” bill OCR cross-checks forwarded to the PPT / proposal API. */
+/** MP smart billing — bill OCR cross-checks forwarded to the PPT / proposal API. */
 function buildMpSmartBillingApiPayload(manual: ManualProposalCustomer, latestBill: ParsedBillShape | null, previousBill: ParsedBillShape | null) {
   const ref = latestBill ?? previousBill;
   const purpose =
@@ -238,7 +238,7 @@ function saveSession(snap: SessionSnap) {
   try {
     sessionStorage.setItem(SESSION_STATE_KEY, JSON.stringify(snap));
   } catch {
-    /* quota exceeded or private mode â€” ignore */
+    /* quota exceeded or private mode — ignore */
   }
 }
 
@@ -272,7 +272,7 @@ function ProposalPageContent() {
   const [isWorkspaceBusy, setIsWorkspaceBusy] = useState(false);
   const [latestWebProposalUrl, setLatestWebProposalUrl] = useState<string | null>(null);
   const [draftProposalId, setDraftProposalId] = useState<string | null>(null);
-  // Proposal Builder Settings â€” language + EMI only (logo, bank, AMC, site photos live in More > Company Profile).
+  // Proposal Builder Settings — language + EMI only (logo, bank, AMC, site photos live in More > Company Profile).
   const [proposalLang, setProposalLang] = useState<"en" | "hi">("en");
   const [financeRatePct, setFinanceRatePct] = useState(7);
   /** Set when a walk-in lead was auto-created during the last generate (for CRM deep-link). */
@@ -288,8 +288,8 @@ function ProposalPageContent() {
   const [learnedBillProfiles, setLearnedBillProfiles] = useState<Record<string, LearnedBillProfile>>({});
 
   // â”€â”€ URL prefill (Wave 2 P5) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Read ?preset=â€¦&orgType=â€¦&kw=â€¦&lang=â€¦&story=â€¦ on first render only.
-  // useSearchParams() is safe here â€” the page is already a client component.
+  // Read ?preset=…&orgType=…&kw=…&lang=…&story=… on first render only.
+  // useSearchParams() is safe here — the page is already a client component.
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlPrefill = useMemo(
@@ -308,7 +308,7 @@ function ProposalPageContent() {
   const [showReviewSheet, setShowReviewSheet] = useState(false);
   const [commercialConfig, setCommercialConfig] = useState<CommercialProposalConfig | null>(null);
   const [proposalLayout, setProposalLayout] = useState<ProposalTemplateV1 | null>(null);
-  // Commercial input mode â€” "bill" uses existing upload flow; "requirement" shows simple form
+  // Commercial input mode — "bill" uses existing upload flow; "requirement" shows simple form
   const [commercialInputMode, setCommercialInputMode] = useState<"bill" | "requirement">("bill");
   const [residentialInputMode, setResidentialInputMode] = useState<ResidentialInputMode>(
     urlPrefill.inputMode === "requirement" ? "requirement" : "bill"
@@ -379,7 +379,7 @@ function ProposalPageContent() {
     localStorage.setItem(LEARNED_BILL_PROFILE_KEY, JSON.stringify(learnedBillProfiles));
   }, [learnedBillProfiles]);
 
-  // Persist session across tab switches â€” debounced so typing does not freeze the UI.
+  // Persist session across tab switches — debounced so typing does not freeze the UI.
   useEffect(() => {
     const timer = window.setTimeout(() => {
       saveSession({
@@ -579,7 +579,7 @@ function ProposalPageContent() {
   /**
    * Deep-link auto-select: `/proposal?leadId=<id>` lands here from the CRM
    * "Send proposal" CTA. Declared here so `customers` is in scope (it is a
-   * `const` derived from SWR data above â€” referencing it earlier causes a
+   * `const` derived from SWR data above — referencing it earlier causes a
    * TypeScript "used before declaration" error).
    */
   const deepLinkLeadIdRef = useRef<string | null>(null);
@@ -776,7 +776,7 @@ function ProposalPageContent() {
       return;
     }
 
-    // If sessionStorage already had a snapshot, session data takes priority â€”
+    // If sessionStorage already had a snapshot, session data takes priority —
     // skip server overwrite to prevent stale server data clobbering fresher local state.
     if (hadSessionOnMountRef.current) {
       setHydratedFromServer(true);
@@ -798,7 +798,7 @@ function ProposalPageContent() {
     }
 
     if (calc?.manualSnapshot) {
-      // Merge only empty fields â€” never overwrite data the user has already typed.
+      // Merge only empty fields — never overwrite data the user has already typed.
       setManual((prev) => {
         const snap = calc.manualSnapshot as Partial<ManualProposalCustomer>;
         const merged: ManualProposalCustomer = { ...prev };
@@ -837,7 +837,7 @@ function ProposalPageContent() {
       result,
       stateForSizing: stateForSizing || undefined,
       discom: manual.discom.trim() || undefined,
-      tariffLabel: `${effectiveTariffContext.discomLabel} â€¢ ${effectiveTariffContext.source}`,
+      tariffLabel: `${effectiveTariffContext.discomLabel} • ${effectiveTariffContext.source}`,
       manualSnapshot: manualSnapshot(manual),
       latestBill,
       previousBill: additionalBills[0] ?? null
@@ -919,7 +919,7 @@ function ProposalPageContent() {
             ? "Local PDF Parser"
             : "Manual Verify";
       const seconds = scanDurationMs > 0 ? (scanDurationMs / 1000).toFixed(1) : null;
-      setScanTimingBadge(seconds ? `${modelLabel} â€¢ ${seconds}s` : modelLabel);
+      setScanTimingBadge(seconds ? `${modelLabel} • ${seconds}s` : modelLabel);
       if (analysisMessages.length > 0) {
         const joined = analysisMessages.join(" ");
         const withScannerNote =
@@ -934,7 +934,7 @@ function ProposalPageContent() {
 
       const data = payload.data as ParsedBillShape;
       // Build parsedUnits with smart priority:
-      //   1. History fills histBase (from consumption_history â€” most reliable for past months).
+      //   1. History fills histBase (from consumption_history — most reliable for past months).
       //   2. data.months: only the CURRENT bill month overwrites; other months only fill empties.
       const histUnits = buildUnitsFromConsumptionHistory(data);
       const histBase = emptyMonthlyUnits();
@@ -1022,13 +1022,13 @@ function ProposalPageContent() {
 
       setMonthlyUnits((prev) => {
         const base = slot === "latest" ? emptyMonthlyUnits() : prev;
-        // History fills first (lower priority) â€” only for empty slots.
+        // History fills first (lower priority) — only for empty slots.
         const histU = buildUnitsFromConsumptionHistory(data);
         for (const k of MONTH_KEYS) { if (histU[k] && !base[k]) base[k] = histU[k] as number; }
 
         // Smart merge from data.months:
-        //   â€¢ Current bill month key â†’ always trust the AI/safety-net metered value.
-        //   â€¢ All other months (history) â†’ only fill if slot is STILL EMPTY.
+        //   • Current bill month key → always trust the AI/safety-net metered value.
+        //   • All other months (history) → only fill if slot is STILL EMPTY.
         //     This prevents the AI from overwriting a history-derived correct value
         //     with a neighbouring-month value it confused (e.g., putting DEC's 194
         //     into the NOV slot when processing the DEC-2025 bill).
@@ -1406,10 +1406,10 @@ function ProposalPageContent() {
         `SOL.52 Solar Snapshot`,
         `Customer: ${customer}`,
         `System size: ${effectiveResult.solarKw} kW`,
-        `Net investment: â‚¹${effectiveResult.netCost.toLocaleString("en-IN")}`,
-        `Annual saving: â‚¹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
+        `Net investment: ₹${effectiveResult.netCost.toLocaleString("en-IN")}`,
+        `Annual saving: ₹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
         `Payback: ${effectiveResult.paybackDisplay}`,
-        `25Y profit estimate: â‚¹${effectiveResult.profit25yr.toLocaleString("en-IN")}`
+        `25Y profit estimate: ₹${effectiveResult.profit25yr.toLocaleString("en-IN")}`
       ].join("\n");
       await navigator.clipboard.writeText(text);
       toast.success("Summary copied", "WhatsApp-ready proposal summary copied.");
@@ -1579,9 +1579,9 @@ function ProposalPageContent() {
       `Namaste ${customer} ðŸŒž`,
       ``,
       `${effectiveResult.solarKw} kW solar proposal aapke liye taiyaar hai:`,
-      `â€¢ Net cost: â‚¹${effectiveResult.netCost.toLocaleString("en-IN")}`,
-      `â€¢ Annual saving: â‚¹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
-      `â€¢ Payback: ${effectiveResult.paybackDisplay}`,
+      `• Net cost: ₹${effectiveResult.netCost.toLocaleString("en-IN")}`,
+      `• Annual saving: ₹${effectiveResult.annualSavings.toLocaleString("en-IN")}`,
+      `• Payback: ${effectiveResult.paybackDisplay}`,
       ``,
       `Full interactive proposal: ${latestWebProposalUrl}`
     ].join("\n");
@@ -1596,7 +1596,7 @@ function ProposalPageContent() {
 
   return (
     <>
-      {/* Proposal OS â€” Preset Picker overlay */}
+      {/* Proposal OS — Preset Picker overlay */}
       {showPresetPicker && (
         <ProposalPresetPicker
           currentPresetId={osPresetId}
@@ -1650,10 +1650,10 @@ function ProposalPageContent() {
       ) : null}
 
       {/*
-       * Mobile floating generate FAB â€” visible below lg when customer name is filled.
+       * Mobile floating generate FAB — visible below lg when customer name is filled.
        * Sits above the bottom nav (bottom-[5.5rem] matches the nav height + safe area).
        * Hidden on lg+ since the LivePreviewPanel already has a visible generate button.
-       * z-[90] â€” below shell topbar (z-100) and modals (z-10050+) but above page content.
+       * z-[90] — below shell topbar (z-100) and modals (z-10050+) but above page content.
        */}
       {osCustomerName && !showPresetPicker && !showBlockPlaylist && (
         <div className="fixed bottom-[5.5rem] right-4 z-[90] lg:hidden">
@@ -1677,13 +1677,13 @@ function ProposalPageContent() {
             ) : (
               <Globe className="h-4 w-4 shrink-0" aria-hidden />
             )}
-            <span>{isWebProposalBusy ? "Generatingâ€¦" : "Generate"}</span>
+            <span>{isWebProposalBusy ? "Generating…" : "Generate"}</span>
           </button>
         </div>
       )}
 
       <WorkspacePage tone="workflow" stagger={false}>
-        {/* Proposal OS â€” branded header */}
+        {/* Proposal OS — branded header */}
         <ProposalOSHeader
           presetId={osPresetId}
           onChangePreset={() => setShowPresetPicker(true)}
@@ -1700,7 +1700,7 @@ function ProposalPageContent() {
               completedStages={osCompletedStages}
             />
 
-            {/* Commercial Executive â€” Category selector (PHASE A) */}
+            {/* Commercial Executive — Category selector (PHASE A) */}
             {osPresetId === "commercial_executive" && commercialConfig && (
               <CommercialCategorySelector
                 value={commercialConfig.orgType}
@@ -1756,11 +1756,11 @@ function ProposalPageContent() {
           }}
         >
               <option value="">
-                {isCustomersLoading ? "à¤²à¥‹à¤¡ à¤¹à¥‹ à¤°à¤¹à¥€ à¤¹à¥ˆ..." : " "}
+                {isCustomersLoading ? "लोड हो रही है..." : " "}
               </option>
           {customers.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name} â€” {c.city} ({c.discom})
+              {c.name} — {c.city} ({c.discom})
             </option>
           ))}
         </FloatingLabelSelect>
@@ -1895,8 +1895,8 @@ function ProposalPageContent() {
             const alignState = secondaryAlignment[idx];
             const mismatchHint =
               alignState && alignState.current && !alignState.aligned
-                ? `Uploaded ${alignState.current} â€¢ Please match ${targetLabel}`
-                : `Required â€¢ ${targetLabel}`;
+                ? `Uploaded ${alignState.current} • Please match ${targetLabel}`
+                : `Required • ${targetLabel}`;
             return (
               <UploadCard
                 key={`secondary-card-${idx}`}
@@ -1966,7 +1966,7 @@ function ProposalPageContent() {
       </div>
       ) : null}
 
-      {/* Bill analysis charts â€” hidden in commercial requirement mode */}
+      {/* Bill analysis charts — hidden in commercial requirement mode */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
         <div className="ss-card p-4 sm:p-5">
           <BillAnalysisCharts
@@ -1978,7 +1978,7 @@ function ProposalPageContent() {
         </div>
       )}
 
-      {/* Connection & manual fields â€” hidden in commercial requirement mode (handled by CommercialInputModeSelector) */}
+      {/* Connection & manual fields — hidden in commercial requirement mode (handled by CommercialInputModeSelector) */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
       <div className="ss-card space-y-3 p-4 sm:space-y-4 sm:p-5">
         <div>
@@ -2066,7 +2066,7 @@ function ProposalPageContent() {
             onChange={(e) => setManual((p) => ({ ...p, sanctionedLoad: e.target.value }))}
           />
           <FloatingLabelInput
-            label="Contract demand â€” kVA (if printed separately)"
+            label="Contract demand — kVA (if printed separately)"
             value={manual.contractDemandKva}
             onChange={(e) => setManual((p) => ({ ...p, contractDemandKva: e.target.value }))}
           />
@@ -2086,13 +2086,13 @@ function ProposalPageContent() {
       )}
       {/* END: connection & manual fields */}
 
-      {/* Bill details summary â€” hidden in commercial requirement mode */}
+      {/* Bill details summary — hidden in commercial requirement mode */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (latestBill || previousBill || manual.officialBillName) && (
         <div className="ss-card space-y-2 p-4 sm:p-5">
           <h3 className="text-xs font-bold uppercase tracking-wide text-brand-700 sm:text-sm">{t("proposal_billDetails")}</h3>
           <div className="grid gap-1 text-xs font-semibold text-slate-800 sm:text-sm">
             {[
-              [t("proposal_rowLeadContact"), manual.leadContactName || "â€”"],
+              [t("proposal_rowLeadContact"), manual.leadContactName || "—"],
               [t("proposal_rowOfficialBillName"), manual.officialBillName || latestBill?.name || previousBill?.name],
               ["Consumer ID", latestBill?.consumer_id || previousBill?.consumer_id || manual.consumerId],
               ["Meter", latestBill?.meter_number || previousBill?.meter_number || manual.meterNumber],
@@ -2115,12 +2115,12 @@ function ProposalPageContent() {
         </div>
       )}
 
-      {/* Recommended solar card â€” hidden in commercial requirement mode */}
+      {/* Recommended solar card — hidden in commercial requirement mode */}
       {!(osPresetId === "commercial_executive" && commercialInputMode === "requirement") && (
         <div className="ss-card p-4 sm:p-5">
           <h2 className="text-base font-extrabold text-brand-900 sm:text-lg">{t("proposal_recommended")}</h2>
           <p className="mt-2 break-words text-2xl font-extrabold tabular-nums text-solar-600 sm:text-3xl lg:text-4xl">
-            â‚¹{effectiveResult.annualSavings.toLocaleString("en-IN")}
+            ₹{effectiveResult.annualSavings.toLocaleString("en-IN")}
           </p>
           <p className="mt-1 text-xs font-semibold text-slate-700 sm:text-sm">{t("proposal_annualSavingsLine")}</p>
         </div>
@@ -2219,7 +2219,7 @@ function ProposalPageContent() {
 
         {!hideBillUploadSteps ? (
         <>
-        {/* Solar System Size â€” editable */}
+        {/* Solar System Size — editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
             {t("proposal_solarSizeLabel")}
@@ -2228,7 +2228,7 @@ function ProposalPageContent() {
             )}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Editable custom input â€” text mode prevents browser mangling of digits */}
+            {/* Editable custom input — text mode prevents browser mangling of digits */}
             <div className="flex items-center gap-1 rounded-lg border border-brand-300 bg-white px-3 py-1.5">
               <NumericTextInput
                 value={
@@ -2271,7 +2271,7 @@ function ProposalPageContent() {
           </div>
         </div>
 
-        {/* Panels â€” editable */}
+        {/* Panels — editable */}
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">
             {t("proposal_panelsLabel")}
@@ -2312,7 +2312,7 @@ function ProposalPageContent() {
 
         <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
           <p className="text-xs font-semibold text-slate-700 sm:text-sm">
-            {t("proposal_netCost")}: <span className="break-words font-extrabold text-brand-700">â‚¹{effectiveResult.netCost.toLocaleString("en-IN")}</span>
+            {t("proposal_netCost")}: <span className="break-words font-extrabold text-brand-700">₹{effectiveResult.netCost.toLocaleString("en-IN")}</span>
           </p>
           <p className="text-xs font-semibold text-slate-700 sm:text-sm">
             {t("proposal_payback")}: <span className="font-extrabold text-brand-700">{effectiveResult.paybackDisplay}</span>
@@ -2334,7 +2334,7 @@ function ProposalPageContent() {
               onClick={() => setProposalLang("hi")}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition-all ${proposalLang === "hi" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
-              à¤¹à¤¿à¤‚à¤¦à¥€
+              हिंदी
             </button>
           </div>
         </div>
@@ -2423,7 +2423,7 @@ function ProposalPageContent() {
       </div>{/* closes system size ss-card */}
           </div>{/* end main builder column */}
 
-          {/* Live preview panel â€” visible at lg+ (iPad Pro, desktop) */}
+          {/* Live preview panel — visible at lg+ (iPad Pro, desktop) */}
           <div className="hidden lg:block lg:w-60 lg:shrink-0 xl:w-72 2xl:w-80">
             <ProposalLivePreviewPanel
               presetId={osPresetId}
@@ -2785,7 +2785,7 @@ function buildUnitsFromConsumptionHistory(parsed: ParsedBillShape | null): Parti
     const rawMonth = String(row.month ?? "");
     const parts = rawMonth.split(/[\s/-]+/).map((part) => part.trim()).filter(Boolean);
 
-    // Extract year from the month string (e.g. "APR-2025" â†’ year 2025)
+    // Extract year from the month string (e.g. "APR-2025" → year 2025)
     let rowYear = 0;
     for (const part of parts) {
       const n = Number(part);
@@ -2850,14 +2850,14 @@ function buildSixMonthAutofill(parsed: ParsedBillShape): Partial<MonthlyUnits> {
 
 function stripStepPrefix(label: string): string {
   return label
-    .replace(/^\s*(step|à¤šà¤°à¤£|à®ªà®Ÿà®¿)\s*\d+\s*[:\-]\s*/iu, "")
+    .replace(/^\s*(step|चरण|படி)\s*\d+\s*[:\-]\s*/iu, "")
     .trim();
 }
 
 function stripManualSuffix(label: string): string {
   return label
     .replace(/\s*\(\s*manual override\s*\)\s*/iu, "")
-    .replace(/\s*\(\s*à¤®à¥ˆà¤¨à¥à¤…à¤² à¤“à¤µà¤°à¤°à¤¾à¤‡à¤¡\s*\)\s*/iu, "")
+    .replace(/\s*\(\s*मैनुअल ओवरराइड\s*\)\s*/iu, "")
     .trim();
 }
 

@@ -124,7 +124,7 @@ function DashboardPageContent() {
     [installerDiscom, discomOptions]
   );
   const [metricTrends, setMetricTrends] = useState<MetricTrendLines | null>(null);
-  /** Only true â€œfinger-firstâ€ pointers skip stagger â€” keeps entrance motion on mouse / hybrid laptops. */
+  /** Only true "finger-first" pointers skip stagger — keeps entrance motion on mouse / hybrid laptops. */
   const [isPointerCoarse, setIsPointerCoarse] = useState(false);
 
   useEffect(() => {
@@ -159,7 +159,7 @@ function DashboardPageContent() {
     setInstallerDiscom((prev) => resolveDiscomCode(prev.trim(), discomOptions));
   }, [installerState, discomOptions]);
 
-  /** Purane installs: LS me state thi, DISCOM key nahi â€” seed sirf tab jab UI state LS se match ho. */
+  /** Purane installs: LS me state thi, DISCOM key nahi — seed sirf tab jab UI state LS se match ho. */
   useEffect(() => {
     if (!installerState.trim() || discomOptions.length === 0) return;
     let stateInLs = "";
@@ -212,31 +212,31 @@ function DashboardPageContent() {
       {
         id: "demo-1",
         name: "Sharma Residence (Ravi Sharma)",
-        detail: `${t("dashboard_demo_p1_detail")} â€¢ Demo data`,
+        detail: `${t("dashboard_demo_p1_detail")} • Demo data`,
         capacityKw: "5.4 kW",
         status: "active",
         installProgress: 60,
-        nextAction: `${t("dashboard_demo_p1_next")} â€¢ Demo`,
+        nextAction: `${t("dashboard_demo_p1_next")} • Demo`,
         updatedAt: _demoStale
       },
       {
         id: "demo-2",
         name: "Patel Commercial (Jignesh Patel)",
-        detail: `${t("dashboard_demo_p2_detail")} â€¢ Demo data`,
+        detail: `${t("dashboard_demo_p2_detail")} • Demo data`,
         capacityKw: "12 kW",
         status: "pending",
         installProgress: 35,
-        nextAction: `${t("dashboard_demo_p2_next")} â€¢ Demo`,
+        nextAction: `${t("dashboard_demo_p2_next")} • Demo`,
         updatedAt: _demoFresh
       },
       {
         id: "demo-3",
         name: "Green Valley School (Trust office)",
-        detail: `${t("dashboard_demo_p3_detail")} â€¢ Demo data`,
+        detail: `${t("dashboard_demo_p3_detail")} • Demo data`,
         capacityKw: "25 kW",
         status: "done",
         installProgress: 100,
-        nextAction: "Installation complete â€¢ Demo",
+        nextAction: "Installation complete • Demo",
         updatedAt: _demoFresh
       }
     ];
